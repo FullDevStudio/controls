@@ -409,4 +409,105 @@ public class ButtonGroupTests
         group.Children.Remove(last);
         group.SelectedIndex.ShouldBe(-1);
     }
+
+
+    // ---------------------------------------------------------------------------------------------
+    // Styles (#32)
+    // ---------------------------------------------------------------------------------------------
+
+    [Fact]
+    public void WithNothingSet_TheGroupHugsTheStartAndCentresVertically()
+    {
+        IView group = Group(3);
+
+        group.HorizontalLayoutAlignment.ShouldBe(Microsoft.Maui.Primitives.LayoutAlignment.Start);
+        group.VerticalLayoutAlignment.ShouldBe(Microsoft.Maui.Primitives.LayoutAlignment.Center);
+    }
+
+
+    /// <summary>
+    /// The defaults used to be written in the constructor, as local values - and a local value outranks
+    /// every Style, so a Style centring the group never applied.
+    /// </summary>
+    [Fact]
+    public void AStyle_CanStillPositionTheGroup()
+    {
+        var style = new Style(typeof(ButtonGroup));
+        style.Setters.Add(new Setter { Property = View.HorizontalOptionsProperty, Value = LayoutOptions.Center });
+        style.Setters.Add(new Setter { Property = View.VerticalOptionsProperty, Value = LayoutOptions.End });
+
+        var group = Group(3);
+        group.Style = style;
+
+        group.HorizontalOptions.ShouldBe(LayoutOptions.Center);
+        ((IView)group).HorizontalLayoutAlignment.ShouldBe(Microsoft.Maui.Primitives.LayoutAlignment.Center);
+        ((IView)group).VerticalLayoutAlignment.ShouldBe(Microsoft.Maui.Primitives.LayoutAlignment.End);
+    }
+
+
+    [Fact]
+    public void AnImplicitStyle_CanStillPositionTheGroup()
+    {
+        var style = new Style(typeof(ButtonGroup));
+        style.Setters.Add(new Setter { Property = View.HorizontalOptionsProperty, Value = LayoutOptions.Center });
+        Application.Current!.Resources.Add(style);
+
+        var page = new ContentPage { Content = Group(3) };
+        var group = (ButtonGroup)page.Content;
+
+        ((IView)group).HorizontalLayoutAlignment.ShouldBe(Microsoft.Maui.Primitives.LayoutAlignment.Center);
+    }
+
+
+    [Fact]
+    public void ALocalValue_StillPositionsTheGroup()
+    {
+        var group = Group(3);
+        group.HorizontalOptions = LayoutOptions.Fill;
+
+        ((IView)group).HorizontalLayoutAlignment.ShouldBe(Microsoft.Maui.Primitives.LayoutAlignment.Fill);
+    }
+
+
+    /// <summary>
+    /// An appearance from a Style is how the app draws every button, not this segment's own choice. Kept
+    /// as the unselected look, a Style making every button Filled left the selected segment - Filled by
+    /// default - looking exactly like the rest.
+    /// </summary>
+    [Fact]
+    public void AStyledAppearance_DoesNotHideTheSelection()
+    {
+        var style = new Style(typeof(ShinyButton));
+        style.Setters.Add(new Setter { Property = ShinyButton.AppearanceProperty, Value = ButtonAppearance.Filled });
+        Application.Current!.Resources.Add(style);
+
+        var group = Group(3);
+        group.SelectionMode = ButtonGroupSelectionMode.Single;
+        group.SelectedIndex = 0;
+
+        Segment(group, 0).Appearance.ShouldBe(ButtonAppearance.Filled);
+        Segment(group, 1).Appearance.ShouldBe(ButtonAppearance.Outlined);
+        Segment(group, 2).Appearance.ShouldBe(ButtonAppearance.Outlined);
+    }
+
+
+    [Fact]
+    public void AStyledAppearance_ComesBackWhenTheSelectionModeIsTurnedOff()
+    {
+        var style = new Style(typeof(ShinyButton));
+        style.Setters.Add(new Setter { Property = ShinyButton.AppearanceProperty, Value = ButtonAppearance.Tonal });
+
+        var group = new ButtonGroup();
+        for (var i = 0; i < 2; i++)
+            group.Children.Add(new ShinyButton { Text = $"Segment {i}", Style = style });
+
+        group.SelectionMode = ButtonGroupSelectionMode.Single;
+        group.SelectedIndex = 0;
+        Segment(group, 1).Appearance.ShouldBe(ButtonAppearance.Outlined);
+
+        group.SelectionMode = ButtonGroupSelectionMode.None;
+
+        Segment(group, 0).Appearance.ShouldBe(ButtonAppearance.Tonal);
+        Segment(group, 1).Appearance.ShouldBe(ButtonAppearance.Tonal);
+    }
 }

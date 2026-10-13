@@ -22,7 +22,7 @@ namespace Shiny.Maui.Controls;
 /// &lt;/shiny:ButtonGroup&gt;
 /// </code>
 /// </example>
-public class ButtonGroupText : ContentView
+public class ButtonGroupText : ContentView, IView
 {
     const double DefaultMinimumHeight = 44;
 
@@ -57,8 +57,6 @@ public class ButtonGroupText : ContentView
         ThemeBrush.Apply(this.border, Border.StrokeProperty, ShinyThemeKeys.Brush.Outline);
 
         this.Content = this.border;
-        this.HorizontalOptions = LayoutOptions.Start;
-        this.VerticalOptions = LayoutOptions.Center;
         this.MinimumHeightRequest = DefaultMinimumHeight;
 
         this.ApplyCornerRadius();
@@ -67,6 +65,14 @@ public class ButtonGroupText : ContentView
         // See StyleGuard.
         StyleGuard.MarkReady(this, typeof(ButtonGroupText));
     }
+
+
+    // Start/Center by default, without the local value that would outrank a Style. See DefaultAlignment.
+    Microsoft.Maui.Primitives.LayoutAlignment IView.HorizontalLayoutAlignment
+        => DefaultAlignment.Resolve(this, HorizontalOptionsProperty, Microsoft.Maui.Primitives.LayoutAlignment.Start);
+
+    Microsoft.Maui.Primitives.LayoutAlignment IView.VerticalLayoutAlignment
+        => DefaultAlignment.Resolve(this, VerticalOptionsProperty, Microsoft.Maui.Primitives.LayoutAlignment.Center);
 
 
     public static readonly BindableProperty TextProperty = BindableProperty.Create(

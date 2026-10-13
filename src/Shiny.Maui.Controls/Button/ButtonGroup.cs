@@ -33,7 +33,7 @@ namespace Shiny.Maui.Controls;
 /// &lt;/shiny:ButtonGroup&gt;
 /// </code>
 /// </example>
-public partial class ButtonGroup : StackLayout
+public partial class ButtonGroup : StackLayout, IView
 {
     /// <summary>What a segment looked like before this group started pushing appearances at it.</summary>
     sealed class SegmentState
@@ -81,8 +81,10 @@ public partial class ButtonGroup : StackLayout
         // than a column of them, and it is the orientation every example of one is drawn in.
         this.Orientation = StackOrientation.Horizontal;
         this.Spacing = 0;
-        this.HorizontalOptions = LayoutOptions.Start;
-        this.VerticalOptions = LayoutOptions.Center;
+
+        // No HorizontalOptions/VerticalOptions here: a value written in the constructor is local, and
+        // a local value outranks every Style, so a Style centring the group never applied. The
+        // Start/Center defaults are supplied by the IView alignment members below instead.
 
         this.Children.Add(this.probe);
 
@@ -90,6 +92,14 @@ public partial class ButtonGroup : StackLayout
         // See StyleGuard.
         StyleGuard.MarkReady(this, typeof(ButtonGroup));
     }
+
+
+    // Start/Center unless something - a local value, a Style, a binding - says otherwise. See DefaultAlignment.
+    Microsoft.Maui.Primitives.LayoutAlignment IView.HorizontalLayoutAlignment
+        => DefaultAlignment.Resolve(this, HorizontalOptionsProperty, Microsoft.Maui.Primitives.LayoutAlignment.Start);
+
+    Microsoft.Maui.Primitives.LayoutAlignment IView.VerticalLayoutAlignment
+        => DefaultAlignment.Resolve(this, VerticalOptionsProperty, Microsoft.Maui.Primitives.LayoutAlignment.Center);
 
 
     // ---------------------------------------------------------------------------------------------
@@ -489,8 +499,11 @@ public partial class ButtonGroup : StackLayout
             }
 
             // Recorded once, on the first push: after that every value on the button is this group's.
+            // Only a value set on the segment itself counts as the author's: one from a Style is the
+            // app's look for every button, and keeping it would leave a group whose Style makes all
+            // buttons Filled with every segment Filled - the selection simply not shown.
             if (!state.Pushed)
-                state.Author = button.IsSet(ShinyButton.AppearanceProperty) ? button.Appearance : null;
+                state.Author = LocalValue.Has(button, ShinyButton.AppearanceProperty) ? button.Appearance : null;
 
             var appearance = this.selection.Contains(i)
                 ? this.SelectedAppearance

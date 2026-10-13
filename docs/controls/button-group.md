@@ -65,7 +65,9 @@ Events: `SelectionChanged`, plus `SelectionChangedCommand`/`SelectionChangedComm
 </ButtonGroup>
 ```
 
-While a selection mode is on, the group owns each segment's appearance: selected segments take `SelectedAppearance`, the rest take `UnselectedAppearance` — **unless the segment set an `Appearance` of its own**, which wins, so one odd segment in a picker stays odd. Leaving the selection mode hands every appearance back.
+While a selection mode is on, the group owns each segment's appearance: selected segments take `SelectedAppearance`, the rest take `UnselectedAppearance` — **unless the segment set an `Appearance` of its own**, which wins, so one odd segment in a picker stays odd. Only a value set on the segment itself counts: an `Appearance` from a Style (implicit or explicit) is the app's look for every button, so it is replaced like any unstyled segment — otherwise a Style making every `ShinyButton` `Filled` would hide the selection. Leaving the selection mode hands every appearance back, and a styled segment returns to its Style.
+
+On MAUI the group defaults to `HorizontalOptions=Start` / `VerticalOptions=Center` without writing them as local values, so a Style (or a local value) that positions the group wins.
 
 `Single` ignores a tap on the already-selected segment: a picker that can be emptied by tapping its own answer again is a picker with no answer. `AllowDeselect="True"` allows it. `Multiple` always toggles.
 
