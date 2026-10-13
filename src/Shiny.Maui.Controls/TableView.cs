@@ -328,6 +328,15 @@ public partial class TableView : ContentView
                     (cell.Parent as Layout)?.Remove(cell);
                     SetInheritedBindingContext(cell, section.BindingContext);
                 }
+
+                // The same goes for a section's HeaderView and FooterView: SectionRenderer adds the
+                // consumer's instance to a brand-new section layout on every render, so left in the
+                // outgoing one it crashes the next render — Android's "The specified child already has
+                // a parent", and a COMException out of UIElementCollection.Add on Windows.
+                if (section.HeaderView is { Parent: Layout headerParent } header)
+                    headerParent.Remove(header);
+                if (section.FooterView is { Parent: Layout footerParent } footer)
+                    footerParent.Remove(footer);
             }
 
             rootLayout.Children.Clear();

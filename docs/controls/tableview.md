@@ -10,6 +10,10 @@ to a feature flag or a mode switch is the intended use — including to a `Switc
 table. The re-render runs on the dispatcher just after the change, not inside it, and several sections
 changing together re-render once.
 
+A section's `HeaderView` and `FooterView` are your own view instances and are moved into each new
+render, so any re-render (a styling property, a cell added or removed, a bound section property) keeps
+showing them. Don't put the same view instance in two sections or anywhere else on the page.
+
 | Basic | Dynamic | Drag & Sort | Pickers | Styling |
 |:---:|:---:|:---:|:---:|:---:|
 | ![Basic](../../assets/tableview-basic.png) | ![Dynamic](../../assets/tableview-dynamic.png) | ![Drag & Sort](../../assets/tableview-dragsort.png) | ![Pickers](../../assets/tableview-picker.png) | ![Styling](../../assets/tableview-styling.png) |

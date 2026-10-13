@@ -375,6 +375,10 @@ All cells inherit these properties:
 | `ItemsSource` | `IEnumerable?` | `null` |
 | `ItemTemplate` | `DataTemplate?` | `null` |
 
+`HeaderView`/`FooterView` are moved into every re-render, so they survive styling changes and cell
+collection changes. Give each section its own view instance; never share one between sections or with
+another part of the page.
+
 `IsVisible` is live and safe to bind — a section that flips re-renders the table, and a hidden section
 draws nothing at all: no header, no cells, and **no section separator on either side of it**. Binding
 it to a feature flag or a mode switch is the intended use, **including to a `SwitchCell.On` in the same
