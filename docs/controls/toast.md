@@ -32,6 +32,8 @@ await toaster.DangerAsync("Save failed");           // Orange
 await toaster.CriticalAsync("System error");        // Red
 ```
 
+**Your own toaster** — implement `IToaster` and register it with `UseShinyControls(c => c.SetCustomToaster<MyToaster>())`; it replaces the built-in `Toaster` for everything that injects `IToaster`. (Before 1.7.0 this registered the built-in `Toaster` regardless of `T` — #29.)
+
 ```razor
 <!-- Blazor: register AddShinyToast() in DI, place <ToastHost /> in layout -->
 @inject IToastService ToastService
