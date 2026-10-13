@@ -65,6 +65,7 @@
         <button @onclick="ScanDocumentImage">Document Image</button>
         <button @onclick="ScanDocumentPages">Document Pages (stream)</button>
         <button @onclick="ScanAiDocument">AI Document</button>
+        <button @onclick="ScanAiDocuments">AI Documents (stream)</button>
     </div>
     <p class="media-note">
         AI Document uses an offline stand-in <code>IChatClient</code> that returns a canned receipt — register a
@@ -281,6 +282,21 @@
         Log($"{doc.DocumentType}: {doc.Summary}");
         foreach (var field in doc.Fields)
             Log($"    {field.Label} = {field.Value}");
+    }
+
+    async Task ScanAiDocuments()
+    {
+        var count = 0;
+        await foreach (var doc in Media.ScanDocumentsAsync(new AiDocumentScanner(new SampleVisionChatClient()), new MediaScanOptions
+        {
+            Title = "AI documents",
+            Instructions = "Hold up each document in turn, then tap ✓"
+        }))
+        {
+            count++;
+            Log($"{count}. {doc.DocumentType}: {doc.Summary}");
+        }
+        Log($"AI session ended — {count} document(s)");
     }
 
     // --- results -------------------------------------------------------------------------------------

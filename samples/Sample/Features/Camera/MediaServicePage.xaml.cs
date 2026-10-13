@@ -251,6 +251,51 @@ public partial class MediaServicePage : ContentPage
         this.Write(card is null ? "business card: cancelled" : $"business card: {card.Name} — {card.Company} — {card.Email}");
     });
 
+    public ICommand ScanHealthCardCommand => this.Run(async () =>
+    {
+        var card = await this.media.ScanHealthCardAsync(new MediaScanOptions
+        {
+            Title = "Health card",
+            Instructions = "Hold the front of the card in frame"
+        });
+        this.Write(card is null
+            ? "health card: cancelled"
+            : $"health card: {card.Name} #{card.Number} ({card.Province ?? card.Issuer}) exp {card.Expiry:yyyy-MM}");
+    });
+
+    public ICommand ScanInvoiceCommand => this.Run(async () =>
+    {
+        var invoice = await this.media.ScanInvoiceAsync(new MediaScanOptions
+        {
+            Title = "Invoice",
+            Instructions = "Fit the whole page in frame",
+            AllowZoom = false
+        });
+        this.Write(invoice is null
+            ? "invoice: cancelled"
+            : $"invoice: #{invoice.Number} {invoice.Total} on {invoice.Date} — {invoice.Lines.Count} line(s)");
+    });
+
+    // ScanDocumentsAsync is what every document verb above is built on. Hand it any configured
+    // DocumentAnalyzer<T> - here a receipt analyzer that reads more frames before it commits, which
+    // helps on long, crumpled receipts - or one for a document type of your own.
+    public ICommand ScanWithAnalyzerCommand => this.Run(async () =>
+    {
+        var analyzer = new ReceiptAnalyzer { AccumulationFrames = 12 };
+
+        await foreach (var receipt in this.media.ScanDocumentsAsync(
+            analyzer,
+            duplicateKey: r => $"{r.Merchant}|{r.Total}|{r.Date}",
+            describe: r => $"{r.Merchant} {r.Total}",
+            options: new MediaScanOptions
+            {
+                Title = "Custom analyzer",
+                Instructions = "A ReceiptAnalyzer with AccumulationFrames = 12",
+                AllowZoom = false
+            }))
+            this.Write($"analyzer: {receipt.Merchant} {receipt.Total} on {receipt.Date}");
+    });
+
     public ICommand ScanReceiptsCommand => this.Run(async () =>
     {
         await foreach (var receipt in this.media.ScanReceiptsAsync(options: new MediaScanOptions

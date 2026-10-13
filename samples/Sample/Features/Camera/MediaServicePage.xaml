@@ -52,7 +52,10 @@
                 <Button Text="Driver's License" Margin="0,0,8,8" Command="{Binding ScanDriversLicenseCommand}" />
                 <Button Text="Passport" Margin="0,0,8,8" Command="{Binding ScanPassportCommand}" />
                 <Button Text="Business Card" Margin="0,0,8,8" Command="{Binding ScanBusinessCardCommand}" />
+                <Button Text="Health Card" Margin="0,0,8,8" Command="{Binding ScanHealthCardCommand}" />
+                <Button Text="Invoice" Margin="0,0,8,8" Command="{Binding ScanInvoiceCommand}" />
                 <Button Text="Receipts (stream)" Margin="0,0,8,8" Command="{Binding ScanReceiptsCommand}" />
+                <Button Text="Custom Analyzer" Margin="0,0,8,8" Command="{Binding ScanWithAnalyzerCommand}" />
                 <Button Text="Faces" Margin="0,0,8,8" Command="{Binding DetectFacesCommand}" />
             </FlexLayout>
 
