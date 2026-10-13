@@ -52,12 +52,12 @@ Identical on both hosts unless noted.
 | `Source` | `MotionIconDefinition` | Explicit artwork. Beats `Icon` and `PathData`. |
 | `PathData` | `string` | Raw SVG path in a 24x24 box — the quickest way to animate your own glyph. |
 | `Motion` | `MotionPreset` | Defaults to `Default`. |
-| `Trigger` | `MotionTrigger` | `[Flags]`. Defaults to `Hover \| Press`. |
+| `Trigger` | `MotionTrigger` | `[Flags]`. Defaults to `Hover \| Press`. Bindable at runtime: becoming `Loop`/`Appear` after load starts the icon, leaving `Loop` stops it. |
 | `Duration` | `TimeSpan` | Overrides one cycle. Zero uses the motion's own. |
 | `Interval` | `TimeSpan` | Rests between cycles while looping. |
 | `Speed` | `double` | Rate multiplier. Negative reverses **on MAUI only**. |
 | `RepeatCount` | `int` | Cycles per triggered play. Zero or less repeats forever. |
-| `Color` | `Color` (MAUI) / `string` (Blazor) | MAUI: unset follows the theme pack's on-surface token. Blazor: `currentColor`. |
+| `Color` | `Color` (MAUI) / `string` (Blazor) | MAUI: unset follows the theme pack's on-surface token; a local value, `Style` setter, `Binding` or `AppThemeBinding` all override it. Blazor: `currentColor`. |
 | `AccentColor` | same | Secondary colour for two-tone artwork. Falls back to `Color`. |
 | `StrokeWidth` | `double` | In the icon's own 24-unit space. The set is drawn for `2`. |
 | `IsPlaying` | `bool` | Two-way. **This is the one to bind to a busy flag.** |

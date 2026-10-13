@@ -42,7 +42,8 @@
 - Because nothing touches a platform SDK, the MAUI side works on every head — including AppKit and GTK4.
 - Playback never starts before the view is loaded, so an implicit `<Style TargetType="MotionIconView">` that sets `IsPlaying` cannot reach for a dispatcher from inside a constructor.
 - A hidden icon does not animate. Setting `IsVisible="False"` on a playing `MotionIconView` pauses it — no redraws, no `Progress` writes, and the shared timer sleeps if nothing else is moving — and showing it again resumes mid-cycle. `IsPlaying` stays `true` throughout, so toggling one icon per state by visibility is cheap. Only the view's own `IsVisible` counts; hiding a parent layout does not pause it. On Blazor a hidden element runs no CSS animation anyway.
-- Unset `Color` follows the theme pack's on-surface token via `SetDynamicResource`, so icons restyle with a live `SetTheme`.
+- Unset `Color` follows the theme pack's on-surface token, so icons restyle with a live `SetTheme`. The token is only a fallback: a `Color` from a local value, a `Style` setter, a `Binding` or an `AppThemeBinding` always wins.
+- `Trigger` can change at any time — switching to `Loop` (or `Appear`) after the icon has loaded starts it, and switching away from `Loop` stops it.
 - Every generic preset works on artwork the library has never seen; only `Draw` needs to know the parts, so it can stagger them.
 - `prefers-reduced-motion` is honoured on the web: the icon renders and still responds, it just holds its resting pose.
 - **Write path data with explicit `L` commands.** `Microsoft.Maui.Graphics` does not implement SVG's implicit-lineto rule (`M6 6 18 18` becomes two *movetos*, not a line) and cannot read run-together decimals (`l.06.06`). Browsers handle both, so artwork copied from a design tool can look perfect on Blazor and draw nothing on MAUI. Unit tests guard the built-in set against both.

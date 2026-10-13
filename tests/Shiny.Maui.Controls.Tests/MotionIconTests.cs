@@ -13,8 +13,16 @@ namespace Shiny.Maui.Controls.Tests;
 /// Covers the MAUI half of motion icons: the artwork's integrity against MAUI's path parser, the
 /// scene the keyframe engine draws, and the property surface that decides what gets drawn.
 /// </summary>
+[Collection(ApplicationResourcesCollection.Name)]
 public class MotionIconTests
 {
+    public MotionIconTests()
+    {
+        // A fresh Application, so an implicit MotionIconView style another test installed (one sets
+        // IsPlaying) cannot reach the views built here.
+        _ = new Application();
+    }
+
     /// <summary>Records what a scene asks for, so drawing can be asserted without a real surface.</summary>
     sealed class RecordingCanvas : ICanvas
     {

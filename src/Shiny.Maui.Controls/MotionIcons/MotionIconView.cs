@@ -74,6 +74,13 @@ public class MotionIconView : GraphicsView
         BindableProperty.Create(nameof(Color), typeof(Color), typeof(MotionIconView),
             propertyChanged: OnArtworkChanged);
 
+    // The theme's ink, used while Color is unset. A property of its own, fed by a dynamic resource,
+    // because a dynamic resource on Color itself outranks a Style setter, a Binding and an
+    // AppThemeBinding — so none of them could ever colour the icon.
+    static readonly BindableProperty ThemeColorProperty =
+        BindableProperty.Create("ThemeColor", typeof(Color), typeof(MotionIconView),
+            propertyChanged: OnThemeColorChanged);
+
     /// <summary>Backing store for <see cref="AccentColor"/>.</summary>
     public static readonly BindableProperty AccentColorProperty =
         BindableProperty.Create(nameof(AccentColor), typeof(Color), typeof(MotionIconView),
@@ -124,8 +131,9 @@ public class MotionIconView : GraphicsView
         HeightRequest = 24d;
 
         // Follows the theme pack rather than a hardcoded pair, so an icon sits correctly on whatever
-        // surface the app is using. Assigning Color explicitly clears this, as it should.
-        this.SetDynamicResource(ColorProperty, ShinyThemeKeys.Color.OnSurface);
+        // surface the app is using — until Color is given a value by any means (local, Style,
+        // Binding, AppThemeBinding), which wins.
+        this.SetDynamicResource(ThemeColorProperty, ShinyThemeKeys.Color.OnSurface);
 
         Loaded += (_, _) => OnLoadedInternal();
         Unloaded += (_, _) => Detach();
@@ -502,7 +510,7 @@ public class MotionIconView : GraphicsView
         Invalidate();
     }
 
-    Color ResolveColor() => Color ?? Colors.Black;
+    internal Color ResolveColor() => Color ?? (Color?)GetValue(ThemeColorProperty) ?? Colors.Black;
 
     void RebuildAndResume()
     {
@@ -516,8 +524,9 @@ public class MotionIconView : GraphicsView
 
         Rebuild();
 
+        // A looping icon keeps looping; anything else picks up a fresh play of RepeatCount.
         if (wasPlaying)
-            Start(PlaybackIterations());
+            Start(Trigger.HasFlag(MotionTrigger.Loop) ? double.PositiveInfinity : PlaybackIterations());
         else
             Invalidate();
     }
@@ -589,8 +598,33 @@ public class MotionIconView : GraphicsView
     static void OnArtworkChanged(BindableObject bindable, object oldValue, object newValue)
         => ((MotionIconView)bindable).RebuildAndResume();
 
+    static void OnThemeColorChanged(BindableObject bindable, object oldValue, object newValue)
+    {
+        var view = (MotionIconView)bindable;
+        if (view.Color is null)
+            view.RebuildAndResume();
+    }
+
     static void OnTriggerChanged(BindableObject bindable, object oldValue, object newValue)
-        => ((MotionIconView)bindable).ApplyTriggerGestures();
+    {
+        var view = (MotionIconView)bindable;
+        view.ApplyTriggerGestures();
+
+        // Loop and Appear are otherwise read only in Loaded, so a Trigger that arrives later — a late
+        // BindingContext, a runtime switch — would never start, and leaving Loop would never stop.
+        if (!view.loaded)
+            return;
+
+        var was = (MotionTrigger)oldValue;
+        var now = (MotionTrigger)newValue;
+
+        if (now.HasFlag(MotionTrigger.Loop) && !was.HasFlag(MotionTrigger.Loop))
+            view.Start(double.PositiveInfinity);
+        else if (was.HasFlag(MotionTrigger.Loop) && !now.HasFlag(MotionTrigger.Loop))
+            view.Stop();
+        else if (now.HasFlag(MotionTrigger.Appear) && !was.HasFlag(MotionTrigger.Appear))
+            view.Start(view.RepeatCount);
+    }
 
     static void OnSpeedChanged(BindableObject bindable, object oldValue, object newValue)
     {

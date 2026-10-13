@@ -1,4 +1,6 @@
 using Microsoft.Maui.Controls;
+using Microsoft.Maui.Graphics;
+using Shiny.Maui.Controls.Themes;
 using Shiny.Controls.MotionIcons;
 using Shiny.Maui.Controls.MotionIcons;
 using Shouldly;
@@ -22,6 +24,7 @@ namespace Shiny.Maui.Controls.Tests;
 /// directly in <see cref="MotionIconTests"/> rather than pretended at through a view that can never
 /// load in this host.</para>
 /// </remarks>
+[Collection(ApplicationResourcesCollection.Name)]
 public class MotionIconPlaybackTests
 {
     public MotionIconPlaybackTests()
@@ -155,5 +158,124 @@ public class MotionIconPlaybackTests
 
         view.IsPlaying.ShouldBeFalse();
         MotionTicker.For(view)!.IsRunning.ShouldBeFalse();
+    }
+
+    // Color: the theme ink is a fallback, never a value that outranks the app's own. A dynamic
+    // resource on Color itself beat every Style setter, Binding and AppThemeBinding (#25).
+
+    static MotionIconView Themed(MotionIconView view)
+    {
+        var page = new ContentPage { Content = view };
+        page.Resources[ShinyThemeKeys.Color.OnSurface] = Colors.Green;
+        return view;
+    }
+
+    [Fact]
+    public void AnUnsetColorFollowsTheTheme()
+    {
+        _ = new Application();
+
+        var view = Themed(new MotionIconView { Icon = "heart" });
+
+        view.Color.ShouldBeNull();
+        view.ResolveColor().ShouldBe(Colors.Green);
+    }
+
+    [Fact]
+    public void AStyleColorBeatsTheTheme()
+    {
+        _ = new Application();
+
+        var style = new Style(typeof(MotionIconView));
+        style.Setters.Add(new Setter { Property = MotionIconView.ColorProperty, Value = Colors.Red });
+
+        var view = Themed(new MotionIconView { Icon = "heart", Style = style });
+
+        view.Color.ShouldBe(Colors.Red);
+        view.ResolveColor().ShouldBe(Colors.Red);
+    }
+
+    [Fact]
+    public void ABoundColorBeatsTheTheme()
+    {
+        _ = new Application();
+
+        var view = Themed(new MotionIconView { Icon = "heart" });
+        view.BindingContext = new { Ink = Colors.Red };
+        view.SetBinding(MotionIconView.ColorProperty, "Ink");
+
+        view.ResolveColor().ShouldBe(Colors.Red);
+    }
+
+    [Fact]
+    public void AnAppThemeColorBeatsTheTheme()
+    {
+        _ = new Application();
+
+        var view = Themed(new MotionIconView { Icon = "heart" });
+        view.SetAppThemeColor(MotionIconView.ColorProperty, Colors.Red, Colors.Red);
+
+        view.ResolveColor().ShouldBe(Colors.Red);
+    }
+
+    [Fact]
+    public void ClearingTheColorFallsBackToTheTheme()
+    {
+        _ = new Application();
+
+        var view = Themed(new MotionIconView { Icon = "heart", Color = Colors.Red });
+        view.ClearValue(MotionIconView.ColorProperty);
+
+        view.ResolveColor().ShouldBe(Colors.Green);
+    }
+
+    // Trigger: Loop and Appear used to be read only in Loaded (#25).
+
+    [Fact]
+    public void SwitchingToLoopAfterLoadStartsTheLoop()
+    {
+        _ = new Application();
+
+        var view = new MotionIconView { Icon = "refresh", Trigger = MotionTrigger.Manual };
+        view.OnLoadedInternal();
+        view.IsPlaying.ShouldBeFalse();
+
+        view.Trigger = MotionTrigger.Loop;
+
+        view.IsPlaying.ShouldBeTrue();
+        MotionTicker.For(view)!.IsRunning.ShouldBeTrue();
+
+        view.Stop();
+    }
+
+    [Fact]
+    public void SwitchingAwayFromLoopStopsIt()
+    {
+        _ = new Application();
+
+        var view = new MotionIconView { Icon = "refresh", Trigger = MotionTrigger.Loop };
+        view.OnLoadedInternal();
+        view.IsPlaying.ShouldBeTrue();
+
+        view.Trigger = MotionTrigger.Manual;
+
+        view.IsPlaying.ShouldBeFalse();
+        MotionTicker.For(view)!.IsRunning.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void ALoopingIconKeepsLoopingWhenItsColorChanges()
+    {
+        _ = new Application();
+
+        var view = new MotionIconView { Icon = "refresh", Trigger = MotionTrigger.Loop };
+        view.OnLoadedInternal();
+
+        view.Color = Colors.Red;
+
+        view.IsPlaying.ShouldBeTrue();
+        MotionTicker.For(view)!.IsRunning.ShouldBeTrue();
+
+        view.Stop();
     }
 }
