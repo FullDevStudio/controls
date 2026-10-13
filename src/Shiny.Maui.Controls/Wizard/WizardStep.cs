@@ -132,5 +132,18 @@ public class WizardStep : StateViewState
     /// <summary>What the progress indicator labels this step.</summary>
     public string DisplayTitle => string.IsNullOrWhiteSpace(this.Title) ? (this.Name ?? string.Empty) : this.Title!;
 
-    void RaiseStepChanged() => this.RaiseChanged();
+    /// <summary>
+    /// Raised when step metadata the wizard renders from changes — title, validity, visibility.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Deliberately not the base <c>Changed</c>. That one makes the hosting <see cref="StateView"/>
+    /// re-host the step's view, and <see cref="IsValid"/> is routinely bound to the text being typed
+    /// into that very view: the keystroke that flipped it detached the field mid-input, the detach
+    /// dropped its inherited BindingContext, the TwoWay binding wrote the default back into the field,
+    /// and Android's input connection then committed into text that had been replaced under it and
+    /// crashed in EmojiCompat. Nothing a step's metadata carries changes what the step shows.
+    /// </remarks>
+    internal event EventHandler? StepChanged;
+
+    void RaiseStepChanged() => this.StepChanged?.Invoke(this, EventArgs.Empty);
 }

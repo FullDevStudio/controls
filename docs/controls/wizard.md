@@ -55,7 +55,10 @@ What the wizard adds beyond switching views:
 - **Validity gates.** `WizardStep.IsValid` blocks Next; `IsOptional` bypasses it. `ValidateCommand` (MAUI)
   runs *before* `IsValid` is read, so a view-model that validates inside the command and sets the flag is
   enough — no event wiring. Blazor's `Validate` is an `async Func<Task<bool>>`, so a server round-trip is a
-  first-class validator. `StepChanging` is cancellable for anything neither can express.
+  first-class validator. `StepChanging` is cancellable for anything neither can express. Binding `IsValid`
+  to the text being typed into the step is safe: a change to a step's metadata (`IsValid`, `Title`,
+  `IsCompleted`, …) refreshes the wizard chrome without re-hosting the step's view, so the field keeps
+  focus and its input on every platform.
 - **Conditional branches.** `IsVisible="False"` takes a step out of the run entirely: skipped by Next/Back,
   dropped from the progress bar, and excluded from `StepCount`. Bind it and the wizard reshapes itself.
   `IsEnabled="False"` keeps the step on the indicator but unreachable.

@@ -447,6 +447,7 @@ public partial class Wizard : ContentView
             foreach (WizardStep removed in e.OldItems)
             {
                 removed.Changed -= this.OnStepPropertyChanged;
+                removed.StepChanged -= this.OnStepPropertyChanged;
                 this.stateView.States.Remove(removed);
                 if (ReferenceEquals(removed, this.current))
                     this.current = null;
@@ -458,6 +459,7 @@ public partial class Wizard : ContentView
             foreach (WizardStep added in e.NewItems)
             {
                 added.Changed += this.OnStepPropertyChanged;
+                added.StepChanged += this.OnStepPropertyChanged;
                 if (!this.stateView.States.Contains(added))
                     this.stateView.States.Add(added);
             }
@@ -471,6 +473,8 @@ public partial class Wizard : ContentView
             {
                 step.Changed -= this.OnStepPropertyChanged;
                 step.Changed += this.OnStepPropertyChanged;
+                step.StepChanged -= this.OnStepPropertyChanged;
+                step.StepChanged += this.OnStepPropertyChanged;
                 this.stateView.States.Add(step);
             }
         }

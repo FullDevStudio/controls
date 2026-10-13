@@ -360,4 +360,79 @@ public class WizardTests
         step.Title = "Where to?";
         step.DisplayTitle.ShouldBe("Where to?");
     }
+
+
+    class NameModel : System.ComponentModel.INotifyPropertyChanged
+    {
+        string? name;
+
+        public string? Name
+        {
+            get => this.name;
+            set
+            {
+                this.name = value;
+                this.PropertyChanged?.Invoke(this, new(nameof(this.Name)));
+                this.PropertyChanged?.Invoke(this, new(nameof(this.NameIsValid)));
+            }
+        }
+
+        public bool NameIsValid => !string.IsNullOrEmpty(this.name);
+
+        public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+    }
+
+
+    /// <summary>
+    /// The keystroke that flips a bound IsValid used to re-host the step's view from inside the field's
+    /// own Text write: the field was detached, lost its inherited BindingContext, had the default
+    /// written back into it by its TwoWay binding mid-input - and on Android the input connection then
+    /// committed into text that had been replaced underneath it and crashed. (#22)
+    /// </summary>
+    [Fact]
+    public void TypingIntoAStepWhoseValidityFollowsTheTextLeavesTheFieldInPlace()
+    {
+        var entry = new Entry();
+        entry.SetBinding(Entry.TextProperty, new Binding(nameof(NameModel.Name), BindingMode.TwoWay));
+
+        var step = new WizardStep { Name = "Name", Content = entry };
+        step.SetBinding(WizardStep.IsValidProperty, nameof(NameModel.NameIsValid));
+
+        var wizard = new Wizard { Transition = StateTransition.None };
+        wizard.Steps.Add(step);
+        wizard.Steps.Add(new WizardStep { Name = "Done", Content = new Label { Text = "Done" } });
+
+        var model = new NameModel();
+        wizard.BindingContext = model;
+        step.IsValid.ShouldBeFalse();
+
+        var host = entry.Parent;
+        host.ShouldNotBeNull();
+        var reparented = 0;
+        entry.ParentChanged += (_, _) => reparented++;
+
+        entry.Text = "a";
+
+        step.IsValid.ShouldBeTrue();
+        entry.Text.ShouldBe("a");
+        model.Name.ShouldBe("a");
+        reparented.ShouldBe(0);
+        entry.Parent.ShouldBeSameAs(host);
+        wizard.GoNextCommand.CanExecute(null).ShouldBeTrue();
+    }
+
+
+    [Fact]
+    public void AStepsMetadataStillReachesTheWizard()
+    {
+        var wizard = Build("One", "Two");
+        var first = wizard.Steps[0];
+        var raised = 0;
+        wizard.GoNextCommand.CanExecuteChanged += (_, _) => raised++;
+
+        first.IsValid = false;
+
+        raised.ShouldBeGreaterThan(0);
+        wizard.GoNextCommand.CanExecute(null).ShouldBeFalse();
+    }
 }
