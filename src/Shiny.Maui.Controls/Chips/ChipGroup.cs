@@ -195,10 +195,25 @@ public partial class ChipGroup : ContentView
             // cannot undo.
             var pruned = this.selection.RemoveAll(x => this.IndexIn(this.items, x) < 0);
 
+            // A SelectedItem that arrived before the items it names (XAML attribute order, or a view
+            // model that picks a default while building its list) was refused then for not being in the
+            // source. Now it is - so adopt it, or the group shows nothing selected while SelectedItem and
+            // the bound property both still say otherwise. Only into an empty selection: anything already
+            // selected was put there after, and SelectedItem is published from it below.
+            var adopted = false;
+            if (this.selection.Count == 0
+                && this.SelectionMode != ChipSelectionMode.None
+                && this.SelectedItem is { } pending
+                && this.IndexIn(this.items, pending) >= 0)
+            {
+                this.selection.Add(pending);
+                adopted = true;
+            }
+
             this.ApplyLayout();
             this.RefreshChips();
 
-            if (pruned > 0)
+            if (pruned > 0 || adopted)
                 this.AfterSelectionChanged();
         }
         finally

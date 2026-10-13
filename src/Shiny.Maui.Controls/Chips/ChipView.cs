@@ -39,6 +39,9 @@ class ChipView : ContentView
 
     View? custom;
 
+    // The template's labels that take the chip's ink. See SetCustomContent.
+    readonly List<Label> inked = new();
+
     public ChipView()
     {
         this.check = new MotionIconView
@@ -171,6 +174,7 @@ class ChipView : ContentView
             this.row.Remove(this.custom);
             this.custom = null;
         }
+        this.inked.Clear();
 
         if (content is null)
         {
@@ -181,7 +185,43 @@ class ChipView : ContentView
         // The row still carries the check and the remove button, so the template replaces the label only.
         this.label.IsVisible = false;
         this.custom = content;
+
+        // The chip's own label is the one the selected ink is painted on, and it is hidden now - so the
+        // template's labels take the ink instead, or a selected chip's text keeps the unselected colour
+        // on the selected fill. Decided here, before this chip has painted anything onto them: a label
+        // that sets its own TextColor (locally or through its own Style) keeps it. An app-wide implicit
+        // Label style does not count - it is how every label looks, not a choice this template made.
+        CollectInkedLabels(content, this.inked);
+
         this.row.Insert(1, content);
+    }
+
+
+    static void CollectInkedLabels(IVisualTreeElement element, List<Label> into)
+    {
+        if (element is Label label && !SetsOwnInk(label))
+            into.Add(label);
+
+        foreach (var child in element.GetVisualChildren())
+            CollectInkedLabels(child, into);
+    }
+
+
+    static bool SetsOwnInk(Label label)
+    {
+        if (LocalValue.Has(label, Label.TextColorProperty))
+            return true;
+
+        for (var style = label.Style; style is not null; style = style.BasedOn)
+        {
+            foreach (var setter in style.Setters)
+            {
+                if (setter.Property == Label.TextColorProperty)
+                    return true;
+            }
+        }
+
+        return false;
     }
 
 
@@ -276,6 +316,8 @@ class ChipView : ContentView
         var color = explicitInk ?? (fill is Color surface ? PillView.GetContrastTextColor(surface) : null);
 
         ThemeProbe.Tint(this.label, Label.TextColorProperty, color, token);
+        foreach (var templated in this.inked)
+            ThemeProbe.Tint(templated, Label.TextColorProperty, color, token);
         ThemeProbe.Tint(this.check, MotionIconView.ColorProperty, color, token);
         ThemeProbe.Tint(this.removeIcon, MotionIconView.ColorProperty, color, token);
     }

@@ -79,7 +79,7 @@ At `MaxSelectionCount` a tap on an unselected chip does **nothing**. The oldest 
 
 > On Blazor, `SelectedItem` cannot express "nothing selected" for a **value type** — `default(TItem)` is a perfectly good item. Bind `SelectedItems`, or make the type nullable (`ChipGroup<int?>`).
 
-Anything selected that the source no longer offers is dropped: a selection with no chip to show for it is one the user cannot see and cannot undo.
+Anything selected that the source no longer offers is dropped: a selection with no chip to show for it is one the user cannot see and cannot undo. The reverse is kept: a `SelectedItem` that arrives before `ItemsSource` (XAML attribute order, or a view model that picks a default while building its list) is shown as soon as the items contain it.
 
 ## What a chip shows
 
@@ -97,6 +97,8 @@ Unset, a chip shows the item's `ToString()`. For anything richer:
 `ItemDisplayBinding` is a binding rather than a property name looked up by reflection: the path is compiled, so it survives trimming, and a converter or a `StringFormat` comes along for free. It wins over `DisplayMemberPath` when both are set. In a full-trim or NativeAOT app use `ItemDisplayBinding` — `DisplayMemberPath` reads a property of your model by name, which the trimmer cannot see.
 
 `ItemTemplate` (MAUI) and `ChipContent` (Blazor) replace a chip's **label**. The selection check and the remove affordance are never part of the template: every chip keeps the same state and the same way out, however it is drawn.
+
+On MAUI the chip's ink (`ChipTextColor` / `SelectedChipTextColor`, or the theme's on-colour) is painted onto every `Label` in the template, so a selected chip's template text follows the selection like the built-in label does. A `Label` that sets `TextColor` itself — a local value or its own `Style` — keeps it; an app-wide implicit `Label` style does not count. A `TextColor` *binding* on a template label is overwritten by the ink, so set the colour locally or through the label's `Style` if you want to own it. On Blazor the template inherits the chip's CSS `color`.
 
 ```xml
 <shiny:ChipGroup ItemsSource="{Binding Teams}" SelectionMode="Multiple">

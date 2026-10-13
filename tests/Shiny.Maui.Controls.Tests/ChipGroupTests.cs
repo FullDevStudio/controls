@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using Microsoft.Maui.Controls;
+using Microsoft.Maui.Graphics;
 using Shouldly;
 using Xunit;
 
@@ -417,5 +418,178 @@ public class ChipGroupTests
 
         group.SelectedItems!.Count.ShouldBe(0);
         group.SelectedItem.ShouldBeNull();
+    }
+
+
+    // ---------------------------------------------------------------------------------------------
+    // Arrival order (#28)
+    // ---------------------------------------------------------------------------------------------
+
+    class Model
+    {
+        public ObservableCollection<string> Items { get; } = new(["First", "Second", "Third"]);
+        public object? Selected { get; set; } = "Second";
+    }
+
+
+    /// <summary>
+    /// SelectedItem was refused for not being in a source that did not exist yet, and nothing looked
+    /// at it again when the items arrived: the group showed no selection while SelectedItem - and the
+    /// view model bound to it - still held one.
+    /// </summary>
+    [Fact]
+    public void ASelectedItemThatArrivesBeforeTheItemsIsShownOnceTheyDo()
+    {
+        var group = new ChipGroup { SelectionMode = ChipSelectionMode.Single };
+        group.SetBinding(ChipGroup.SelectedItemProperty, new Binding(nameof(Model.Selected), BindingMode.TwoWay));
+        group.SetBinding(ChipGroup.ItemsSourceProperty, nameof(Model.Items));
+
+        var model = new Model();
+        group.BindingContext = model;
+
+        group.SelectedItem.ShouldBe("Second");
+        group.IsSelected("Second").ShouldBeTrue();
+        group.Chips[1].IsSelected.ShouldBeTrue();
+        group.SelectedItems!.Cast<object>().ShouldBe(["Second"]);
+        model.Selected.ShouldBe("Second");
+    }
+
+
+    [Fact]
+    public void ASelectedItemSetFirstInCodeIsShownWhenTheItemsArrive()
+    {
+        var group = new ChipGroup { SelectionMode = ChipSelectionMode.Multiple, SelectedItem = "b" };
+
+        group.ItemsSource = new[] { "a", "b", "c" };
+
+        group.IsSelected("b").ShouldBeTrue();
+    }
+
+
+    [Fact]
+    public void AnEarlySelectedItemTheItemsDoNotContainSelectsNothing()
+    {
+        var group = new ChipGroup { SelectionMode = ChipSelectionMode.Single, SelectedItem = "z" };
+
+        group.ItemsSource = new[] { "a", "b", "c" };
+
+        group.SelectedItems!.Count.ShouldBe(0);
+        group.Chips.Any(x => x.IsSelected).ShouldBeFalse();
+    }
+
+
+    // ---------------------------------------------------------------------------------------------
+    // ItemTemplate ink (#30)
+    // ---------------------------------------------------------------------------------------------
+
+    static ChipGroup Templated(Func<object> content)
+        => new()
+        {
+            SelectionMode = ChipSelectionMode.Single,
+            ChipTextColor = Colors.Blue,
+            SelectedChipTextColor = Colors.Red,
+            ItemTemplate = new DataTemplate(content),
+            ItemsSource = new[] { "one", "two" }
+        };
+
+
+    /// <summary>
+    /// The selected ink was painted on the chip's own label only - which a template hides - so the
+    /// selected chip's template text kept the unselected colour on the selected fill.
+    /// </summary>
+    [Fact]
+    public void ATemplatesLabelTakesTheSelectedInk()
+    {
+        var group = Templated(() =>
+        {
+            var label = new Label();
+            label.SetBinding(Label.TextProperty, ".");
+            return label;
+        });
+
+        group.SelectedItem = "one";
+
+        ((Label)TemplateRoot(group, 0)).TextColor.ShouldBe(Colors.Red);
+        ((Label)TemplateRoot(group, 1)).TextColor.ShouldBe(Colors.Blue);
+
+        group.SelectedItem = "two";
+
+        ((Label)TemplateRoot(group, 0)).TextColor.ShouldBe(Colors.Blue);
+        ((Label)TemplateRoot(group, 1)).TextColor.ShouldBe(Colors.Red);
+    }
+
+
+    [Fact]
+    public void ALabelNestedInTheTemplateTakesTheInkToo()
+    {
+        var group = Templated(() => new HorizontalStackLayout { Children = { new Label { Text = "x" } } });
+
+        group.SelectedItem = "two";
+
+        NestedLabel(group, 1).TextColor.ShouldBe(Colors.Red);
+        NestedLabel(group, 0).TextColor.ShouldBe(Colors.Blue);
+    }
+
+
+    [Fact]
+    public void ALabelThatColoursItselfKeepsItsColour()
+    {
+        var group = Templated(() => new HorizontalStackLayout
+        {
+            Children = { new Label { Text = "x", TextColor = Colors.Green } }
+        });
+
+        group.SelectedItem = "one";
+
+        NestedLabel(group, 0).TextColor.ShouldBe(Colors.Green);
+        NestedLabel(group, 1).TextColor.ShouldBe(Colors.Green);
+    }
+
+
+    [Fact]
+    public void ALabelWhoseOwnStyleColoursItKeepsThatColour()
+    {
+        var style = new Style(typeof(Label));
+        style.Setters.Add(new Setter { Property = Label.TextColorProperty, Value = Colors.Green });
+
+        var group = Templated(() => new Label { Text = "x", Style = style });
+        group.SelectedItem = "one";
+
+        ((Label)TemplateRoot(group, 0)).TextColor.ShouldBe(Colors.Green);
+    }
+
+
+    /// <summary>An app-wide implicit Label style (the MAUI template ships one) is not the template's choice.</summary>
+    [Fact]
+    public void AnAppWideLabelStyleDoesNotStopTheInk()
+    {
+        var style = new Style(typeof(Label));
+        style.Setters.Add(new Setter { Property = Label.TextColorProperty, Value = Colors.Black });
+        Application.Current!.Resources.Add(style);
+
+        var group = Templated(() => new Label { Text = "x" });
+        _ = new ContentPage { Content = group };
+        group.SelectedItem = "one";
+
+        ((Label)TemplateRoot(group, 0)).TextColor.ShouldBe(Colors.Red);
+        ((Label)TemplateRoot(group, 1)).TextColor.ShouldBe(Colors.Blue);
+    }
+
+
+    static View TemplateRoot(ChipGroup group, int index)
+        => FindLabels(group.Chips[index]).First(x => !ReferenceEquals(x, group.Chips[index].Label));
+
+    static Label NestedLabel(ChipGroup group, int index) => (Label)TemplateRoot(group, index);
+
+    static IEnumerable<Label> FindLabels(IVisualTreeElement element)
+    {
+        if (element is Label label)
+            yield return label;
+
+        foreach (var child in element.GetVisualChildren())
+        {
+            foreach (var found in FindLabels(child))
+                yield return found;
+        }
     }
 }
