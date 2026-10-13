@@ -54,6 +54,8 @@ An empty string draws a dot, `null` draws nothing, and `ShinyNav.BadgeColor` (or
 
 A badged item that folds into the overflow menu keeps its badge on its menu row, and the overflow button itself draws a dot while anything behind it is badged — so a count never disappears just because the bar ran out of room.
 
+A title or subtitle too long for the room left between the item groups ends in "…" rather than running under the items.
+
 Everything MAUI already gives a `NavigationPage` is honoured rather than reinvented — `Page.Title`, `Page.ToolbarItems`, `SetHasBackButton`, `SetBackButtonTitle`, `SetTitleView`, `SetTitleIconImageSource`, `SetIconColor`, and `BarBackground`/`BarBackgroundColor`/`BarTextColor`. The one exception is `SetHasNavigationBar`: it is honoured as the *starting* value, but that property is the slot this page had to take over to hide the native bar, so the runtime switch is `ShinyNav.SetIsNavBarVisible(page, false)` (or `IsNavBarVisible` on the navigation page, for all of them at once).
 
 `LargeTitleDisplay="Collapsing"` gives the iOS-style oversized title that folds into the bar as the page scrolls — it finds the first `ScrollView` or `ItemsView` in the page on its own, and `ShinyNav.ScrollSource` names a different one. A single page opts out with `shiny:ShinyNav.LargeTitleDisplay="None"`.

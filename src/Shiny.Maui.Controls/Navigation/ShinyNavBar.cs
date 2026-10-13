@@ -37,7 +37,7 @@ public partial class ShinyNavBar : Grid
     readonly HorizontalStackLayout leadingHost;
     readonly HorizontalStackLayout trailingHost;
     readonly Grid titleHost;
-    readonly HorizontalStackLayout titleRow;
+    readonly Grid titleRow;
     readonly Image titleIconImage;
     readonly VerticalStackLayout titleStack;
     readonly Label titleLabel;
@@ -95,12 +95,24 @@ public partial class ShinyNavBar : Grid
             VerticalOptions = LayoutOptions.Center
         };
 
-        this.titleRow = new HorizontalStackLayout
+        // A Grid, not a HorizontalStackLayout: a horizontal stack measures its children with an
+        // unbounded width, so the labels never learned how much room they had and TailTruncation
+        // never kicked in - a long title ran on underneath the right-hand items. The star column
+        // hands the text whatever width the bar has left. Spacing is the icon's (see ApplyTitle),
+        // since a Grid keeps its column gap even when the Auto column is empty.
+        this.titleRow = new Grid
         {
-            Spacing = 8,
             VerticalOptions = LayoutOptions.Center,
-            Children = { this.titleIconImage, this.titleStack }
+            ColumnDefinitions =
+            {
+                new ColumnDefinition(GridLength.Auto),
+                new ColumnDefinition(GridLength.Star)
+            }
         };
+        Grid.SetColumn(this.titleIconImage, 0);
+        Grid.SetColumn(this.titleStack, 1);
+        this.titleRow.Children.Add(this.titleIconImage);
+        this.titleRow.Children.Add(this.titleStack);
 
         // A Grid rather than the row itself, so a TitleView can replace the row without the
         // alignment attached properties having to be re-applied to whatever the consumer handed over.
@@ -551,6 +563,7 @@ public partial class ShinyNavBar : Grid
 
         this.titleIconImage.Source = this.TitleIcon;
         this.titleIconImage.IsVisible = this.TitleIcon is not null;
+        this.titleRow.ColumnSpacing = this.TitleIcon is null ? 0 : 8;
 
         this.largeTitleLabel.Text = this.LargeTitle ?? this.Title ?? String.Empty;
         this.ApplyLargeTitle();

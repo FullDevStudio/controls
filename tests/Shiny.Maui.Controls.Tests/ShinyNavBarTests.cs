@@ -512,6 +512,42 @@ public class ShinyNavBarTests
 
 
     [Fact]
+    public void TheTitleTextGetsABoundedWidthSoItCanTruncate()
+    {
+        // Issue #18: a HorizontalStackLayout measures its children with an unbounded width, so the
+        // labels never truncated and a long title ran on under the right-hand items. The text has to
+        // sit in a star column, which is handed the width the bar has left.
+        var bar = Build();
+        bar.Title = "This line is much longer than the room left of the two items on the right";
+        bar.Subtitle = "a subtitle that is longer than the room as well";
+
+        var row = bar.TitleRow.ShouldBeOfType<Grid>();
+        var textHost = (View)bar.TitleLabel.Parent;
+        bar.SubtitleLabel.Parent.ShouldBe(textHost);
+        row.Children.ShouldContain(textHost);
+        row.ColumnDefinitions[Grid.GetColumn(textHost)].Width.IsStar.ShouldBeTrue();
+
+        bar.TitleLabel.LineBreakMode.ShouldBe(LineBreakMode.TailTruncation);
+        bar.SubtitleLabel.LineBreakMode.ShouldBe(LineBreakMode.TailTruncation);
+    }
+
+
+    [Fact]
+    public void TheTitleRowOnlySpacesForAnIcon()
+    {
+        var bar = Build();
+        bar.Title = "Inbox";
+        ((Grid)bar.TitleRow).ColumnSpacing.ShouldBe(0);
+
+        bar.TitleIcon = "inbox.png";
+        ((Grid)bar.TitleRow).ColumnSpacing.ShouldBe(8);
+
+        bar.TitleIcon = null;
+        ((Grid)bar.TitleRow).ColumnSpacing.ShouldBe(0);
+    }
+
+
+    [Fact]
     public void TheSubtitleIsHiddenWhenEmpty()
     {
         var bar = Build();
