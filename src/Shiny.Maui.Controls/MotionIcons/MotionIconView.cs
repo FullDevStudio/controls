@@ -111,6 +111,7 @@ public class MotionIconView : GraphicsView
     TaskCompletionSource? completion;
 
     bool loaded;
+    bool ticking;
     bool pendingAutoPlay;
     bool stopAtCycleEnd;
     bool suppressPlaybackFeedback;
@@ -307,7 +308,8 @@ public class MotionIconView : GraphicsView
         Invalidate();
     }
 
-    void OnLoadedInternal()
+    // Internal so tests can stand in for Loaded, which only a real handler raises.
+    internal void OnLoadedInternal()
     {
         loaded = true;
         Rebuild();
@@ -359,8 +361,9 @@ public class MotionIconView : GraphicsView
 
         player.Play();
 
-        // Subscribed after the player so the redraw sees the state the player just wrote.
-        ticker.Tick += OnTick;
+        // A hidden icon starts paused: IsPlaying still says it is playing, and it picks up from
+        // the first frame once it is shown.
+        SyncVisibility();
 
         SetPlaybackFlag(true);
         Invalidate();
@@ -375,8 +378,60 @@ public class MotionIconView : GraphicsView
             player = null;
         }
 
-        if (ticker is not null)
+        StopTicking();
+    }
+
+    /// <summary>
+    /// Pauses a hidden icon and resumes a visible one.
+    /// </summary>
+    /// <remarks>
+    /// MAUI raises no <c>Unloaded</c> for <c>IsVisible = false</c>, so without this a looping icon
+    /// that is merely hidden keeps redrawing and writing <see cref="Progress"/> every frame — and
+    /// keeps the shared ticker awake for nobody. Pausing rather than stopping keeps the position,
+    /// so showing the icon again carries on mid-cycle instead of restarting. Only the view's own
+    /// <see cref="VisualElement.IsVisible"/> is watched; a hidden ancestor does not change it.
+    /// </remarks>
+    void SyncVisibility()
+    {
+        if (player is null)
+            return;
+
+        if (IsVisible)
+        {
+            if (player.State is PlaybackState.Paused)
+                player.Resume();
+
+            // Subscribed after the player so the redraw sees the state the player just wrote.
+            if (!ticking && ticker is not null)
+            {
+                ticker.Tick += OnTick;
+                ticking = true;
+            }
+
+            Invalidate();
+        }
+        else
+        {
+            player.Pause();
+            StopTicking();
+        }
+    }
+
+    void StopTicking()
+    {
+        if (ticking && ticker is not null)
             ticker.Tick -= OnTick;
+
+        ticking = false;
+    }
+
+    /// <inheritdoc />
+    protected override void OnPropertyChanged(string? propertyName = null)
+    {
+        base.OnPropertyChanged(propertyName);
+
+        if (propertyName == IsVisibleProperty.PropertyName)
+            SyncVisibility();
     }
 
     void Detach()

@@ -258,8 +258,8 @@ public class PickerCell : CellBase
     {
         if (!string.IsNullOrEmpty(DisplayMember))
         {
-            var prop = item.GetType().GetProperty(DisplayMember);
-            return prop?.GetValue(item)?.ToString() ?? item.ToString() ?? string.Empty;
+            MemberPath.TryGetValue(item, DisplayMember, out var value);
+            return value?.ToString() ?? item.ToString() ?? string.Empty;
         }
         return item.ToString() ?? string.Empty;
     }
@@ -268,8 +268,8 @@ public class PickerCell : CellBase
     {
         if (!string.IsNullOrEmpty(SubDisplayMember))
         {
-            var prop = item.GetType().GetProperty(SubDisplayMember);
-            return prop?.GetValue(item)?.ToString() ?? string.Empty;
+            MemberPath.TryGetValue(item, SubDisplayMember, out var value);
+            return value?.ToString() ?? string.Empty;
         }
         return string.Empty;
     }

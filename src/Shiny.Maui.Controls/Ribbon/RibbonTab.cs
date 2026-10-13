@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 
@@ -27,7 +28,7 @@ public class RibbonTab : BindableObject
 
     void RaiseChanged() => this.Changed?.Invoke(this, EventArgs.Empty);
 
-    static BindableProperty Redraw(string name, Type returnType, object? defaultValue = null)
+    static BindableProperty Redraw(string name, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] Type returnType, object? defaultValue = null)
         => BindableProperty.Create(
             name, returnType, typeof(RibbonTab), defaultValue,
             propertyChanged: (b, _, _) => ((RibbonTab)b).RaiseChanged()

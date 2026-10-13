@@ -377,7 +377,7 @@ public partial class Tooltip : ContentView
         if (this.bubble is null)
         {
             this.bubble = new TooltipBubble();
-            this.bubble.SetBinding(BindableObject.BindingContextProperty, new Binding(nameof(this.BindingContext), source: this));
+            this.bubble.SetBinding(BindableObject.BindingContextProperty, static (Tooltip t) => t.BindingContext, source: this);
 
             var tap = new TapGestureRecognizer();
             tap.Tapped += this.OnBubbleTapped;

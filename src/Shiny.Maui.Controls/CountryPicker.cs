@@ -37,12 +37,12 @@ public class CountryPicker : ContentView
                     VerticalTextAlignment = TextAlignment.Center,
                     IsVisible = showFlags
                 }.WithFontSize(ShinyThemeKeys.Type.TitleLargeSize);
-                flag.SetBinding(Label.TextProperty, nameof(Country.FlagEmoji));
+                flag.SetBinding(Label.TextProperty, static (Country c) => c.FlagEmoji);
 
                 var name = new Label
                 {
                     VerticalTextAlignment = TextAlignment.Center}.WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
-                name.SetBinding(Label.TextProperty, nameof(Country.Name));
+                name.SetBinding(Label.TextProperty, static (Country c) => c.Name);
 
                 grid.Add(flag, 0, 0);
                 grid.Add(name, 1, 0);

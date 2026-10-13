@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using Microsoft.Maui.Controls.Shapes;
@@ -60,7 +61,7 @@ public class OfficeBackstage : ContentView
     OfficeShellOptions? observedOptions;
     bool syncingOptions;
 
-    static BindableProperty Prop(string name, Type type, object? value, Action<OfficeBackstage>? changed, BindingMode mode = BindingMode.OneWay)
+    static BindableProperty Prop(string name, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] Type type, object? value, Action<OfficeBackstage>? changed, BindingMode mode = BindingMode.OneWay)
         => BindableProperty.Create(name, type, typeof(OfficeBackstage), value, mode,
             propertyChanged: changed is null ? null : (b, _, _) => { if (((OfficeBackstage)b).root is not null) changed((OfficeBackstage)b); });
 

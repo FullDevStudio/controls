@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Shiny.Maui.Controls;
 
 public partial class YogaLayout
@@ -123,7 +125,7 @@ public partial class YogaLayout
     public static readonly BindableProperty MaxWidthProperty = Attached("MaxWidth", typeof(YogaValue), YogaValue.Undefined);
     public static readonly BindableProperty MaxHeightProperty = Attached("MaxHeight", typeof(YogaValue), YogaValue.Undefined);
 
-    static BindableProperty Attached(string name, Type type, object defaultValue)
+    static BindableProperty Attached(string name, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] Type type, object defaultValue)
         => BindableProperty.CreateAttached(name, type, typeof(YogaLayout), defaultValue, propertyChanged: OnChildPropertyChanged);
 
     static void OnChildPropertyChanged(BindableObject bindable, object oldValue, object newValue)

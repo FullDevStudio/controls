@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Shiny.Controls.Office.Shell;
 using Shiny.Maui.Controls.Themes;
 
@@ -43,7 +44,7 @@ public class OfficeRuler : GraphicsView, IDrawable
     Color paper = Colors.White;
     Color accent = Color.FromArgb("#185ABD");
 
-    static BindableProperty Redraw(string name, Type type, object? value, BindingMode mode = BindingMode.OneWay)
+    static BindableProperty Redraw(string name, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] Type type, object? value, BindingMode mode = BindingMode.OneWay)
         => BindableProperty.Create(name, type, typeof(OfficeRuler), value, mode, propertyChanged: (b, _, _) => ((OfficeRuler)b).Sync());
 
     public static readonly BindableProperty OrientationProperty = Redraw(nameof(Orientation), typeof(OfficeRulerOrientation), OfficeRulerOrientation.Horizontal);

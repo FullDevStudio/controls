@@ -268,6 +268,10 @@ static unsafe class QuickEntryPlatform
         Justification = "The GTK4 MAUI head is a plain net10.0 app that is not trimmed, and a missing Handle property degrades to an undecorated-only popup rather than failing.")]
     internal static IntPtr GetNativeHandleForGlow(object? platformWindow) => GetNativeHandle(platformWindow);
 
+    // The GTK window type belongs to the app's GTK4 head, which this package does not reference, so
+    // Handle can only be found by reflection. The head reads the same property itself, so it survives.
+    [UnconditionalSuppressMessage("Trimming", "IL2075",
+        Justification = "Handle is public API of the GTK4 head's window and is used by the head itself.")]
     static IntPtr GetNativeHandle(object? platformWindow)
     {
         if (platformWindow == null)

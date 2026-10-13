@@ -98,14 +98,14 @@ public class AddressEntry : ContentView
                     MaxLines = 1,
                     Padding = new Thickness(8, 6)
                 };
-                label.SetBinding(Label.TextProperty, nameof(Address.ShortDisplay));
+                label.SetBinding(Label.TextProperty, static (Address a) => a.ShortDisplay);
                 return label;
             }),
             HorizontalOptions = LayoutOptions.Fill
         };
         autoComplete.SetBinding(
             AutoCompleteEntry.SearchCommandProperty,
-            new Binding(nameof(InternalSearchCommand), source: this)
+            static (AddressEntry e) => e.InternalSearchCommand, source: this
         );
         autoComplete.ItemSelected += OnItemSelected;
 

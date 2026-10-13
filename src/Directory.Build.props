@@ -1,0 +1,18 @@
+<Project>
+    <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+    <PropertyGroup>
+        <!--
+            MAUI's build targets switch the trim analyzer OFF for every project unless TrimMode=full,
+            so a MAUI library marked IsAotCompatible was never analysed: its string-path bindings only
+            surfaced as warnings inside a consumer's full-trim publish (issue #33). Opting out of that
+            lets IsAotCompatible/IsTrimmable turn the analyzer back on for the packages, and the
+            warnings that matter fail the build here rather than in someone else's app.
+
+            Scoped to src/ on purpose: the samples use string bindings in their own pages and would
+            light up the same way.
+        -->
+        <_MauiDoNotConfigureTrimAnalyzer>true</_MauiDoNotConfigureTrimAnalyzer>
+        <WarningsAsErrors>$(WarningsAsErrors);IL2026;IL2046;IL2050;IL2055;IL2057;IL2060;IL2062;IL2067;IL2068;IL2069;IL2070;IL2072;IL2075;IL2077;IL2080;IL2087;IL2090;IL2091;IL2092;IL2093;IL2094;IL2095;IL2111;IL3050;IL3051</WarningsAsErrors>
+    </PropertyGroup>
+</Project>

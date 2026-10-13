@@ -73,7 +73,7 @@ public class ButtonCell : CellBase
             HorizontalTextAlignment = TextAlignment.Center,
             HorizontalOptions = LayoutOptions.Fill
         };
-        buttonLabel.SetBinding(Label.TextProperty, new Binding(nameof(Title), source: this));
+        buttonLabel.SetBinding(Label.TextProperty, static (ButtonCell c) => c.Title, source: this);
 
         Content = buttonLabel;
     }

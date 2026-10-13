@@ -612,9 +612,8 @@ public class AutoCompleteEntry : ContentView
 
         if (!string.IsNullOrEmpty(TextMemberPath))
         {
-            var prop = item.GetType().GetProperty(TextMemberPath);
-            if (prop != null)
-                return prop.GetValue(item)?.ToString() ?? string.Empty;
+            if (MemberPath.TryGetValue(item, TextMemberPath, out var value))
+                return value?.ToString() ?? string.Empty;
         }
 
         return item.ToString() ?? string.Empty;

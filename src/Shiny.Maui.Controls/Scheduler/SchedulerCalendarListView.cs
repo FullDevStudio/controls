@@ -191,7 +191,7 @@ public class SchedulerCalendarListView : ContentView
             GroupHeaderTemplate = new DataTemplate(() =>
             {
                 var cv = new ContentView();
-                cv.SetBinding(ContentView.BindingContextProperty, ".");
+                cv.SetBinding(ContentView.BindingContextProperty, static (object o) => o);
                 cv.ControlTemplate = new ControlTemplate(() =>
                 {
                     var presenter = new ContentPresenter();

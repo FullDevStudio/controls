@@ -57,7 +57,7 @@ public class FontSizePickerButton : ContentView
             HorizontalOptions = LayoutOptions.Fill,
             Margin = new Thickness(12, 0, 12, 12)
         }.Neutralize().WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
-        doneButton.SetBinding(Button.TextProperty, new Binding(nameof(DoneText), source: this));
+        doneButton.SetBinding(Button.TextProperty, static (FontSizePickerButton b) => b.DoneText, source: this);
         doneButton.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnPrimary);
         doneButton.SetDynamicResource(Button.BackgroundColorProperty, ShinyThemeKeys.Color.Primary);
         doneButton.Clicked += (_, _) => Close();

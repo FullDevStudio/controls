@@ -32,7 +32,7 @@ A text input with debounced search, dropdown suggestions, busy indicator, and cu
 | ItemsSource | IList | null | Suggestion items |
 | SelectedItem | object? | null | Currently selected item (TwoWay) |
 | SearchCommand | ICommand / EventCallback\<string\> | null | Remote search command |
-| TextMemberPath | string? | null | Property name to display from items |
+| TextMemberPath | string? | null | Property name to display from items (read by reflection on MAUI — under full trimming leave it unset and override the item's `ToString()`) |
 | ItemTemplate | DataTemplate / RenderFragment\<object\> | null | Custom dropdown item template |
 | IsBusy | bool | false | Show/hide the loading spinner (TwoWay) |
 | DebounceInterval | int | 300 | Debounce delay (ms) |

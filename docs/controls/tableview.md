@@ -46,6 +46,8 @@ changing together re-render once.
 | SimpleCheckCell | Checkmark indicator |
 | CustomCell | Custom view content with drag-reorder support |
 
+`PickerCell` and `TextPickerCell` show a property of complex items through `DisplayMember` (and `SubDisplayMember` on `PickerCell`). Those are read by reflection, so in a full-trim or NativeAOT app leave them unset and override the item's `ToString()` instead.
+
 **EntryCell input features** — `EntryCell` shares `TextEntry`'s input behaviour without any of its chrome (no tools, no floating label, no hint — the cell already has those):
 
 ```xml
@@ -75,6 +77,10 @@ changing together re-render once.
 ```xml
 <shiny:TableView ItemsSource="{Binding Items}" ItemTemplate="{StaticResource SectionTemplate}" />
 ```
+
+Each generated section gets its item as its `BindingContext`, and so does everything inside it: its
+title, fixed cells declared in the template, and its `HeaderView`/`FooterView`. They keep the item when
+the TableView's own `BindingContext` changes.
 
 **Drag to reorder** - `UseDragSort="True"` puts a drag handle on every row in a section. Dragging a
 handle lifts the row under the finger, draws an insertion line at the drop position, and auto-scrolls

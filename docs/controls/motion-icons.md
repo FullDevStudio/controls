@@ -41,6 +41,7 @@
 - The two hosts run the *same* spec through different machinery: on MAUI it compiles to a `KeyframeScene` driven by the [Keyframe](keyframe.md) engine's `Player`, so motion icons and hand-written timelines share one animation engine, one clock per window and one set of easing curves. On Blazor it compiles to `@keyframes` once and the browser composites it, so no C# runs per frame and the animation keeps going while WebAssembly is busy.
 - Because nothing touches a platform SDK, the MAUI side works on every head — including AppKit and GTK4.
 - Playback never starts before the view is loaded, so an implicit `<Style TargetType="MotionIconView">` that sets `IsPlaying` cannot reach for a dispatcher from inside a constructor.
+- A hidden icon does not animate. Setting `IsVisible="False"` on a playing `MotionIconView` pauses it — no redraws, no `Progress` writes, and the shared timer sleeps if nothing else is moving — and showing it again resumes mid-cycle. `IsPlaying` stays `true` throughout, so toggling one icon per state by visibility is cheap. Only the view's own `IsVisible` counts; hiding a parent layout does not pause it. On Blazor a hidden element runs no CSS animation anyway.
 - Unset `Color` follows the theme pack's on-surface token via `SetDynamicResource`, so icons restyle with a live `SetTheme`.
 - Every generic preset works on artwork the library has never seen; only `Draw` needs to know the parts, so it can stagger them.
 - `prefers-reduced-motion` is honoured on the web: the icon renders and still responds, it just holds its resting pose.

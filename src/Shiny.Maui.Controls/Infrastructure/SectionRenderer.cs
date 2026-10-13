@@ -16,6 +16,13 @@ static class SectionRenderer
 
         var sectionLayout = new VerticalStackLayout();
 
+        // A section the TableView's ItemTemplate generated carries its item as BindingContext, but the
+        // layout inherits the TableView's once it is added under it - and hands that down to every cell
+        // and header/footer view in it, so a fixed cell in the template bound to the page's view model
+        // instead of the item. Pinned, so the layout passes the item down instead.
+        if (parentTableView.IsGeneratedSection(section))
+            sectionLayout.BindingContext = section.BindingContext;
+
         // Header
         RenderHeader(sectionLayout, section, parentTableView);
 

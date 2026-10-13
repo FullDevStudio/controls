@@ -270,7 +270,7 @@ public class ShinyControlConfiguration(IServiceCollection services)
     /// to build the request, so headers, cookies, a custom handler and certificate pinning are all
     /// yours.
     /// </summary>
-    public ShinyControlConfiguration SetCustomImageDownloader<T>() where T : class, IImageDownloader
+    public ShinyControlConfiguration SetCustomImageDownloader<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>() where T : class, IImageDownloader
     {
         services.AddSingleton<IImageDownloader, T>();
         return this;
@@ -280,7 +280,7 @@ public class ShinyControlConfiguration(IServiceCollection services)
     /// Replace the whole image pipeline - caching included. Prefer
     /// <see cref="SetCustomImageDownloader{T}"/> unless you genuinely need your own cache.
     /// </summary>
-    public ShinyControlConfiguration SetCustomImageService<T>() where T : class, IImageService
+    public ShinyControlConfiguration SetCustomImageService<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>() where T : class, IImageService
     {
         services.AddSingleton<IImageService, T>();
         return this;
@@ -300,7 +300,7 @@ public class ShinyControlConfiguration(IServiceCollection services)
     /// <summary>
     /// Replace the default <see cref="IDialogService"/> implementation with your own.
     /// </summary>
-    public ShinyControlConfiguration SetCustomDialogs<T>() where T : class, IDialogService
+    public ShinyControlConfiguration SetCustomDialogs<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>() where T : class, IDialogService
     {
         services.AddSingleton<IDialogService, T>();
         return this;
@@ -311,7 +311,7 @@ public class ShinyControlConfiguration(IServiceCollection services)
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <returns></returns>
-    public ShinyControlConfiguration SetCustomFeedback<T>() where T : class, IFeedbackService
+    public ShinyControlConfiguration SetCustomFeedback<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>() where T : class, IFeedbackService
     {
         services.TryAddSingleton<IFeedbackService, T>();
         return this;
@@ -322,9 +322,9 @@ public class ShinyControlConfiguration(IServiceCollection services)
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <returns></returns>
-    public ShinyControlConfiguration SetCustomToaster<T>() where T : class, IToaster
+    public ShinyControlConfiguration SetCustomToaster<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>() where T : class, IToaster
     {
-        services.TryAddSingleton<IToaster, Toaster>();
+        services.TryAddSingleton<IToaster, T>();
         return this;
     }
 

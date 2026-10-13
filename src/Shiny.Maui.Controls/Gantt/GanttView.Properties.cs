@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Collections;
 using System.Collections.ObjectModel;
 using System.Globalization;
@@ -14,19 +15,19 @@ public partial class GanttView
     // rebuild story stays legible: Model rebuilds the plan, Layout re-measures and re-places, and
     // Paint just invalidates the drawables. Getting that wrong is how a control ends up rebuilding
     // its entire task graph because someone changed a grid line colour.
-    static BindableProperty Model<T>(string name, T? defaultValue = default) =>
+    static BindableProperty Model<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(string name, T? defaultValue = default) =>
         Declare(name, defaultValue, static v => v.RebuildModel());
 
-    static BindableProperty Layout<T>(string name, T? defaultValue = default) =>
+    static BindableProperty Layout<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(string name, T? defaultValue = default) =>
         Declare(name, defaultValue, static v => v.RelayoutTimeline());
 
-    static BindableProperty Paint<T>(string name, T? defaultValue = default) =>
+    static BindableProperty Paint<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(string name, T? defaultValue = default) =>
         Declare(name, defaultValue, static v => v.Repaint());
 
-    static BindableProperty Inert<T>(string name, T? defaultValue = default) =>
+    static BindableProperty Inert<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(string name, T? defaultValue = default) =>
         Declare<T>(name, defaultValue, null);
 
-    static BindableProperty Declare<T>(string name, T? defaultValue, Action<GanttView>? changed) =>
+    static BindableProperty Declare<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(string name, T? defaultValue, Action<GanttView>? changed) =>
         BindableProperty.Create(
             name,
             typeof(T),

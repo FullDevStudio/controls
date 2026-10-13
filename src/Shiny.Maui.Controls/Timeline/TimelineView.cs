@@ -194,7 +194,7 @@ public partial class TimelineView : ContentView
         if (template is null)
         {
             var label = new Label { VerticalOptions = LayoutOptions.Start };
-            label.SetBinding(Label.TextProperty, ".");
+            label.SetBinding(Label.TextProperty, static (object o) => o);
             label.BindingContext = item;
             return label;
         }

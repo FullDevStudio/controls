@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Windows.Input;
 using Shiny.Maui.Controls.Infrastructure;
 
@@ -5,7 +6,7 @@ namespace Shiny.Maui.Controls.Ribbons;
 
 public partial class Ribbon
 {
-    static BindableProperty Redraw(string name, Type returnType, object? defaultValue = null)
+    static BindableProperty Redraw(string name, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] Type returnType, object? defaultValue = null)
         => BindableProperty.Create(
             name, returnType, typeof(Ribbon), defaultValue,
             // Guarded: MAUI applies an implicit Style from StyleableElement's own constructor, before

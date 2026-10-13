@@ -169,7 +169,7 @@ public partial class ChipGroup : ContentView
             // the list for no gain.
             this.ApplyDisplayBinding(
                 this.ItemDisplayBinding
-                ?? (String.IsNullOrWhiteSpace(this.DisplayMemberPath) ? null : new Binding(this.DisplayMemberPath))
+                ?? (String.IsNullOrWhiteSpace(this.DisplayMemberPath) ? null : MemberPath.Binding(this.DisplayMemberPath))
             );
 
             foreach (var item in this.items)

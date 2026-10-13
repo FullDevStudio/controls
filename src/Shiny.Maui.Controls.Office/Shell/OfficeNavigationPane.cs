@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Maui.Controls.Shapes;
 using Shiny.Controls.Office.Icons;
 using Shiny.Controls.Office.Shell;
@@ -36,7 +37,7 @@ public class OfficeNavigationPane : ContentView
     readonly VerticalStackLayout resultRows;
     readonly HashSet<string> collapsed = new(StringComparer.Ordinal);
 
-    static BindableProperty Prop(string name, Type type, object? value, Action<OfficeNavigationPane> changed, BindingMode mode = BindingMode.OneWay)
+    static BindableProperty Prop(string name, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] Type type, object? value, Action<OfficeNavigationPane> changed, BindingMode mode = BindingMode.OneWay)
         => BindableProperty.Create(name, type, typeof(OfficeNavigationPane), value, mode,
             propertyChanged: (b, _, _) => { if (((OfficeNavigationPane)b).resultRows is not null) changed((OfficeNavigationPane)b); });
 

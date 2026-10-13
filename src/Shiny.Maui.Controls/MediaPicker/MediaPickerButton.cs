@@ -458,7 +458,7 @@ public class MediaPickerButton : ContentView
     DataTemplate BuildDefaultItemTemplate() => new(() =>
     {
         var image = new Image { Aspect = Aspect.AspectFill };
-        image.SetBinding(Image.SourceProperty, nameof(MediaPickerItem.Thumbnail));
+        image.SetBinding(Image.SourceProperty, static (MediaPickerItem i) => i.Thumbnail);
 
         var removeButton = new Button
         {

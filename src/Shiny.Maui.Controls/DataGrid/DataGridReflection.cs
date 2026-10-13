@@ -13,14 +13,19 @@ static class DataGridReflection
 {
     static readonly ConcurrentDictionary<(Type, string), PropertyInfo?> Cache = new();
 
+    // Not a GetOrAdd lambda: the type would reach GetProperty through a tuple field, which the
+    // analyzer reports separately (IL2080) and this method's suppression does not cover.
     [UnconditionalSuppressMessage("Trimming", "IL2070",
         Justification = "DataGrid binds to user model properties by name; set Column.ValueGetter for full-trim scenarios.")]
-    [UnconditionalSuppressMessage("Trimming", "IL2075",
-        Justification = "DataGrid binds to user model properties by name; set Column.ValueGetter for full-trim scenarios.")]
     static PropertyInfo? GetProperty(Type type, string name)
-        => Cache.GetOrAdd((type, name), key => key.Item1.GetProperty(
-            key.Item2,
-            BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase));
+    {
+        if (Cache.TryGetValue((type, name), out var cached))
+            return cached;
+
+        var pi = type.GetProperty(name, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+        Cache[(type, name)] = pi;
+        return pi;
+    }
 
     public static object? GetValue(object? item, string? propertyName)
     {

@@ -358,20 +358,19 @@ public partial class DataGrid
         }
 
         var caret = new Label { VerticalOptions = LayoutOptions.Center, WidthRequest = 18 }.WithFontSize(ShinyThemeKeys.Type.BodySmallSize);
-        caret.SetBinding(Label.TextProperty, nameof(DataGridGroupHeader.CaretGlyph));
+        caret.SetBinding(Label.TextProperty, static (DataGridGroupHeader h) => h.CaretGlyph);
         caret.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
 
         var text = new Label { FontAttributes = FontAttributes.Bold, VerticalOptions = LayoutOptions.Center };
-        text.SetBinding(Label.TextProperty, nameof(DataGridGroupHeader.Display));
+        text.SetBinding(Label.TextProperty, static (DataGridGroupHeader h) => h.Display);
         text.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurface);
 
         var layout = new HorizontalStackLayout { Spacing = 4, Padding = this.CellPadding, Children = { caret, text } };
 
         // Nested levels step in from their parent. The padding is the cell padding plus the indent, so
         // a level-0 header lines up with the cells exactly as it did before nesting existed.
-        layout.SetBinding(Microsoft.Maui.Controls.Layout.PaddingProperty, new Binding(
-            nameof(DataGridGroupHeader.Level),
-            converter: new DataGridGroupIndentConverter(this.CellPadding)));
+        layout.SetBinding(Microsoft.Maui.Controls.Layout.PaddingProperty, static (DataGridGroupHeader h) => h.Level,
+            converter: new DataGridGroupIndentConverter(this.CellPadding));
 
         // The group label spans every column, so it would slide out of view with the rest of the
         // content; pin it to the leading edge alongside the frozen cells.

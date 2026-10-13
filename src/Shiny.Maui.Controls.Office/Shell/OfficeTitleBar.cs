@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -89,7 +90,7 @@ public class OfficeTitleBar : ContentView
     public static readonly BindableProperty UndoCommandProperty = Create(nameof(UndoCommand), typeof(ICommand), null, null);
     public static readonly BindableProperty RedoCommandProperty = Create(nameof(RedoCommand), typeof(ICommand), null, null);
 
-    static BindableProperty Create(string name, Type type, object? defaultValue, Action<OfficeTitleBar, object?>? changed, BindingMode mode = BindingMode.OneWay)
+    static BindableProperty Create(string name, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] Type type, object? defaultValue, Action<OfficeTitleBar, object?>? changed, BindingMode mode = BindingMode.OneWay)
         => BindableProperty.Create(name, type, typeof(OfficeTitleBar), defaultValue, mode,
             propertyChanged: changed is null ? null : (b, _, n) => { if (((OfficeTitleBar)b).root is not null) changed((OfficeTitleBar)b, n); });
 

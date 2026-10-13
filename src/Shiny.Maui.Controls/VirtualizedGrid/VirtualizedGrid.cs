@@ -189,7 +189,7 @@ public class VirtualizedGrid : CollectionControlBase
         if (GroupHeaderTemplate is null)
         {
             var label = new Label { FontAttributes = FontAttributes.Bold };
-            label.SetBinding(Label.TextProperty, ".");
+            label.SetBinding(Label.TextProperty, static (object o) => o);
             label.BindingContext = groupKey;
             return label;
         }

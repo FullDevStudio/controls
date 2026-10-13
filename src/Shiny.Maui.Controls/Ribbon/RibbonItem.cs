@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Collections.ObjectModel;
 
 namespace Shiny.Maui.Controls.Ribbons;
@@ -33,8 +34,8 @@ public abstract class RibbonItem : BindableObject
     /// </summary>
     private protected static BindableProperty Redraw(
         string name,
-        Type returnType,
-        Type declaringType,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] Type returnType,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.PublicProperties)] Type declaringType,
         object? defaultValue = null
     )
         => BindableProperty.Create(

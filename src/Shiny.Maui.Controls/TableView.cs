@@ -385,6 +385,8 @@ public partial class TableView : ContentView
         return visible;
     }
 
+    internal bool IsGeneratedSection(TvTableSection section) => generatedSections.Contains(section);
+
     internal IReadOnlyList<TvTableSection> GetAllSections()
     {
         var staticSections = root.Sections;

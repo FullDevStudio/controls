@@ -211,7 +211,7 @@ public class DurationPickerCell : CellBase
         pickerGrid.Add(minuteUnit, 3);
 
         var doneButton = new Button { HorizontalOptions = LayoutOptions.Fill }.Neutralize();
-        doneButton.SetBinding(Button.TextProperty, new Binding(nameof(DoneText), source: this));
+        doneButton.SetBinding(Button.TextProperty, static (DurationPickerCell c) => c.DoneText, source: this);
         doneButton.Clicked += (_, _) =>
         {
             var hours = hourPicker.SelectedIndex >= 0 ? hourPicker.SelectedIndex : 0;
@@ -233,7 +233,7 @@ public class DurationPickerCell : CellBase
         {
             HorizontalOptions = LayoutOptions.Fill
         }.Neutralize();
-        cancelButton.SetBinding(Button.TextProperty, new Binding(nameof(CancelText), source: this));
+        cancelButton.SetBinding(Button.TextProperty, static (DurationPickerCell c) => c.CancelText, source: this);
         cancelButton.SetDynamicResource(Button.BackgroundColorProperty, ShinyThemeKeys.Color.SecondaryContainer);
         cancelButton.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnSecondaryContainer);
         cancelButton.Clicked += (_, _) => panel!.IsOpen = false;

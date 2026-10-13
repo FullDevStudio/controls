@@ -48,7 +48,7 @@ public class PickerPage : ContentPage
                 {
                     VerticalOptions = LayoutOptions.Center
                 }.WithFontSize(ShinyThemeKeys.Type.BodyLargeSize);
-                displayLabel.SetBinding(Label.TextProperty, nameof(PickerItemViewModel.DisplayText));
+                displayLabel.SetBinding(Label.TextProperty, static (PickerItemViewModel v) => v.DisplayText);
                 Grid.SetColumn(displayLabel, 0);
                 grid.Children.Add(displayLabel);
 
@@ -57,8 +57,8 @@ public class PickerPage : ContentPage
                     Opacity = 0.6,
                     VerticalOptions = LayoutOptions.Start
                 }.WithFontSize(ShinyThemeKeys.Type.BodySmallSize);
-                subLabel.SetBinding(Label.TextProperty, nameof(PickerItemViewModel.SubDisplayText));
-                subLabel.SetBinding(Label.IsVisibleProperty, nameof(PickerItemViewModel.HasSubText));
+                subLabel.SetBinding(Label.TextProperty, static (PickerItemViewModel v) => v.SubDisplayText);
+                subLabel.SetBinding(Label.IsVisibleProperty, static (PickerItemViewModel v) => v.HasSubText);
                 Grid.SetColumn(subLabel, 0);
                 Grid.SetRow(subLabel, 1);
                 grid.Children.Add(subLabel);
@@ -73,7 +73,7 @@ public class PickerPage : ContentPage
                     checkLabel.TextColor = accentColor;
                 else
                     checkLabel.SetBinding(Label.TextColorProperty, static (PickerCell c) => c.ThemeAccentColor, source: ownerCell);
-                checkLabel.SetBinding(Label.IsVisibleProperty, nameof(PickerItemViewModel.IsSelected));
+                checkLabel.SetBinding(Label.IsVisibleProperty, static (PickerItemViewModel v) => v.IsSelected);
                 Grid.SetColumn(checkLabel, 1);
                 Grid.SetRowSpan(checkLabel, 2);
                 grid.Children.Add(checkLabel);

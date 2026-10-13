@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
@@ -558,7 +559,7 @@ public partial class ImageEditor : IAsyncDisposable
     }
 
     /// <summary>The same guard for a call that returns something.</summary>
-    async ValueTask<T?> CallAsync<T>(string identifier, params object?[] args)
+    async ValueTask<T?> CallAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.PublicFields | DynamicallyAccessedMemberTypes.PublicProperties)] T>(string identifier, params object?[] args)
     {
         if (disposed || module is not { } target)
             return default;

@@ -94,7 +94,7 @@ Unset, a chip shows the item's `ToString()`. For anything richer:
 <ChipGroup ItemsSource="@teams" DisplaySelector="@(t => t.Name)" />
 ```
 
-`ItemDisplayBinding` is a binding rather than a property name looked up by reflection: the path is compiled, so it survives trimming, and a converter or a `StringFormat` comes along for free. It wins over `DisplayMemberPath` when both are set.
+`ItemDisplayBinding` is a binding rather than a property name looked up by reflection: the path is compiled, so it survives trimming, and a converter or a `StringFormat` comes along for free. It wins over `DisplayMemberPath` when both are set. In a full-trim or NativeAOT app use `ItemDisplayBinding` — `DisplayMemberPath` reads a property of your model by name, which the trimmer cannot see.
 
 `ItemTemplate` (MAUI) and `ChipContent` (Blazor) replace a chip's **label**. The selection check and the remove affordance are never part of the template: every chip keeps the same state and the same way out, however it is drawn.
 

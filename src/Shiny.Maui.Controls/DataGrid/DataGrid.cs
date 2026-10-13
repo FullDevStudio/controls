@@ -411,7 +411,7 @@ public partial class DataGrid : ContentView
         if (column.EditTemplate is not null)
         {
             var content = (View)column.EditTemplate.CreateContent();
-            content.SetBinding(BindableObject.BindingContextProperty, new Binding(nameof(DataGridRow.Data)));
+            content.SetBinding(BindableObject.BindingContextProperty, static (DataGridRow r) => r.Data);
             return content;
         }
 
@@ -1077,10 +1077,10 @@ public partial class DataGrid : ContentView
             Converter = this.selectionConverter,
             Bindings =
             {
-                new Binding(nameof(DataGridRow.IsSelected)),
-                new Binding(nameof(DataGridRow.Index)),
+                BindingBase.Create(static (DataGridRow r) => r.IsSelected),
+                BindingBase.Create(static (DataGridRow r) => r.Index),
                 // Unused by the converter: raised on a theme change so the background re-resolves.
-                new Binding(nameof(DataGridRow.BackgroundRevision))
+                BindingBase.Create(static (DataGridRow r) => r.BackgroundRevision)
             }
         });
 
@@ -1094,7 +1094,7 @@ public partial class DataGrid : ContentView
         if (this.HasMultiSelect)
         {
             var box = new CheckBox { HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center };
-            box.SetBinding(CheckBox.IsCheckedProperty, new Binding(nameof(DataGridRow.IsSelected), BindingMode.TwoWay));
+            box.SetBinding(CheckBox.IsCheckedProperty, static (DataGridRow r) => r.IsSelected, BindingMode.TwoWay);
             leading.Add(box);
         }
 
@@ -1159,7 +1159,7 @@ public partial class DataGrid : ContentView
         {
             var content = (View)column.CellTemplate.CreateContent();
             // The row's BindingContext is the DataGridRow wrapper; point the cell at the data item.
-            content.SetBinding(BindableObject.BindingContextProperty, new Binding(nameof(DataGridRow.Data)));
+            content.SetBinding(BindableObject.BindingContextProperty, static (DataGridRow r) => r.Data);
             return content;
         }
 
@@ -1184,7 +1184,7 @@ public partial class DataGrid : ContentView
             // Converter rather than the binding's own StringFormat: presets, prefix/suffix, the null
             // placeholder and a TextFormatter delegate all live in Column.FormatValue, and routing the
             // cell through it is what keeps the cell text identical to what search and export see.
-            cell.SetBinding(Label.TextProperty, new Binding(
+            cell.SetBinding(Label.TextProperty, MemberPath.Binding(
                 $"{nameof(DataGridRow.Data)}.{column.PropertyName}",
                 converter: new DataGridCellTextConverter(column)));
         }

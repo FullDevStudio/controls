@@ -132,7 +132,7 @@ sealed class DialogView : ContentView
                     MaxLength = this.config.MaxLength,
                     ReturnType = ReturnType.Done
                 };
-                entry.SetBinding(Entry.TextProperty, new Binding(nameof(DialogContext.PromptValue), BindingMode.TwoWay));
+                entry.SetBinding(Entry.TextProperty, static (DialogContext c) => c.PromptValue, BindingMode.TwoWay);
                 entry.Completed += (_, _) => this.OnConfirm();
                 stack.Add(entry);
             }

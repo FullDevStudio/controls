@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Collections;
 using System.Globalization;
 using System.Windows.Input;
@@ -12,19 +13,19 @@ public partial class KanbanView
     // rebuilds the visual tree from the board it already has, and Chrome only restyles what is
     // already there. Getting that wrong is how a control ends up re-bucketing a thousand cards
     // because someone changed a corner radius.
-    static BindableProperty Bucket<T>(string name, T? defaultValue = default) =>
+    static BindableProperty Bucket<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(string name, T? defaultValue = default) =>
         Declare(name, defaultValue, static v => v.RebuildBoard());
 
-    static BindableProperty Render<T>(string name, T? defaultValue = default) =>
+    static BindableProperty Render<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(string name, T? defaultValue = default) =>
         Declare(name, defaultValue, static v => v.RenderBoard());
 
-    static BindableProperty Chrome<T>(string name, T? defaultValue = default) =>
+    static BindableProperty Chrome<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(string name, T? defaultValue = default) =>
         Declare(name, defaultValue, static v => v.ApplyThemeChrome());
 
-    static BindableProperty Inert<T>(string name, T? defaultValue = default) =>
+    static BindableProperty Inert<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(string name, T? defaultValue = default) =>
         Declare<T>(name, defaultValue, null);
 
-    static BindableProperty Declare<T>(string name, T? defaultValue, Action<KanbanView>? changed) =>
+    static BindableProperty Declare<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(string name, T? defaultValue, Action<KanbanView>? changed) =>
         BindableProperty.Create(
             name,
             typeof(T),

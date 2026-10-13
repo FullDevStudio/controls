@@ -1,5 +1,6 @@
 using Microsoft.Maui.Controls;
 using Shiny.Controls.MotionIcons;
+using Shiny.Maui.Controls.MotionIcons;
 using Shouldly;
 using Xunit;
 
@@ -98,5 +99,61 @@ public class MotionIconPlaybackTests
         _ = new MotionIconView { Icon = "definitely-not-an-icon", Trigger = MotionTrigger.Loop, IsPlaying = true };
 
         TestDispatcherProvider.Instance.Timers.ShouldBeEmpty();
+    }
+
+    // The ticker's timer runs only while something is subscribed to it, so IsRunning is exactly
+    // "is any icon on this dispatcher still consuming frames". Nothing else in the suite loads an
+    // icon, and each test stops its own before returning so the next starts from an idle ticker.
+
+    [Fact]
+    public void AHiddenLoopingIconDoesNotConsumeFrames()
+    {
+        _ = new Application();
+
+        var view = new MotionIconView { Icon = "refresh", Trigger = MotionTrigger.Loop, IsVisible = false };
+        view.OnLoadedInternal();
+
+        // Still "playing" as far as bindings are concerned — it is paused, not stopped.
+        view.IsPlaying.ShouldBeTrue();
+        MotionTicker.For(view)!.IsRunning.ShouldBeFalse();
+
+        view.Stop();
+    }
+
+    [Fact]
+    public void HidingALoopingIconPausesItAndShowingItResumes()
+    {
+        _ = new Application();
+
+        var view = new MotionIconView { Icon = "refresh", Trigger = MotionTrigger.Loop };
+        view.OnLoadedInternal();
+
+        var ticker = MotionTicker.For(view)!;
+        ticker.IsRunning.ShouldBeTrue();
+
+        view.IsVisible = false;
+        ticker.IsRunning.ShouldBeFalse();
+        view.IsPlaying.ShouldBeTrue();
+
+        view.IsVisible = true;
+        ticker.IsRunning.ShouldBeTrue();
+
+        view.Stop();
+        ticker.IsRunning.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void StoppingAHiddenIconLeavesItStoppedWhenShown()
+    {
+        _ = new Application();
+
+        var view = new MotionIconView { Icon = "refresh", Trigger = MotionTrigger.Loop, IsVisible = false };
+        view.OnLoadedInternal();
+        view.Stop();
+
+        view.IsVisible = true;
+
+        view.IsPlaying.ShouldBeFalse();
+        MotionTicker.For(view)!.IsRunning.ShouldBeFalse();
     }
 }

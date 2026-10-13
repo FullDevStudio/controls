@@ -407,10 +407,10 @@ public partial class DataGrid
             Converter = this.frozenBackgroundConverter,
             Bindings =
             {
-                new Binding(nameof(DataGridRow.IsSelected)),
-                new Binding(nameof(DataGridRow.Index)),
+                BindingBase.Create(static (DataGridRow r) => r.IsSelected),
+                BindingBase.Create(static (DataGridRow r) => r.Index),
                 // Unused by the converter: raised on a theme change so the background re-resolves.
-                new Binding(nameof(DataGridRow.BackgroundRevision))
+                BindingBase.Create(static (DataGridRow r) => r.BackgroundRevision)
             }
         });
 }

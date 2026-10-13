@@ -51,22 +51,22 @@ public partial class ProgressLine : ContentView, IDisposable
         // Bound rather than pushed by a propertyChanged handler on each of the fifteen passthroughs:
         // one source of truth, and a property added to ProgressBar later cannot silently go unwired
         // on this side.
-        Forward(ProgressBar.ValueProperty, nameof(this.Value));
-        Forward(ProgressBar.MinimumProperty, nameof(this.Minimum));
-        Forward(ProgressBar.MaximumProperty, nameof(this.Maximum));
-        Forward(ProgressBar.IsIndeterminateProperty, nameof(this.IsIndeterminate));
-        Forward(ProgressBar.BarColorProperty, nameof(this.BarColor));
-        Forward(ProgressBar.TrackColorProperty, nameof(this.TrackColor));
-        Forward(ProgressBar.TrackHeightProperty, nameof(this.LineHeight));
-        Forward(ProgressBar.CornerRadiusProperty, nameof(this.CornerRadius));
-        Forward(ProgressBar.UseGradientProperty, nameof(this.UseGradient));
-        Forward(ProgressBar.AnimateProgressProperty, nameof(this.AnimateProgress));
-        Forward(ProgressBar.ProgressAnimationDurationProperty, nameof(this.ProgressAnimationDuration));
-        Forward(ProgressBar.ProgressAnimationEasingProperty, nameof(this.ProgressAnimationEasing));
-        Forward(ProgressBar.PulseEnabledProperty, nameof(this.PulseEnabled));
-        Forward(ProgressBar.PulseColorProperty, nameof(this.PulseColor));
-        Forward(ProgressBar.PulseLengthProperty, nameof(this.PulseLength));
-        Forward(ProgressBar.PulseSpeedProperty, nameof(this.PulseSpeed));
+        this.bar.SetBinding(ProgressBar.ValueProperty, static (ProgressLine l) => l.Value, source: this);
+        this.bar.SetBinding(ProgressBar.MinimumProperty, static (ProgressLine l) => l.Minimum, source: this);
+        this.bar.SetBinding(ProgressBar.MaximumProperty, static (ProgressLine l) => l.Maximum, source: this);
+        this.bar.SetBinding(ProgressBar.IsIndeterminateProperty, static (ProgressLine l) => l.IsIndeterminate, source: this);
+        this.bar.SetBinding(ProgressBar.BarColorProperty, static (ProgressLine l) => l.BarColor, source: this);
+        this.bar.SetBinding(ProgressBar.TrackColorProperty, static (ProgressLine l) => l.TrackColor, source: this);
+        this.bar.SetBinding(ProgressBar.TrackHeightProperty, static (ProgressLine l) => l.LineHeight, source: this);
+        this.bar.SetBinding(ProgressBar.CornerRadiusProperty, static (ProgressLine l) => l.CornerRadius, source: this);
+        this.bar.SetBinding(ProgressBar.UseGradientProperty, static (ProgressLine l) => l.UseGradient, source: this);
+        this.bar.SetBinding(ProgressBar.AnimateProgressProperty, static (ProgressLine l) => l.AnimateProgress, source: this);
+        this.bar.SetBinding(ProgressBar.ProgressAnimationDurationProperty, static (ProgressLine l) => l.ProgressAnimationDuration, source: this);
+        this.bar.SetBinding(ProgressBar.ProgressAnimationEasingProperty, static (ProgressLine l) => l.ProgressAnimationEasing, source: this);
+        this.bar.SetBinding(ProgressBar.PulseEnabledProperty, static (ProgressLine l) => l.PulseEnabled, source: this);
+        this.bar.SetBinding(ProgressBar.PulseColorProperty, static (ProgressLine l) => l.PulseColor, source: this);
+        this.bar.SetBinding(ProgressBar.PulseLengthProperty, static (ProgressLine l) => l.PulseLength, source: this);
+        this.bar.SetBinding(ProgressBar.PulseSpeedProperty, static (ProgressLine l) => l.PulseSpeed, source: this);
 
         this.Content = this.bar;
         this.HorizontalOptions = LayoutOptions.Fill;
@@ -78,9 +78,6 @@ public partial class ProgressLine : ContentView, IDisposable
         this.ApplyGradientColors();
 
         StyleGuard.MarkReady(this, typeof(ProgressLine));
-
-        void Forward(BindableProperty target, string source)
-            => this.bar.SetBinding(target, new Binding(source, source: this));
     }
 
 

@@ -148,7 +148,7 @@ public abstract class CollectionControlBase : View
         return new DataTemplate(() =>
         {
             var label = new Label();
-            label.SetBinding(Label.TextProperty, ".");
+            label.SetBinding(Label.TextProperty, static (object o) => o);
             return label;
         });
     }

@@ -562,13 +562,13 @@ public partial class DataGrid
             VerticalOptions = LayoutOptions.Center
         }.WithFontSize(ShinyThemeKeys.Type.TitleMediumSize);
         caret.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
-        caret.SetBinding(Label.TextProperty, nameof(DataGridRow.DetailCaretGlyph));
-        caret.SetBinding(VisualElement.IsVisibleProperty, nameof(DataGridRow.ShowDetailCaret));
+        caret.SetBinding(Label.TextProperty, static (DataGridRow r) => r.DetailCaretGlyph);
+        caret.SetBinding(VisualElement.IsVisibleProperty, static (DataGridRow r) => r.ShowDetailCaret);
 
         // The whole cell is the target, not just the glyph - a caret-sized hit box is a miss on a phone.
         var host = new Grid { MinimumHeightRequest = 44 };
         host.Add(caret);
-        host.Add(BuildBusySpinner(nameof(DataGridRow.IsLoadingDetail)));
+        host.Add(BuildBusySpinner(children: false));
         var tap = new TapGestureRecognizer();
         tap.Tapped += (s, _) =>
         {
@@ -583,9 +583,8 @@ public partial class DataGrid
     View WrapTreeCell(View cell)
     {
         var indent = new BoxView { BackgroundColor = Colors.Transparent, HeightRequest = 1 };
-        indent.SetBinding(VisualElement.WidthRequestProperty, new Binding(
-            nameof(DataGridRow.Level),
-            converter: new DataGridIndentConverter(this.TreeIndentSize)));
+        indent.SetBinding(VisualElement.WidthRequestProperty, static (DataGridRow r) => r.Level,
+            converter: new DataGridIndentConverter(this.TreeIndentSize));
 
         var caret = new Label
         {
@@ -594,12 +593,12 @@ public partial class DataGrid
             VerticalOptions = LayoutOptions.Center
         }.WithFontSize(ShinyThemeKeys.Type.TitleMediumSize);
         caret.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
-        caret.SetBinding(Label.TextProperty, nameof(DataGridRow.TreeCaretGlyph));
-        caret.SetBinding(VisualElement.IsVisibleProperty, nameof(DataGridRow.ShowTreeCaret));
+        caret.SetBinding(Label.TextProperty, static (DataGridRow r) => r.TreeCaretGlyph);
+        caret.SetBinding(VisualElement.IsVisibleProperty, static (DataGridRow r) => r.ShowTreeCaret);
 
         var caretHost = new Grid { WidthRequest = TreeCaretSize, MinimumHeightRequest = TreeCaretSize };
         caretHost.Add(caret);
-        caretHost.Add(BuildBusySpinner(nameof(DataGridRow.IsLoadingChildren)));
+        caretHost.Add(BuildBusySpinner(children: true));
         var tap = new TapGestureRecognizer();
         tap.Tapped += (s, _) =>
         {
@@ -628,7 +627,7 @@ public partial class DataGrid
     /// The spinner that takes the caret's place while that row's load runs - the caret *is* the
     /// button, so the progress belongs on it rather than somewhere else on the row.
     /// </summary>
-    static ActivityIndicator BuildBusySpinner(string busyPropertyName)
+    static ActivityIndicator BuildBusySpinner(bool children)
     {
         var spinner = new ActivityIndicator
         {
@@ -638,8 +637,18 @@ public partial class DataGrid
             VerticalOptions = LayoutOptions.Center
         };
         spinner.SetDynamicResource(ActivityIndicator.ColorProperty, ShinyThemeKeys.Color.Primary);
-        spinner.SetBinding(ActivityIndicator.IsRunningProperty, busyPropertyName);
-        spinner.SetBinding(VisualElement.IsVisibleProperty, busyPropertyName);
+        // Typed bindings need the lambda written at the call, so the two loads branch here rather
+        // than passing a property name in.
+        if (children)
+        {
+            spinner.SetBinding(ActivityIndicator.IsRunningProperty, static (DataGridRow r) => r.IsLoadingChildren);
+            spinner.SetBinding(VisualElement.IsVisibleProperty, static (DataGridRow r) => r.IsLoadingChildren);
+        }
+        else
+        {
+            spinner.SetBinding(ActivityIndicator.IsRunningProperty, static (DataGridRow r) => r.IsLoadingDetail);
+            spinner.SetBinding(VisualElement.IsVisibleProperty, static (DataGridRow r) => r.IsLoadingDetail);
+        }
         return spinner;
     }
 
@@ -650,7 +659,7 @@ public partial class DataGrid
         if (this.RowDetailLoadingTemplate is not null)
         {
             content = (View)this.RowDetailLoadingTemplate.CreateContent();
-            content.SetBinding(BindableObject.BindingContextProperty, new Binding(nameof(DataGridDetailRow.Data)));
+            content.SetBinding(BindableObject.BindingContextProperty, static (DataGridDetailRow r) => r.Data);
         }
         else
         {
@@ -680,7 +689,7 @@ public partial class DataGrid
             ? new Grid()
             : (View)this.RowDetailTemplate.CreateContent();
 
-        content.SetBinding(BindableObject.BindingContextProperty, new Binding(nameof(DataGridDetailRow.Data)));
+        content.SetBinding(BindableObject.BindingContextProperty, static (DataGridDetailRow r) => r.Data);
         return this.WrapDetailRow(content);
     }
 

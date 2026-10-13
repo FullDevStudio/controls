@@ -162,7 +162,7 @@ public partial class DataGrid
         {
             var content = (View)cell.CellTemplate.CreateContent();
             if (item is null)
-                content.SetBinding(BindableObject.BindingContextProperty, new Binding(nameof(DataGridSummaryRowItem.Context)));
+                content.SetBinding(BindableObject.BindingContextProperty, static (DataGridSummaryRowItem i) => i.Context);
             else
                 content.BindingContext = item.Context;
             return content;
@@ -189,7 +189,7 @@ public partial class DataGrid
         label.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
 
         if (item is null)
-            label.SetBinding(Label.TextProperty, new Binding(".", converter: new DataGridSummaryTextConverter(column)));
+            label.SetBinding(Label.TextProperty, static (DataGridSummaryRowItem i) => i, converter: new DataGridSummaryTextConverter(column));
         else
             label.Text = item.TextFor(column);
 

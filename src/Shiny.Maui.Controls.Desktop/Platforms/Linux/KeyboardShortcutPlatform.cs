@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using Shiny.Controls.Keyboard;
@@ -67,6 +68,10 @@ static unsafe class KeyboardShortcutPlatform
             dispatcher.Dispatch(action);
     }
 
+    // The GTK window type belongs to the app's GTK4 head, which this package does not reference, so
+    // Handle can only be found by reflection. The head reads the same property itself, so it survives.
+    [UnconditionalSuppressMessage("Trimming", "IL2075",
+        Justification = "Handle is public API of the GTK4 head's window and is used by the head itself.")]
     static IntPtr GetNativeHandle(object? platformWindow)
     {
         if (platformWindow == null)

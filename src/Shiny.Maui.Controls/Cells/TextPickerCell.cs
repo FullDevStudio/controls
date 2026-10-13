@@ -172,7 +172,7 @@ public class TextPickerCell : CellBase
 
         hiddenPicker.ItemsSource = ItemsSource;
         if (!string.IsNullOrEmpty(DisplayMember))
-            hiddenPicker.ItemDisplayBinding = new Binding(DisplayMember);
+            hiddenPicker.ItemDisplayBinding = MemberPath.Binding(DisplayMember);
 
         // Reassigning a Picker's ItemsSource resets its native selection to -1, and the items may
         // also have arrived after the selection was set (e.g. an async-loaded list, or a TableView
@@ -240,8 +240,8 @@ public class TextPickerCell : CellBase
         {
             if (!string.IsNullOrEmpty(DisplayMember))
             {
-                var prop = hiddenPicker.SelectedItem.GetType().GetProperty(DisplayMember);
-                valueLabel.Text = prop?.GetValue(hiddenPicker.SelectedItem)?.ToString() ?? hiddenPicker.SelectedItem.ToString();
+                MemberPath.TryGetValue(hiddenPicker.SelectedItem, DisplayMember, out var value);
+                valueLabel.Text = value?.ToString() ?? hiddenPicker.SelectedItem.ToString();
             }
             else
             {

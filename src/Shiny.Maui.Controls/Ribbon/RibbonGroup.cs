@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Windows.Input;
@@ -32,7 +33,7 @@ public class RibbonGroup : BindableObject
 
     void RaiseChanged() => this.Changed?.Invoke(this, EventArgs.Empty);
 
-    static BindableProperty Redraw(string name, Type returnType, object? defaultValue = null)
+    static BindableProperty Redraw(string name, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] Type returnType, object? defaultValue = null)
         => BindableProperty.Create(
             name, returnType, typeof(RibbonGroup), defaultValue,
             propertyChanged: (b, _, _) => ((RibbonGroup)b).RaiseChanged()
