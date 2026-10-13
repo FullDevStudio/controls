@@ -23,10 +23,10 @@ A PIN entry control with individually rendered cells that captures input through
 | CellSize | double | 50 | Width/height of each cell |
 | CellSpacing | double | 8 | Space between cells |
 | CellCornerRadius | double | 8 | Border corner radius |
-| CellBorderColor | Color? | null | Cell border color |
-| CellFocusedBorderColor | Color? | null | Border color for the active cell |
-| CellBackgroundColor | Color? | null | Cell fill color |
-| CellTextColor | Color? | null | Entered character color |
+| CellBorderColor | Color? | null | Cell border color; unset follows the theme's `outline` |
+| CellFocusedBorderColor | Color? | null | Border color for the active cell; unset uses `primary` (or `CellBorderColor` when only that is set) |
+| CellBackgroundColor | Color? | null | Cell fill color; unset follows `surface-container-low` |
+| CellTextColor | Color? | null | Entered character color; unset follows `on-surface` |
 | FontSize | double | 24 | Character font size |
 
 | UseFeedback | bool | Enable/disable feedback on digit entry (click) and completion (long press) (default: true) |

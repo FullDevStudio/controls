@@ -31,6 +31,11 @@ public class SecurityPin : ContentView
         hiddenEntry.TextChanged += OnHiddenEntryTextChanged;
         hiddenEntry.Completed += OnHiddenEntryCompleted;
 
+        // The active cell is drawn from IsFocused, so gaining or losing focus has to repaint - without
+        // it the cell kept its focused colours after focus moved on.
+        hiddenEntry.Focused += (_, _) => RefreshCells();
+        hiddenEntry.Unfocused += (_, _) => RefreshCells();
+
         cellsLayout = new HorizontalStackLayout
         {
             Spacing = DefaultCellSpacing,
@@ -250,13 +255,10 @@ public class SecurityPin : ContentView
         null,
         propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(SecurityPin), () =>
             {
-            var pin = (SecurityPin)b;
-            if (n is Color c)
-            {
+                var pin = (SecurityPin)b;
                 foreach (var label in pin.cellLabels)
-                    label.TextColor = c;
-            }
-        })
+                    ThemeProbe.Tint(label, Label.TextColorProperty, (Color?)n, ShinyThemeKeys.Color.OnSurface);
+            })
     );
     public Color? CellTextColor
     {
@@ -317,8 +319,7 @@ public class SecurityPin : ContentView
                 VerticalOptions = LayoutOptions.Center
             };
             label.SetTokenOrValue(Label.FontSizeProperty, FontSize, ShinyThemeKeys.Type.HeadlineSmallSize);
-            if (CellTextColor is Color textColor)
-                label.TextColor = textColor;
+            ThemeProbe.Tint(label, Label.TextColorProperty, CellTextColor, ShinyThemeKeys.Color.OnSurface);
 
             var border = new Border
             {
@@ -362,19 +363,24 @@ public class SecurityPin : ContentView
         }
     }
 
+    /// <remarks>
+    /// Every branch writes, colour or token. Leaving an unset colour unwritten drew no outline and no
+    /// fill at all - the cells were simply not there unless an app-wide implicit Border style happened
+    /// to stroke them - and a cell that had been focused kept its focused colour after focus moved on.
+    /// </remarks>
     void ApplyActiveCellStyle(Border border, int index)
     {
         var isCurrent = index == CurrentIndex && hiddenEntry.IsFocused;
 
-        if (isCurrent && CellFocusedBorderColor is Color focusedBorder)
-            border.Stroke = focusedBorder;
-        else if (CellBorderColor is Color normal)
-            border.Stroke = normal;
+        // The focused cell takes the primary colour unless the consumer coloured the cells themselves
+        // and said nothing about focus, in which case it keeps theirs - as it always has.
+        if (isCurrent && (CellFocusedBorderColor is not null || CellBorderColor is null))
+            ThemeBrush.Apply(border, Border.StrokeProperty, CellFocusedBorderColor, ShinyThemeKeys.Brush.Primary);
+        else
+            ThemeBrush.Apply(border, Border.StrokeProperty, CellBorderColor, ShinyThemeKeys.Brush.Outline);
 
-        if (isCurrent && CellFocusedBackgroundColor is Color focusedBg)
-            border.BackgroundColor = focusedBg;
-        else if (CellBackgroundColor is Color bg)
-            border.BackgroundColor = bg;
+        var fill = isCurrent ? CellFocusedBackgroundColor ?? CellBackgroundColor : CellBackgroundColor;
+        ThemeProbe.Tint(border, VisualElement.BackgroundColorProperty, fill, ShinyThemeKeys.Color.SurfaceContainerLow);
     }
 
     int CurrentIndex => Math.Min(Value?.Length ?? 0, cellBorders.Count - 1);
