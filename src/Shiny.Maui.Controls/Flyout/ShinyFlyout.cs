@@ -46,6 +46,22 @@ public static class ShinyFlyout
         public FlyoutPanelState? Start;
         public FlyoutPanelState? End;
 
+        /// <summary>
+        /// Every view installed from this host, so a view option changed after the fact reaches the
+        /// pages already shown and not only the next one. Weak: a popped page must still be collectable.
+        /// </summary>
+        public readonly List<WeakReference<FlyoutView>> Views = [];
+
+        public IEnumerable<FlyoutView> LiveViews()
+        {
+            this.Views.RemoveAll(x => !x.TryGetTarget(out _));
+            foreach (var reference in this.Views)
+            {
+                if (reference.TryGetTarget(out var view))
+                    yield return view;
+            }
+        }
+
         public FlyoutPanelState? For(FlyoutSide side) => side == FlyoutSide.Start ? this.Start : this.End;
 
         public void Set(FlyoutSide side, FlyoutPanelState state)
@@ -79,6 +95,78 @@ public static class ShinyFlyout
     public static DataTemplate? GetEndTemplate(BindableObject host) => (DataTemplate?)host.GetValue(EndTemplateProperty);
 
     public static void SetEndTemplate(BindableObject host, DataTemplate? value) => host.SetValue(EndTemplateProperty, value);
+
+
+    // The FlyoutView options, declared once on the host. Each is copied onto every view this host
+    // installs, and a later change reaches the views already installed. The defaults match
+    // FlyoutView's, so copying an unset one is the same as leaving it alone.
+
+    /// <inheritdoc cref="FlyoutView.PushMode"/>
+    public static readonly BindableProperty PushModeProperty = BindableProperty.CreateAttached(
+        "PushMode",
+        typeof(FlyoutPushMode),
+        typeof(ShinyFlyout),
+        FlyoutPushMode.Shift,
+        propertyChanged: (b, _, n) => ForEachView(b, v => v.PushMode = (FlyoutPushMode)n));
+
+    public static FlyoutPushMode GetPushMode(BindableObject host) => (FlyoutPushMode)host.GetValue(PushModeProperty);
+
+    public static void SetPushMode(BindableObject host, FlyoutPushMode value) => host.SetValue(PushModeProperty, value);
+
+    /// <inheritdoc cref="FlyoutView.ScrimColor"/>
+    public static readonly BindableProperty ScrimColorProperty = BindableProperty.CreateAttached(
+        "ScrimColor",
+        typeof(Color),
+        typeof(ShinyFlyout),
+        null,
+        propertyChanged: (b, _, n) => ForEachView(b, v => v.ScrimColor = (Color?)n));
+
+    public static Color? GetScrimColor(BindableObject host) => (Color?)host.GetValue(ScrimColorProperty);
+
+    public static void SetScrimColor(BindableObject host, Color? value) => host.SetValue(ScrimColorProperty, value);
+
+    /// <inheritdoc cref="FlyoutView.ScrimOpacity"/>
+    public static readonly BindableProperty ScrimOpacityProperty = BindableProperty.CreateAttached(
+        "ScrimOpacity",
+        typeof(double),
+        typeof(ShinyFlyout),
+        0.4,
+        propertyChanged: (b, _, n) => ForEachView(b, v => v.ScrimOpacity = (double)n));
+
+    public static double GetScrimOpacity(BindableObject host) => (double)host.GetValue(ScrimOpacityProperty);
+
+    public static void SetScrimOpacity(BindableObject host, double value) => host.SetValue(ScrimOpacityProperty, value);
+
+    /// <inheritdoc cref="FlyoutView.IsAnimationEnabled"/>
+    public static readonly BindableProperty IsAnimationEnabledProperty = BindableProperty.CreateAttached(
+        "IsAnimationEnabled",
+        typeof(bool),
+        typeof(ShinyFlyout),
+        true,
+        propertyChanged: (b, _, n) => ForEachView(b, v => v.IsAnimationEnabled = (bool)n));
+
+    public static bool GetIsAnimationEnabled(BindableObject host) => (bool)host.GetValue(IsAnimationEnabledProperty);
+
+    public static void SetIsAnimationEnabled(BindableObject host, bool value) => host.SetValue(IsAnimationEnabledProperty, value);
+
+
+    static void ForEachView(BindableObject host, Action<FlyoutView> apply)
+    {
+        if (!hostStates.TryGetValue(host, out var state))
+            return;
+
+        foreach (var view in state.LiveViews())
+            apply(view);
+    }
+
+
+    static void ApplyViewOptions(BindableObject host, FlyoutView view)
+    {
+        view.PushMode = GetPushMode(host);
+        view.ScrimColor = GetScrimColor(host);
+        view.ScrimOpacity = GetScrimOpacity(host);
+        view.IsAnimationEnabled = GetIsAnimationEnabled(host);
+    }
 
 
     /// <summary>The flyout installed over a page, or null if none was.</summary>
@@ -170,9 +258,11 @@ public static class ShinyFlyout
         }
 
         var view = new FlyoutView();
+        ApplyViewOptions(host, view);
         Wrap(target, view);
 
         var state = hostStates.GetOrCreateValue(host);
+        state.Views.Add(new WeakReference<FlyoutView>(view));
         view.Start = Build(startTemplate, FlyoutSide.Start, state);
         view.End = Build(endTemplate, FlyoutSide.End, state);
         view.StateChanged += (_, e) => state.Set(e.Side, e.NewState);

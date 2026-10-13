@@ -3,13 +3,17 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:shiny="http://shiny.net/maui/controls"
              x:Class="Sample.Features.Flyout.FlyoutDrawerPage"
-             Title="Flyout Drawer">
+             Title="Flyout Drawer"
+             shiny:ShinyFlyout.ScrimOpacity="0.55">
 
     <!--
         The declare-once form. The same attached properties go on a Shell (with
         FlyoutBehavior="Disabled") or a NavigationPage, where every page it shows gets its own panel
         built from this template and the open/closed state carries across navigation. Declared on one
         page here so the sample gallery does not grow a drawer on every screen.
+
+        The FlyoutView options (PushMode, ScrimColor, ScrimOpacity, IsAnimationEnabled) are attached
+        properties on the same host - ScrimOpacity above is copied onto every view it installs.
     -->
     <shiny:ShinyFlyout.StartTemplate>
         <DataTemplate>
@@ -42,7 +46,7 @@
 
             <BoxView HeightRequest="1" Color="#33808080" />
 
-            <Label Text="This page never mentions a FlyoutView. The two attached properties on the page installed one around its content - the same code path a Shell uses to put one drawer on every page it shows."
+            <Label Text="This page never mentions a FlyoutView. The two attached properties on the page installed one around its content - the same code path a Shell uses to put one drawer on every page it shows. Its darker scrim comes from ShinyFlyout.ScrimOpacity on the page, not from the view."
                    Opacity="0.75" />
         </VerticalStackLayout>
     </ScrollView>

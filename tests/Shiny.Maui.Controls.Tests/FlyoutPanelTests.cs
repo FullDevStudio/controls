@@ -1,4 +1,5 @@
 using Microsoft.Maui.Controls;
+using Microsoft.Maui.Graphics;
 using Shiny.Maui.Controls.Flyout;
 using Shouldly;
 using Xunit;
@@ -189,6 +190,65 @@ public class ShinyFlyoutInstallTests
         ShinyFlyout.InstallOn(host, second);
 
         ShinyFlyout.GetFlyoutView(second)!.GetPanel(FlyoutSide.Start)!.State.ShouldBe(FlyoutPanelState.Expanded);
+    }
+
+
+    /// <summary>
+    /// The view options are declared on the host, so an app never has to find the installed
+    /// <see cref="FlyoutView"/> after each navigation to set them.
+    /// </summary>
+    [Fact]
+    public void HostViewOptionsAreCopiedOntoEveryInstalledView()
+    {
+        var host = new NavigationPage();
+        ShinyFlyout.SetStartTemplate(host, PanelTemplate());
+        ShinyFlyout.SetPushMode(host, FlyoutPushMode.Resize);
+        ShinyFlyout.SetScrimColor(host, Colors.Red);
+        ShinyFlyout.SetScrimOpacity(host, 0.7);
+        ShinyFlyout.SetIsAnimationEnabled(host, false);
+
+        foreach (var page in new[] { new ContentPage { Content = new Label() }, new ContentPage { Content = new Label() } })
+        {
+            ShinyFlyout.InstallOn(host, page);
+
+            var view = ShinyFlyout.GetFlyoutView(page)!;
+            view.PushMode.ShouldBe(FlyoutPushMode.Resize);
+            view.ScrimColor.ShouldBe(Colors.Red);
+            view.ScrimOpacity.ShouldBe(0.7);
+            view.IsAnimationEnabled.ShouldBeFalse();
+        }
+    }
+
+
+    [Fact]
+    public void ChangingAHostViewOptionReachesViewsAlreadyInstalled()
+    {
+        var host = new NavigationPage();
+        ShinyFlyout.SetStartTemplate(host, PanelTemplate());
+
+        var page = new ContentPage { Content = new Label() };
+        ShinyFlyout.InstallOn(host, page);
+        var view = ShinyFlyout.GetFlyoutView(page)!;
+        view.PushMode.ShouldBe(FlyoutPushMode.Shift);
+
+        ShinyFlyout.SetPushMode(host, FlyoutPushMode.Resize);
+        view.PushMode.ShouldBe(FlyoutPushMode.Resize);
+
+        ShinyFlyout.SetPushMode(host, FlyoutPushMode.Shift);
+        view.PushMode.ShouldBe(FlyoutPushMode.Shift);
+    }
+
+
+    /// <summary>XAML may apply the option after the template; the order must not matter.</summary>
+    [Fact]
+    public void AViewOptionSetAfterTheTemplateStillApplies()
+    {
+        var page = new ContentPage { Content = new Label() };
+
+        ShinyFlyout.SetStartTemplate(page, PanelTemplate());
+        ShinyFlyout.SetPushMode(page, FlyoutPushMode.Resize);
+
+        ShinyFlyout.GetFlyoutView(page)!.PushMode.ShouldBe(FlyoutPushMode.Resize);
     }
 
 
