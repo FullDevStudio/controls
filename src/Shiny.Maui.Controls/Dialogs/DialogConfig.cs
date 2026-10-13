@@ -55,6 +55,15 @@ public class DialogConfig
     public Color? OkButtonTextColor { get; set; }
     public Color? CancelButtonColor { get; set; }
     public Color? CancelButtonTextColor { get; set; }
+
+    /// <summary>ActionSheet option button fill. Null follows the theme's surface-variant token.</summary>
+    public Color? ActionSheetButtonColor { get; set; }
+
+    /// <summary>ActionSheet option button text. Null follows the theme's on-surface token.</summary>
+    public Color? ActionSheetButtonTextColor { get; set; }
+
+    /// <summary>Text of the <see cref="DestructiveAction"/> option. Null follows the theme's error token.</summary>
+    public Color? DestructiveButtonTextColor { get; set; }
     public double CornerRadius { get; set; } = 16;
 
     /// <summary>Opacity of the dimmed backdrop (0-1).</summary>

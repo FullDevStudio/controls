@@ -87,4 +87,27 @@ public partial class DialogsViewModel(IDialogService dialogs) : ObservableObject
         );
         this.StatusMessage = "Styled dialog dismissed";
     }
+
+    [RelayCommand]
+    async Task StyledActionSheet()
+    {
+        var choice = await dialogs.ActionSheet(
+            "Share",
+            ["Copy Link", "Send by Email", "Remove Share"],
+            cancelText: "Cancel",
+            destructive: "Remove Share",
+            configure: c =>
+            {
+                c.Animation = this.SelectedAnimation;
+                c.BackgroundColor = Color.FromArgb("#312E81");
+                c.TitleColor = Colors.White;
+                c.ActionSheetButtonColor = Color.FromArgb("#4338CA");
+                c.ActionSheetButtonTextColor = Colors.White;
+                c.DestructiveButtonTextColor = Color.FromArgb("#FCA5A5");
+                c.CancelButtonColor = Color.FromArgb("#22D3EE");
+                c.CancelButtonTextColor = Color.FromArgb("#0F172A");
+            }
+        );
+        this.StatusMessage = choice is null ? "Styled action sheet cancelled" : $"Picked: {choice}";
+    }
 }

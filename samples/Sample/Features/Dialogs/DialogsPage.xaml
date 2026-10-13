@@ -35,6 +35,7 @@
             <Button Text="Prompt" Command="{Binding PromptCommand}" />
             <Button Text="Action Sheet" Command="{Binding ActionSheetCommand}" />
             <Button Text="Custom Styled" Command="{Binding StyledCommand}" />
+            <Button Text="Styled Action Sheet" Command="{Binding StyledActionSheetCommand}" />
 
         </VerticalStackLayout>
     </ScrollView>

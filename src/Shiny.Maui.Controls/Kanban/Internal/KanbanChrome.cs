@@ -1,4 +1,5 @@
 using Shiny.Maui.Controls.Themes;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls.Kanban.Internal;
 
@@ -38,19 +39,17 @@ static class KanbanChrome
 
 
     /// <summary>
-    /// Binds a colour property to a theme token, with a literal fallback applied first.
+    /// Binds a colour property to a theme token, or paints a literal fallback when there is no theme.
     /// </summary>
     /// <remarks>
     /// The fallback is not belt and braces. A dynamic resource whose key is not in the app's
     /// dictionaries leaves the property completely untouched, so an app that never installed a Shiny
     /// theme would render the board in whatever the property happened to default to - which for a
-    /// card background is transparent.
+    /// card background is transparent. It must not be seeded under the token, though: a local value
+    /// outranks a dynamic resource, so the board would keep the Basic colours in every theme.
     /// </remarks>
     public static void Token(VisualElement element, BindableProperty property, string key, Color fallback)
-    {
-        element.SetValue(property, fallback);
-        element.SetDynamicResource(property, key);
-    }
+        => ThemeProbe.TintOrFallback(element, property, null, key, fallback);
 
 
     /// <summary>

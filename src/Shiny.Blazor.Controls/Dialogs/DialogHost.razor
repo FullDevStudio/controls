@@ -41,6 +41,7 @@
                         var destructive = string.Equals(option, cfg.DestructiveAction, StringComparison.Ordinal);
                         <button type="button"
                                 class="shiny-dialog-action @(destructive ? "shiny-dialog-action-destructive" : null)"
+                                style="@ButtonStyle(cfg.ActionSheetButtonColor, destructive ? cfg.DestructiveButtonTextColor : cfg.ActionSheetButtonTextColor)"
                                 @onclick="() => DialogService.SelectAction(entry, label)">
                             @label
                         </button>

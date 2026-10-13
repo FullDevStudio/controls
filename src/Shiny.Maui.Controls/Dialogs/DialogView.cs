@@ -192,11 +192,11 @@ sealed class DialogView : ContentView
                 CornerRadius = 10,
                 HorizontalOptions = LayoutOptions.Fill
             }.Neutralize();
-            ApplyColor(button, Button.BackgroundColorProperty, null, ShinyThemeKeys.Color.SurfaceVariant, FallbackSurfaceVariant);
+            ApplyColor(button, Button.BackgroundColorProperty, this.config.ActionSheetButtonColor, ShinyThemeKeys.Color.SurfaceVariant, FallbackSurfaceVariant);
             if (string.Equals(option, this.config.DestructiveAction, StringComparison.Ordinal))
-                ApplyColor(button, Button.TextColorProperty, null, ShinyThemeKeys.Color.Error, FallbackError);
+                ApplyColor(button, Button.TextColorProperty, this.config.DestructiveButtonTextColor, ShinyThemeKeys.Color.Error, FallbackError);
             else
-                ApplyColor(button, Button.TextColorProperty, null, ShinyThemeKeys.Color.OnSurface, FallbackOnSurface);
+                ApplyColor(button, Button.TextColorProperty, this.config.ActionSheetButtonTextColor, ShinyThemeKeys.Color.OnSurface, FallbackOnSurface);
 
             var captured = option;
             button.Clicked += (_, _) => this.OnSelect(captured);
@@ -234,20 +234,10 @@ sealed class DialogView : ContentView
         return button;
     }
 
+    // An explicit colour wins; otherwise the theme token, so a runtime theme/appearance switch
+    // restyles the dialog live. The literal fallback paints only when no Shiny theme is installed.
     static void ApplyColor(VisualElement element, BindableProperty property, Color? explicitColor, string token, Color fallback)
-    {
-        if (explicitColor is not null)
-        {
-            element.SetValue(property, explicitColor);
-        }
-        else
-        {
-            // Seed a hardcoded fallback first (for non-Application contexts), then bind the token so
-            // a runtime theme/appearance switch restyles the dialog live.
-            element.SetValue(property, fallback);
-            element.SetDynamicResource(property, token);
-        }
-    }
+        => ThemeProbe.TintOrFallback(element, property, explicitColor, token, fallback);
 
     void OnConfirm()
     {

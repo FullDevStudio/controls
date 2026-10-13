@@ -72,4 +72,34 @@ static class ThemeProbe
             target.SetValue(property, value);
         }
     }
+
+
+    /// <summary>
+    /// <see cref="Tint"/> for a control that must still paint when no Shiny theme is installed: the
+    /// token when the app has one, the literal <paramref name="fallback"/> only when it does not.
+    /// </summary>
+    /// <remarks>
+    /// The fallback cannot simply be seeded first and the token bound over it. That local value
+    /// outranks the dynamic resource, so the fallback would win in every theme and through every live
+    /// theme switch — which is exactly how dialogs and the Kanban board ignored the theme. A dynamic
+    /// resource whose key is missing leaves the property untouched, though, so with no theme at all
+    /// something has to paint: the fallback is written only when the key cannot be resolved.
+    /// <c>UseShinyControls()</c> always installs a theme, so in an app that is the uncommon path.
+    /// </remarks>
+    public static void TintOrFallback(Element target, BindableProperty property, Color? value, string token, Color fallback)
+    {
+        if (value is not null || HasToken(token))
+        {
+            Tint(target, property, value, token);
+            return;
+        }
+
+        target.RemoveDynamicResource(property);
+        target.SetValue(property, fallback);
+    }
+
+
+    /// <summary>Whether the app's resources (merged theme dictionaries included) define <paramref name="token"/>.</summary>
+    public static bool HasToken(string token)
+        => Application.Current?.Resources.TryGetValue(token, out _) == true;
 }

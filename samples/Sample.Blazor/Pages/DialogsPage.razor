@@ -61,6 +61,8 @@
     <h2>Custom Styling</h2>
     <p>Per-call colors, corner radius, and a zoom animation.</p>
     <button @onclick="ShowStyled" style="background:#0F766E;">Styled Confirm</button>
+    <p>Action sheet options take their own colours too — <code>ActionSheetButtonColor</code>, <code>ActionSheetButtonTextColor</code> and <code>DestructiveButtonTextColor</code>.</p>
+    <button @onclick="ShowStyledActionSheet" style="background:#4338CA;">Styled Action Sheet</button>
 </section>
 
 @code {
@@ -134,5 +136,27 @@
             }
         );
         statusMessage = "Styled dialog dismissed";
+    }
+
+    async Task ShowStyledActionSheet()
+    {
+        var choice = await Dialogs.ActionSheet(
+            "Share",
+            new[] { "Copy Link", "Send by Email", "Remove Share" },
+            cancelText: "Cancel",
+            destructive: "Remove Share",
+            configure: c =>
+            {
+                c.Animation = animation;
+                c.BackgroundColor = "#312E81";
+                c.TitleColor = "#FFFFFF";
+                c.ActionSheetButtonColor = "#4338CA";
+                c.ActionSheetButtonTextColor = "#FFFFFF";
+                c.DestructiveButtonTextColor = "#FCA5A5";
+                c.CancelButtonColor = "#22D3EE";
+                c.CancelButtonTextColor = "#0F172A";
+            }
+        );
+        statusMessage = choice is null ? "Styled action sheet cancelled" : $"Picked: {choice}";
     }
 }

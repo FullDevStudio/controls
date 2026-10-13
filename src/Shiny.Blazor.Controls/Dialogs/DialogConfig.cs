@@ -55,6 +55,15 @@ public class DialogConfig
     public string? CancelButtonColor { get; set; }
     public string? CancelButtonTextColor { get; set; }
 
+    /// <summary>ActionSheet option button fill (any CSS colour). Null follows the theme.</summary>
+    public string? ActionSheetButtonColor { get; set; }
+
+    /// <summary>ActionSheet option button text (any CSS colour). Null follows the theme.</summary>
+    public string? ActionSheetButtonTextColor { get; set; }
+
+    /// <summary>Text of the <see cref="DestructiveAction"/> option (any CSS colour). Null follows the theme's error colour.</summary>
+    public string? DestructiveButtonTextColor { get; set; }
+
     public double CornerRadius { get; set; } = 16;
 
     /// <summary>Opacity of the dimmed backdrop (0-1).</summary>
