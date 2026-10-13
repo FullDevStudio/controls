@@ -132,7 +132,7 @@ public partial class ShinyImage : ContentView, IDisposable
     /// </summary>
     public IImageService ImageService
     {
-        get => this.resolvedService ??= Resolve(this, DefaultService);
+        get => this.resolvedService ??= Resolve(this, static () => DefaultService.Value);
         set => this.resolvedService = value;
     }
 
@@ -143,7 +143,7 @@ public partial class ShinyImage : ContentView, IDisposable
     /// </summary>
     public SvgCache SvgCache
     {
-        get => this.resolvedSvgCache ??= Resolve(this, DefaultSvgCache);
+        get => this.resolvedSvgCache ??= Resolve(this, static () => DefaultSvgCache.Value);
         set => this.resolvedSvgCache = value;
     }
 
@@ -497,13 +497,19 @@ public partial class ShinyImage : ContentView, IDisposable
     /// host, a design-time preview - has no MauiContext, and throwing there would make the control
     /// impossible to unit test and would crash the previewer over a service that has a perfectly
     /// good default.
+    /// <para>
+    /// The fallback is a factory rather than a <c>Lazy&lt;T&gt;</c>: CoreLib's <c>Lazy&lt;T&gt;</c> requires
+    /// <c>T</c>'s parameterless constructor, so reading it through an open <c>T</c> is an IL2091 in every
+    /// full-trim app - one the library build cannot see, because the reference assembly omits that
+    /// annotation (issue #33).
+    /// </para>
     /// </remarks>
-    static T Resolve<T>(ShinyImage image, Lazy<T> fallback) where T : class
+    static T Resolve<T>(ShinyImage image, Func<T> fallback) where T : class
     {
         var services = image.Handler?.MauiContext?.Services
                        ?? Application.Current?.Handler?.MauiContext?.Services;
 
-        return services?.GetService<T>() ?? fallback.Value;
+        return services?.GetService<T>() ?? fallback();
     }
 
     static readonly Lazy<IImageService> DefaultService = new(() => new ImageService());
