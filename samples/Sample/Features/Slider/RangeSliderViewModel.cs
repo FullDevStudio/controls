@@ -1,5 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Shiny;
+using Shiny.Maui.Controls;
 
 namespace Sample.Features.Slider;
 
@@ -20,4 +22,13 @@ public partial class RangeSliderViewModel : ObservableObject
 
     [ObservableProperty] double shiftStart = 9;
     [ObservableProperty] double shiftEnd = 17;
+
+    [ObservableProperty] double searchLower = 100;
+    [ObservableProperty] double searchUpper = 500;
+    [ObservableProperty] string committedSearch = "Searched: $100 – $500 (0 searches)";
+    int searchCount;
+
+    // Runs once per release, not on every step of the drag.
+    [RelayCommand]
+    void Search(SliderRange range) => this.CommittedSearch = $"Searched: {range.Lower:C0} – {range.Upper:C0} ({++this.searchCount} searches)";
 }

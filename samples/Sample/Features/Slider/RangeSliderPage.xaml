@@ -26,6 +26,18 @@
                    Text="{Binding PriceLower, StringFormat='{0:C0} — '}" />
             <Label Text="{Binding PriceUpper, StringFormat='… {0:C0}'}" />
 
+            <!-- DragCompletedCommand: search once, when a thumb is let go -->
+            <Label Text="Search on Release (DragCompleted)" FontSize="18" FontAttributes="Bold" />
+            <shiny:RangeSlider AutomationId="SearchRange"
+                               LowerValue="{Binding SearchLower}"
+                               UpperValue="{Binding SearchUpper}"
+                               Minimum="0"
+                               Maximum="1000"
+                               Step="10"
+                               ValueFormat="C0"
+                               DragCompletedCommand="{Binding SearchCommand}" />
+            <Label AutomationId="SearchCommitted" Text="{Binding CommittedSearch}" />
+
             <!-- Comfort band with min & max gap -->
             <Label Text="Comfort Band (min 2°, max 8° apart)" FontSize="18" FontAttributes="Bold" />
             <shiny:RangeSlider LowerValue="{Binding TempLower}"

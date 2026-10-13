@@ -1,4 +1,6 @@
+using System.Collections;
 using System.Collections.Specialized;
+using System.Globalization;
 using Microsoft.Maui.Controls.Shapes;
 using Shiny.Maui.Controls.Themes;
 
@@ -43,6 +45,59 @@ public partial class Slider
     void OnMarkChanged(object? sender, EventArgs e) => this.RebuildMarks();
 
 
+    void OnMarksSourceChanged(IEnumerable? oldSource, IEnumerable? newSource)
+    {
+        if (oldSource is INotifyCollectionChanged oldObservable)
+            oldObservable.CollectionChanged -= this.OnMarksSourceCollectionChanged;
+
+        if (newSource is INotifyCollectionChanged newObservable)
+            newObservable.CollectionChanged += this.OnMarksSourceCollectionChanged;
+
+        this.ReadMarksSource();
+    }
+
+
+    void OnMarksSourceCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) => this.ReadMarksSource();
+
+
+    /// <summary>
+    /// Re-reads <see cref="MarksSource"/> from scratch. A source is rarely more than a handful of stops,
+    /// and every change rebuilds the mark views anyway, so diffing the change event would buy nothing.
+    /// </summary>
+    void ReadMarksSource()
+    {
+        foreach (var mark in this.sourceMarks)
+            mark.Changed -= this.OnMarkChanged;
+        this.sourceMarks.Clear();
+
+        if (this.MarksSource is not null)
+        {
+            foreach (var item in this.MarksSource)
+            {
+                var mark = ToMark(item);
+                if (mark is null)
+                    continue;
+
+                mark.Changed += this.OnMarkChanged;
+                this.sourceMarks.Add(mark);
+            }
+        }
+
+        this.RebuildMarks();
+    }
+
+
+    /// <summary>A source item as a mark: a <see cref="SliderMark"/> as-is, a number as an unlabelled stop at that value.</summary>
+    static SliderMark? ToMark(object? item) => item switch
+    {
+        SliderMark mark => mark,
+        double d => new SliderMark { Value = d },
+        float or int or long or short or byte or decimal or uint or ulong or ushort or sbyte
+            => new SliderMark { Value = Convert.ToDouble(item, CultureInfo.InvariantCulture) },
+        _ => null
+    };
+
+
     /// <summary>Bands, then positions. Anything that changes how much room the slider needs goes through here.</summary>
     void Refresh()
     {
@@ -73,7 +128,7 @@ public partial class Slider
         // straight through the thumb, and snapping parks the thumb on a mark by definition.
         var index = this.rootLayout.Children.IndexOf(this.thumb);
 
-        foreach (var mark in this.marks)
+        foreach (var mark in this.AllMarks)
         {
             if (!mark.IsVisible)
                 continue;

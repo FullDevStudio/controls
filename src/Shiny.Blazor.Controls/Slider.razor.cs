@@ -24,10 +24,14 @@ public partial class Slider : IAsyncDisposable, ISliderMarkHost
     SliderOrientation initializedOrientation;
     bool hasRendered;
     bool marksDirty;
+    bool isDragging;
+    double dragStartValue;
 
     // Parameters
     [Parameter] public double Value { get; set; }
     [Parameter] public EventCallback<double> ValueChanged { get; set; }
+    /// <summary>Raised once with the final value when a drag is released, or right after a track click moves the thumb. Not raised when the value did not change.</summary>
+    [Parameter] public EventCallback<double> DragCompleted { get; set; }
     [Parameter] public double Minimum { get; set; } = 0;
     [Parameter] public double Maximum { get; set; } = 100;
     [Parameter] public double Step { get; set; } = 1;
@@ -417,7 +421,18 @@ public partial class Slider : IAsyncDisposable, ISliderMarkHost
         if (!IsEnabled || module is null) return;
 
         var percent = await module.InvokeAsync<double>("getClickPercent", trackRef, e.ClientX, e.ClientY, IsVertical);
+        await ClickAtPercent(percent);
+    }
+
+
+    /// <summary>A click is a whole interaction on its own, so it commits as soon as the value is set.</summary>
+    internal async Task ClickAtPercent(double percent)
+    {
+        var before = Value;
         await SetValueFromPercent(percent);
+
+        if (Math.Abs(Value - before) > double.Epsilon)
+            await DragCompleted.InvokeAsync(Value);
     }
 
     void OnThumbPointerDown(PointerEventArgs e)
@@ -429,6 +444,25 @@ public partial class Slider : IAsyncDisposable, ISliderMarkHost
     public async Task OnDragUpdate(double percent)
     {
         await SetValueFromPercent(percent);
+    }
+
+    [JSInvokable]
+    public void OnDragStart()
+    {
+        isDragging = true;
+        dragStartValue = Value;
+    }
+
+    /// <summary>A cancelled pointer ends the drag the same way: the thumb stays where it was let go.</summary>
+    [JSInvokable]
+    public async Task OnDragEnd()
+    {
+        if (!isDragging)
+            return;
+
+        isDragging = false;
+        if (Math.Abs(Value - dragStartValue) > double.Epsilon)
+            await DragCompleted.InvokeAsync(Value);
     }
 
     async Task SetValueFromPercent(double percent)

@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Windows.Input;
 using Shiny.Maui.Controls.Themes;
 using Shiny.Maui.Controls.Infrastructure;
@@ -255,6 +256,17 @@ public partial class Slider
     /// </summary>
     public bool SnapToMarks { get => (bool)GetValue(SnapToMarksProperty); set => SetValue(SnapToMarksProperty, value); }
 
+    // MarksSource
+    public static readonly BindableProperty MarksSourceProperty = BindableProperty.Create(
+        nameof(MarksSource), typeof(IEnumerable), typeof(Slider), null,
+        propertyChanged: (b, o, n) => ((Slider)b).OnMarksSourceChanged(o as IEnumerable, n as IEnumerable));
+    /// <summary>
+    /// Stop points from data, drawn alongside <see cref="Marks"/>. Items may be <see cref="SliderMark"/>s,
+    /// or plain numbers, which become unlabelled marks at that value. An
+    /// <see cref="System.Collections.Specialized.INotifyCollectionChanged"/> source is followed as it changes.
+    /// </summary>
+    public IEnumerable? MarksSource { get => (IEnumerable?)GetValue(MarksSourceProperty); set => SetValue(MarksSourceProperty, value); }
+
     // MarkShape
     public static readonly BindableProperty MarkShapeProperty = BindableProperty.Create(
         nameof(MarkShape), typeof(SliderMarkShape), typeof(Slider), SliderMarkShape.Dot,
@@ -322,4 +334,13 @@ public partial class Slider
 
     // Event
     public event EventHandler<double>? ValueChangedEvent;
+
+    // DragCompletedCommand
+    public static readonly BindableProperty DragCompletedCommandProperty = BindableProperty.Create(
+        nameof(DragCompletedCommand), typeof(ICommand), typeof(Slider));
+    /// <summary>Executed once with the final value when a drag is released, or right after a tap moves the thumb. Not executed when the value did not change.</summary>
+    public ICommand? DragCompletedCommand { get => (ICommand?)GetValue(DragCompletedCommandProperty); set => SetValue(DragCompletedCommandProperty, value); }
+
+    /// <summary>Raised once with the final value when a drag is released, or right after a tap moves the thumb. Not raised when the value did not change.</summary>
+    public event EventHandler<double>? DragCompleted;
 }

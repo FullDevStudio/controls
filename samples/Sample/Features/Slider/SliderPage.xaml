@@ -124,6 +124,31 @@
             </shiny:Slider>
             <Label Text="{Binding Pressure, StringFormat='Pressure: {0:0} psi'}" />
 
+            <!-- DragCompletedCommand: react once, when the thumb is let go -->
+            <Label Text="Commit on Release (DragCompleted)" FontSize="18" FontAttributes="Bold" />
+            <shiny:Slider AutomationId="SetpointSlider"
+                                  Value="{Binding Setpoint}"
+                                  Minimum="0"
+                                  Maximum="100"
+                                  DragCompletedCommand="{Binding CommitSetpointCommand}" />
+            <Label Text="{Binding Setpoint, StringFormat='Live: {0:0}'}" />
+            <Label AutomationId="SetpointCommitted" Text="{Binding CommittedSetpoint}" />
+
+            <!-- Bound Marks: the stops come from the view model -->
+            <Label Text="Bound Marks (MarksSource)" FontSize="18" FontAttributes="Bold" />
+            <shiny:Slider AutomationId="BookmarkSlider"
+                                  Value="{Binding Position}"
+                                  Minimum="0"
+                                  Maximum="100"
+                                  SnapToMarks="False"
+                                  MarkShape="Line"
+                                  MarksSource="{Binding Bookmarks}"
+                                  ValueFormat="0" />
+            <HorizontalStackLayout Spacing="8">
+                <Button Text="Bookmark here" Command="{Binding AddBookmarkCommand}" />
+                <Button Text="Clear" Command="{Binding ClearBookmarksCommand}" />
+            </HorizontalStackLayout>
+
             <!-- Custom Thumb: the value rides in it -->
             <Label Text="Custom Thumb (the value rides in it)" FontSize="18" FontAttributes="Bold" />
             <shiny:Slider AutomationId="BrightnessSlider"

@@ -32,6 +32,7 @@ public partial class RangeSlider : ContentView
     bool isDragging;
     bool draggingUpper;
     double dragStartThumbX;
+    SliderRange dragStartRange;
 
     public RangeSlider()
     {
@@ -216,7 +217,7 @@ public partial class RangeSlider : ContentView
         switch (e.StatusType)
         {
             case GestureStatus.Started:
-                isDragging = true;
+                BeginDrag();
                 draggingUpper = isUpper;
                 dragStartThumbX = AbsoluteLayout.GetLayoutBounds(isUpper ? upperThumb : lowerThumb).X;
                 break;
@@ -232,9 +233,36 @@ public partial class RangeSlider : ContentView
 
             case GestureStatus.Completed:
             case GestureStatus.Canceled:
-                isDragging = false;
+                EndDrag();
                 break;
         }
+    }
+
+
+    internal void BeginDrag()
+    {
+        isDragging = true;
+        dragStartRange = new SliderRange(LowerValue, UpperValue);
+    }
+
+
+    /// <summary>A cancelled pan ends the drag the same way: the thumbs stay where they were let go.</summary>
+    internal void EndDrag()
+    {
+        if (!isDragging)
+            return;
+
+        isDragging = false;
+        if (dragStartRange != new SliderRange(LowerValue, UpperValue))
+            RaiseDragCompleted();
+    }
+
+
+    void RaiseDragCompleted()
+    {
+        var range = new SliderRange(LowerValue, UpperValue);
+        DragCompletedCommand?.Execute(range);
+        DragCompleted?.Invoke(this, range);
     }
 
     void OnTrackTapped(object? sender, TappedEventArgs e)
@@ -249,7 +277,18 @@ public partial class RangeSlider : ContentView
 
         // Move whichever thumb is nearer the tap.
         var toUpper = Math.Abs(tappedValue - UpperValue) < Math.Abs(tappedValue - LowerValue);
-        ApplyPercentToThumb(percent, toUpper);
+        TapAtPercent(percent, toUpper);
+    }
+
+
+    /// <summary>A tap is a whole interaction on its own, so it commits as soon as the thumb has moved.</summary>
+    internal void TapAtPercent(double percent, bool isUpper)
+    {
+        var before = new SliderRange(LowerValue, UpperValue);
+        ApplyPercentToThumb(percent, isUpper);
+
+        if (before != new SliderRange(LowerValue, UpperValue))
+            RaiseDragCompleted();
     }
 
     double PercentToValue(double percent)
@@ -260,7 +299,7 @@ public partial class RangeSlider : ContentView
         return Math.Clamp(raw, Minimum, Maximum);
     }
 
-    void ApplyPercentToThumb(double percent, bool isUpper)
+    internal void ApplyPercentToThumb(double percent, bool isUpper)
     {
         var value = PercentToValue(percent);
         var lower = LowerValue;

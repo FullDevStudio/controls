@@ -16,6 +16,9 @@ public partial class Slider : ContentView
     readonly ObservableCollection<SliderMark> marks = new();
     readonly List<MarkVisual> markVisuals = new();
 
+    // The marks MarksSource contributed, kept so their Changed handlers can be detached again.
+    readonly List<SliderMark> sourceMarks = new();
+
     readonly BoxView trackBackground;
     readonly Border thumb;
     readonly RoundRectangle thumbShape;
@@ -30,6 +33,7 @@ public partial class Slider : ContentView
     double layoutHeight;
     bool isDragging;
     double dragStartCenter;
+    double dragStartValue;
 
     public Slider()
     {
@@ -130,6 +134,10 @@ public partial class Slider : ContentView
     public IList<SliderMark> Marks => this.marks;
 
 
+    /// <summary>Every mark the slider draws and snaps to: the declared <see cref="Marks"/>, then <see cref="MarksSource"/>.</summary>
+    internal IEnumerable<SliderMark> AllMarks => this.marks.Concat(this.sourceMarks);
+
+
     /// <summary>
     /// The subtle drop shadow the thumb used to get from <c>Frame.HasShadow</c>. Border has no
     /// equivalent flag, so it is recreated explicitly (and per-thumb — a Shadow instance cannot
@@ -215,7 +223,7 @@ public partial class Slider : ContentView
         switch (e.StatusType)
         {
             case GestureStatus.Started:
-                isDragging = true;
+                BeginDrag();
                 dragStartCenter = CenterFor(Percent);
                 break;
 
@@ -229,9 +237,28 @@ public partial class Slider : ContentView
 
             case GestureStatus.Completed:
             case GestureStatus.Canceled:
-                isDragging = false;
+                EndDrag();
                 break;
         }
+    }
+
+
+    internal void BeginDrag()
+    {
+        isDragging = true;
+        dragStartValue = Value;
+    }
+
+
+    /// <summary>A cancelled pan ends the drag the same way: the thumb stays where it was let go.</summary>
+    internal void EndDrag()
+    {
+        if (!isDragging)
+            return;
+
+        isDragging = false;
+        if (Math.Abs(Value - dragStartValue) > double.Epsilon)
+            RaiseDragCompleted();
     }
 
 
@@ -242,7 +269,26 @@ public partial class Slider : ContentView
         var point = e.GetPosition(rootLayout);
         if (point is null) return;
 
-        SetValueFromPercent(PercentForCenter(IsVertical ? point.Value.Y : point.Value.X));
+        TapAtPercent(PercentForCenter(IsVertical ? point.Value.Y : point.Value.X));
+    }
+
+
+    /// <summary>A tap is a whole interaction on its own, so it commits as soon as the value is set.</summary>
+    internal void TapAtPercent(double percent)
+    {
+        var before = Value;
+        SetValueFromPercent(percent);
+
+        if (Math.Abs(Value - before) > double.Epsilon)
+            RaiseDragCompleted();
+    }
+
+
+    void RaiseDragCompleted()
+    {
+        var value = Value;
+        DragCompletedCommand?.Execute(value);
+        DragCompleted?.Invoke(this, value);
     }
 
 
@@ -281,7 +327,7 @@ public partial class Slider : ContentView
         double? best = null;
         var bestDistance = double.MaxValue;
 
-        foreach (var mark in this.marks)
+        foreach (var mark in this.AllMarks)
         {
             if (!mark.IsVisible)
                 continue;

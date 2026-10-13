@@ -15,6 +15,8 @@ public partial class RangeSlider : IAsyncDisposable
     IJSObjectReference? module;
     bool disposed;
     DotNetObjectReference<RangeSlider>? selfRef;
+    bool isDragging;
+    (double Lower, double Upper) dragStartRange;
 
     // Parameters
     [Parameter] public double LowerValue { get; set; } = 0;
@@ -22,6 +24,8 @@ public partial class RangeSlider : IAsyncDisposable
     [Parameter] public double UpperValue { get; set; } = 100;
     [Parameter] public EventCallback<double> UpperValueChanged { get; set; }
     [Parameter] public EventCallback<(double Lower, double Upper)> RangeChanged { get; set; }
+    /// <summary>Raised once with the final range when a thumb drag is released, or right after a track click moves a thumb. Not raised when the range did not change.</summary>
+    [Parameter] public EventCallback<(double Lower, double Upper)> DragCompleted { get; set; }
     [Parameter] public double Minimum { get; set; } = 0;
     [Parameter] public double Maximum { get; set; } = 100;
     [Parameter] public double Step { get; set; } = 1;
@@ -202,11 +206,40 @@ public partial class RangeSlider : IAsyncDisposable
         var value = PercentToValue(percent);
         // Move whichever thumb is nearer the click.
         var toUpper = Math.Abs(value - UpperValue) < Math.Abs(value - LowerValue);
-        await ApplyPercentToThumb(percent, toUpper);
+        await ClickAtPercent(percent, toUpper);
+    }
+
+    /// <summary>A click is a whole interaction on its own, so it commits as soon as a thumb has moved.</summary>
+    internal async Task ClickAtPercent(double percent, bool isUpper)
+    {
+        var before = (LowerValue, UpperValue);
+        await ApplyPercentToThumb(percent, isUpper);
+
+        if (before != (LowerValue, UpperValue))
+            await DragCompleted.InvokeAsync((LowerValue, UpperValue));
     }
 
     [JSInvokable]
     public Task OnDragUpdate(double percent, bool isUpper) => ApplyPercentToThumb(percent, isUpper);
+
+    [JSInvokable]
+    public void OnDragStart()
+    {
+        isDragging = true;
+        dragStartRange = (LowerValue, UpperValue);
+    }
+
+    /// <summary>A cancelled pointer ends the drag the same way: the thumbs stay where they were let go.</summary>
+    [JSInvokable]
+    public async Task OnDragEnd()
+    {
+        if (!isDragging)
+            return;
+
+        isDragging = false;
+        if (dragStartRange != (LowerValue, UpperValue))
+            await DragCompleted.InvokeAsync((LowerValue, UpperValue));
+    }
 
     double PercentToValue(double percent)
     {

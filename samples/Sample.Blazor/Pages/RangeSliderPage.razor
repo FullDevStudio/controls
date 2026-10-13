@@ -16,6 +16,18 @@
 </div>
 
 <div class="demo-section">
+    <h2>Search on Release (DragCompleted)</h2>
+    <RangeSlider @bind-LowerValue="searchLower"
+                 @bind-UpperValue="searchUpper"
+                 Minimum="0"
+                 Maximum="1000"
+                 Step="10"
+                 ValueFormat="C0"
+                 DragCompleted="OnSearchCommitted" />
+    <div class="state">Searched: <code>@committedSearch</code> (@searchCommits searches)</div>
+</div>
+
+<div class="demo-section">
     <h2>Comfort Band (min 2°, max 8° apart)</h2>
     <RangeSlider @bind-LowerValue="tempLower"
                  @bind-UpperValue="tempUpper"
@@ -89,6 +101,17 @@
 </div>
 
 @code {
+    double searchLower = 100;
+    double searchUpper = 500;
+    string committedSearch = "$100 – $500";
+    int searchCommits;
+
+    void OnSearchCommitted((double Lower, double Upper) range)
+    {
+        committedSearch = $"{range.Lower:C0} – {range.Upper:C0}";
+        searchCommits++;
+    }
+
     double priceLower = 250;
     double priceUpper = 750;
     double tempLower = 18;

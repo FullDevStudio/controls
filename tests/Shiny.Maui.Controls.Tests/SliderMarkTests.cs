@@ -322,4 +322,102 @@ public class SliderMarkTests
         visual.Marker.InputTransparent.ShouldBeTrue();
         visual.Caption!.InputTransparent.ShouldBeTrue();
     }
+
+
+    // ---------------------------------------------------------------------------------------------
+    // MarksSource
+    // ---------------------------------------------------------------------------------------------
+
+    [Fact]
+    public void ABoundSourceIsDrawnAlongsideTheDeclaredMarks()
+    {
+        var slider = Build(SliderOrientation.Horizontal, new SliderMark { Value = 0, Text = "Start" });
+
+        slider.MarksSource = new[] { new SliderMark { Value = 50, Text = "Half" }, new SliderMark { Value = 100 } };
+
+        slider.DrawnMarks.Select(m => m.Mark.Value).ShouldBe(new[] { 0d, 50, 100 });
+    }
+
+
+    [Fact]
+    public void NumbersInTheSourceBecomeUnlabelledMarks()
+    {
+        var slider = Build();
+
+        slider.MarksSource = new List<int> { 25, 75 };
+
+        slider.DrawnMarks.Select(m => m.Mark.Value).ShouldBe(new[] { 25d, 75 });
+        slider.DrawnMarks.ShouldAllBe(m => m.Caption == null);
+    }
+
+
+    [Fact]
+    public void SourceMarksAreSnapTargets()
+    {
+        var slider = Build();
+        slider.MarksSource = new[] { 20d, 70d };
+
+        slider.SetValueFromPercent(0.6);
+
+        slider.Value.ShouldBe(70);
+    }
+
+
+    [Fact]
+    public void AnObservableSourceIsFollowedAsItChanges()
+    {
+        var source = new System.Collections.ObjectModel.ObservableCollection<SliderMark> { new() { Value = 10 } };
+        var slider = Build();
+        slider.MarksSource = source;
+
+        source.Add(new SliderMark { Value = 60 });
+        slider.DrawnMarks.Count.ShouldBe(2);
+
+        source.RemoveAt(0);
+        slider.DrawnMarks.Select(m => m.Mark.Value).ShouldBe(new[] { 60d });
+
+        source.Clear();
+        slider.DrawnMarks.ShouldBeEmpty();
+    }
+
+
+    [Fact]
+    public void EditingASourceMarkRedrawsIt()
+    {
+        var mark = new SliderMark { Value = 10 };
+        var slider = Build();
+        slider.MarksSource = new[] { mark };
+
+        mark.IsVisible = false;
+
+        slider.DrawnMarks.ShouldBeEmpty();
+    }
+
+
+    [Fact]
+    public void ReplacingTheSourceLetsGoOfTheOldOne()
+    {
+        var old = new System.Collections.ObjectModel.ObservableCollection<SliderMark> { new() { Value = 10 } };
+        var oldMark = old[0];
+        var slider = Build();
+        slider.MarksSource = old;
+
+        slider.MarksSource = new[] { 90d };
+        old.Add(new SliderMark { Value = 40 });
+        oldMark.Value = 20;
+
+        slider.DrawnMarks.Select(m => m.Mark.Value).ShouldBe(new[] { 90d });
+    }
+
+
+    [Fact]
+    public void ClearingTheSourceLeavesTheDeclaredMarks()
+    {
+        var slider = Build(SliderOrientation.Horizontal, new SliderMark { Value = 30 });
+        slider.MarksSource = new[] { 60d };
+
+        slider.MarksSource = null;
+
+        slider.DrawnMarks.Select(m => m.Mark.Value).ShouldBe(new[] { 30d });
+    }
 }

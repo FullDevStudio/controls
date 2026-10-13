@@ -40,6 +40,31 @@ A two-thumb variant of Slider that selects a lower/upper value pair. It reuses t
 | TooltipTemplate | DataTemplate/RenderFragment | null | Custom tooltip content (applied to both thumbs) |
 | ValueFormat | string? | null | Format string for tooltip values |
 
+## Reacting once, on release
+
+`RangeChanged` fires on every step of a drag. `DragCompleted` is raised once with the final range when a
+thumb is released (a cancelled drag counts as a release), and right after a tap/click on the track moves a
+thumb. It is not raised when the range ends up where it started.
+
+```xml
+<shiny:RangeSlider LowerValue="{Binding MinPrice}"
+                   UpperValue="{Binding MaxPrice}"
+                   DragCompletedCommand="{Binding SearchCommand}" />
+```
+
+```razor
+<RangeSlider @bind-LowerValue="min" @bind-UpperValue="max" DragCompleted="Search" />
+
+@code {
+    Task Search((double Lower, double Upper) range) => ...;
+}
+```
+
+| Member | MAUI | Blazor |
+|---|---|---|
+| `DragCompleted` | `event EventHandler<SliderRange>` | `EventCallback<(double Lower, double Upper)>` |
+| `DragCompletedCommand` | `ICommand?`, parameter = the final `SliderRange` | — |
+
 ## Custom thumb content
 
 `ThumbTemplate` puts your own content inside both thumbs; `LowerThumbTemplate` and

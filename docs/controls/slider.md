@@ -36,6 +36,33 @@ labelled **stop points**, a **custom thumb**, and a **vertical** orientation.
 | TooltipTemplate | DataTemplate/RenderFragment | null | Custom tooltip content |
 | ValueFormat | string? | null | Format string for tooltip value |
 
+## Reacting once, on release
+
+`ValueChanged` (and `ValueChangedCommand` on MAUI) fires on every step while the thumb is dragged. When the
+change should cause something that must happen once — saving, a network call, sending a command to a
+device — use `DragCompleted` instead. It is raised once with the final value when the drag is released
+(a cancelled drag counts as a release), and right after a tap/click on the track moves the thumb. It is
+not raised when the value ends up where it started.
+
+```xml
+<shiny:Slider Value="{Binding Brightness}"
+              DragCompletedCommand="{Binding SendBrightnessCommand}" />
+```
+
+```razor
+<Slider @bind-Value="brightness" DragCompleted="SendBrightness" />
+
+@code {
+    double brightness = 50;
+    Task SendBrightness(double value) => device.SetBrightnessAsync(value);
+}
+```
+
+| Member | MAUI | Blazor |
+|---|---|---|
+| `DragCompleted` | `event EventHandler<double>` | `EventCallback<double>` |
+| `DragCompletedCommand` | `ICommand?`, parameter = the final value | — |
+
 ## Stop points
 
 `Marks` (MAUI) / `<SliderMark>` children (Blazor) put labelled stops on the track. With
@@ -60,8 +87,27 @@ turn it off to leave the marks as reference points.
 </Slider>
 ```
 
+To bind the marks from a view model, use `MarksSource` (MAUI) — any `IEnumerable` of `SliderMark`s
+or plain numbers (a number becomes an unlabelled mark). They are drawn and snapped to alongside
+`Marks`, and an `ObservableCollection` is followed as it changes. On Blazor, `@foreach` over your
+data inside the `<Slider>`.
+
+```xml
+<shiny:Slider Value="{Binding Position}" MarksSource="{Binding Bookmarks}" MarkShape="Line" SnapToMarks="False" />
+```
+
+```razor
+<Slider @bind-Value="position">
+    @foreach (var b in bookmarks)
+    {
+        <SliderMark @key="b" Value="b.Value" Text="@b.Text" />
+    }
+</Slider>
+```
+
 | Slider property | Type | Default | Description |
 |---|---|---|---|
+| MarksSource | IEnumerable? | null | Marks from data (MAUI only) — `SliderMark`s or numbers, alongside `Marks` |
 | SnapToMarks | bool | true | Thumb comes to rest on the nearest mark |
 | MarkShape | SliderMarkShape | Dot | `Dot`, `Bubble` (pill-shaped label) or `Line` (tick) |
 | MarkSize | double | 10 | Dot diameter / tick thickness |

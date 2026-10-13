@@ -24,6 +24,8 @@ export function init(trackEl, dotNetRef, vertical) {
         state.dragging = false;
         document.removeEventListener('pointermove', onPointerMove);
         document.removeEventListener('pointerup', onPointerUp);
+        document.removeEventListener('pointercancel', onPointerUp);
+        dotNetRef.invokeMethodAsync('OnDragEnd');
     };
 
     trackEl.addEventListener('pointerdown', (e) => {
@@ -32,8 +34,10 @@ export function init(trackEl, dotNetRef, vertical) {
         if (e.target.closest && e.target.closest('.shiny-gs-thumb')) {
             state.dragging = true;
             e.preventDefault();
+            dotNetRef.invokeMethodAsync('OnDragStart');
             document.addEventListener('pointermove', onPointerMove);
             document.addEventListener('pointerup', onPointerUp);
+            document.addEventListener('pointercancel', onPointerUp);
         }
     });
 
@@ -59,6 +63,7 @@ export function dispose(trackEl) {
     if (state) {
         document.removeEventListener('pointermove', state.onPointerMove);
         document.removeEventListener('pointerup', state.onPointerUp);
+        document.removeEventListener('pointercancel', state.onPointerUp);
         instances.delete(trackEl);
     }
 }

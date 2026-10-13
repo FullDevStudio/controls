@@ -14,6 +14,15 @@
 </div>
 
 <div class="demo-section">
+    <h2>Commit on Release (DragCompleted)</h2>
+    <Slider @bind-Value="setpoint"
+                    Minimum="0"
+                    Maximum="100"
+                    DragCompleted="OnSetpointCommitted" />
+    <div class="state">Live: <code>@setpoint.ToString("0")</code> · Committed: <code>@committedSetpoint.ToString("0")</code> (@setpointCommits commits)</div>
+</div>
+
+<div class="demo-section">
     <h2>Custom Colors (Green to Yellow)</h2>
     <Slider @bind-Value="intensity"
                     Minimum="0"
@@ -181,6 +190,16 @@
 
 @code {
     double temperature = 50;
+    double setpoint = 40;
+    double committedSetpoint = 40;
+    int setpointCommits;
+
+    void OnSetpointCommitted(double value)
+    {
+        committedSetpoint = value;
+        setpointCommits++;
+    }
+
     double intensity = 5;
     double volume = 30;
     double opacity = 0.75;

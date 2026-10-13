@@ -275,4 +275,13 @@ public partial class RangeSlider
 
     /// <summary>Fired whenever the lower and/or upper value changes through interaction.</summary>
     public event EventHandler<SliderRange>? RangeChanged;
+
+    // DragCompletedCommand
+    public static readonly BindableProperty DragCompletedCommandProperty = BindableProperty.Create(
+        nameof(DragCompletedCommand), typeof(ICommand), typeof(RangeSlider));
+    /// <summary>Executed once with the final range when a thumb drag is released, or right after a tap moves a thumb. Not executed when the range did not change.</summary>
+    public ICommand? DragCompletedCommand { get => (ICommand?)GetValue(DragCompletedCommandProperty); set => SetValue(DragCompletedCommandProperty, value); }
+
+    /// <summary>Raised once with the final range when a thumb drag is released, or right after a tap moves a thumb. Not raised when the range did not change.</summary>
+    public event EventHandler<SliderRange>? DragCompleted;
 }
