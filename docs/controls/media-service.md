@@ -332,7 +332,8 @@ What differs from MAUI, and why:
 ## Platform notes
 
 - Frames, analyzers and capture come from `CameraView`, so every platform note in
-  [CameraView](camera.md) applies — including that barcode and OCR are a no-op on Windows and the bare
-  `net10.0` head, where there is no native scanner.
+  [CameraView](camera.md) applies — barcodes are read with Apple Vision / Android ML Kit, and with the
+  managed ZXing.Net decoder on Windows; OCR is a no-op on the bare `net10.0` head, where there is no native
+  engine.
 - `IsCameraSupported` is false where there is no camera to present, which includes before the app has a
   window.

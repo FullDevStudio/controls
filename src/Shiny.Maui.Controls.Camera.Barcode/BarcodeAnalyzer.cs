@@ -7,7 +7,7 @@ namespace Shiny.Maui.Controls.Camera.Barcode;
 
 /// <summary>
 /// Decodes 1D/2D barcodes and QR codes from each frame using the native scanner — Apple Vision on
-/// iOS/macOS and Android MLKit (a no-op on Windows and bare net10.0). Raises <see cref="BarcodesDetected"/>
+/// iOS/macOS, Android MLKit, and the managed ZXing.Net decoder on Windows. Raises <see cref="BarcodesDetected"/>
 /// once per frame with <b>every</b> code in view (a frame can hold several), and draws a box (captioned with
 /// the value) around each; clears them when no code is in view. Set <see cref="FrameAnalyzer.ScanWindow"/> to
 /// restrict scanning to a region — only codes centered inside it are reported and drawn, and the overlay frames

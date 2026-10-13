@@ -3,13 +3,13 @@
     <PropertyGroup>
         <TargetFrameworks>$(BaseTargetFramework);$(BaseTargetFramework)-ios;$(BaseTargetFramework)-android;$(BaseTargetFramework)-maccatalyst;$(BaseTargetFramework)-macos</TargetFrameworks>
         <!-- Windows packaging (MakePri) only runs on Windows; add the Windows TFM only there so the solution still builds on macOS/Linux. -->
-        <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);$(BaseTargetFramework)-windows10.0.19041.0</TargetFrameworks>
+        <TargetFrameworks Condition="'$(ForceWindowsTfm)' == 'true' Or $([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);$(BaseTargetFramework)-windows10.0.19041.0</TargetFrameworks>
         <EnableWindowsTargeting>true</EnableWindowsTargeting>
         <UseMaui>true</UseMaui>
         <IsAotCompatible>true</IsAotCompatible>
         <SingleProject>true</SingleProject>
         <RootNamespace>Shiny.Maui.Controls.Camera.Barcode</RootNamespace>
-        <Description>Barcode/QR analyzer for the Shiny CameraView. Reads codes with the native scanner — Apple Vision (iOS/macOS) and Android MLKit; a no-op on Windows and bare net10.0.</Description>
+        <Description>Barcode/QR analyzer for the Shiny CameraView. Reads codes with the native scanner — Apple Vision (iOS/macOS) and Android MLKit, with the managed ZXing.Net decoder on Windows and bare net10.0.</Description>
         <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">23.0</SupportedOSPlatformVersion>
     </PropertyGroup>
 
@@ -20,6 +20,11 @@
 
     <ItemGroup Condition="'$(TargetPlatformIdentifier)' == 'android'">
         <PackageReference Include="Xamarin.Google.MLKit.BarcodeScanning" />
+    </ItemGroup>
+
+    <!-- no camera-based native scanner on Windows (or bare net10.0): decode the luminance plane with ZXing.Net -->
+    <ItemGroup Condition="'$(TargetPlatformIdentifier)' == 'windows' Or '$(TargetPlatformIdentifier)' == ''">
+        <PackageReference Include="ZXing.Net" />
     </ItemGroup>
 
     <ItemGroup>
@@ -33,11 +38,8 @@
     <ItemGroup Condition="'$(TargetPlatformIdentifier)' == 'android'">
         <Compile Include="Platforms/Android/**/*.cs" />
     </ItemGroup>
-    <ItemGroup Condition="'$(TargetPlatformIdentifier)' == 'windows'">
-        <Compile Include="Platforms/Windows/**/*.cs" />
-    </ItemGroup>
-    <ItemGroup Condition="'$(TargetPlatformIdentifier)' == ''">
-        <Compile Include="Platforms/Managed/**/*.cs" />
+    <ItemGroup Condition="'$(TargetPlatformIdentifier)' == 'windows' Or '$(TargetPlatformIdentifier)' == ''">
+        <Compile Include="Platforms/ZXing/**/*.cs" />
     </ItemGroup>
 
     <Target Name="_ReincludeNonMauiPlatforms" BeforeTargets="_MauiRemovePlatformCompileItems" Condition="'$(SingleProject)' == 'true'">
@@ -45,7 +47,7 @@
             <Compile Update="Platforms/Apple/**/*.cs" Condition="'$(TargetPlatformIdentifier)' == 'ios' Or '$(TargetPlatformIdentifier)' == 'maccatalyst' Or '$(TargetPlatformIdentifier)' == 'macos'">
                 <ExcludeFromCurrentConfiguration>false</ExcludeFromCurrentConfiguration>
             </Compile>
-            <Compile Update="Platforms/Managed/**/*.cs" Condition="'$(TargetPlatformIdentifier)' == ''">
+            <Compile Update="Platforms/ZXing/**/*.cs" Condition="'$(TargetPlatformIdentifier)' == 'windows' Or '$(TargetPlatformIdentifier)' == ''">
                 <ExcludeFromCurrentConfiguration>false</ExcludeFromCurrentConfiguration>
             </Compile>
         </ItemGroup>
