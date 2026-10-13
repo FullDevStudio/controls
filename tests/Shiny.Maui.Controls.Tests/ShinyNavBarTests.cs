@@ -315,6 +315,31 @@ public class ShinyNavBarTests
     }
 
 
+    /// <summary>
+    /// A MotionIconView is a GraphicsView, which on Android eats every touch over the glyph - so the
+    /// content inside each bar button must be input-transparent or only the padding ring is tappable.
+    /// </summary>
+    [Fact]
+    public void TheContentOfEveryBarButtonLetsTheTapThrough()
+    {
+        var bar = Build();
+        bar.LeftItems.Add(new NavBarItem { Text = "Search", Icon = "search" });
+        bar.RightItems.Add(new NavBarItem { Text = "Hidden", Order = ToolbarItemOrder.Secondary });
+        bar.IsBackButtonVisible = true;
+
+        var buttons = bar.LeadingHost.Children.Concat(bar.TrailingHost.Children).OfType<Border>().ToList();
+        buttons.Count.ShouldBeGreaterThanOrEqualTo(3); // back, item, overflow
+
+        foreach (var button in buttons)
+        {
+            button.InputTransparent.ShouldBeFalse();
+            ((View)button.Content!).InputTransparent.ShouldBeTrue();
+        }
+
+        Descendants(bar.LeadingHost).OfType<MotionIconView>().ShouldNotBeEmpty();
+    }
+
+
     [Fact]
     public void TheBackButtonIsFirstInTheLeadingGroup()
     {

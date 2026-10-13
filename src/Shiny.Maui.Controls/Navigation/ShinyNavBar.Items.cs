@@ -259,6 +259,12 @@ public partial class ShinyNavBar
     /// </remarks>
     View WrapAsButton(View content, string? automationId, Action onTapped, bool enabled = true)
     {
+        // The icon is decoration inside the button, so it must not eat the tap. A MotionIconView is a
+        // GraphicsView, which on Android consumes every touch for its own interaction events - left
+        // hit-testable, a finger on the glyph never reached the Border's recognizer and only the
+        // padding ring around it worked. Cascades through a layout or a badge around the icon too.
+        content.InputTransparent = true;
+
         var host = new Border
         {
             Padding = new Thickness(8, 4),
