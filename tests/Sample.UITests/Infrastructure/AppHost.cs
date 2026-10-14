@@ -459,6 +459,12 @@ public abstract class DesktopAppHost : AppHost
 
     public bool HasExited => process?.HasExited ?? false;
 
+    /// <summary>Kills the app the watchdog found wedged, so pending driver calls fail now rather than time out.</summary>
+    public void Kill()
+    {
+        try { process?.Kill(entireProcessTree: true); } catch { }
+    }
+
     long outputOffset;
 
     static readonly string[] OutputFailureMarkers =

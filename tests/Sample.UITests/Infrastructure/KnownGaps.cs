@@ -38,6 +38,45 @@ public static class KnownGaps
     public const string AppKitNoRelayoutOnChange =
         "BUG: AppKit runs no layout pass when an already-realized layout's properties or size change - it only re-lays out on a window resize";
 
+    /// <summary>
+    /// UPSTREAM maui-labs bug (Microsoft.Maui.Platforms.Linux.Gtk4 0.1.0-preview.12.26479.1): a double free in
+    /// GtkViewHandler.ApplyTransform, which runs for any view with Scale/Rotation != 1 at a non-zero position:
+    ///   var point = Graphene.Point.Alloc(); point.Init(x, y); transform = transform.Translate(point); point.Free();
+    /// Point.Alloc returns a Gir.Core OwnedHandle, so the explicit Free() is followed by the handle's finalizer
+    /// freeing the same pointer. Crash dump (createdump, dotnet-dump clrstack -f on the .NET Finalizer thread):
+    ///   GObject BoxedFree &lt;- Graphene.Internal.PointOwnedHandle.ReleaseHandle &lt;- SafeHandle.Finalize &lt;- GC.RunFinalizers
+    /// glibc then aborts ("double free or corruption (!prev)", "free(): double free detected in tcache 2", ...)
+    /// whenever the GC gets to it, so it hits pages at random: the Badge page (every badge scales in, and the
+    /// pulse loops) dies ~2-19s after opening with no input; Expander and Dialogs died the same way under test.
+    /// The fix is upstream: drop point.Free(). Nothing in Shiny's src is at fault.
+    /// </summary>
+    public const string LinuxBadgeHeapCorruption =
+        "BUG: upstream maui-labs: GtkViewHandler.ApplyTransform double-frees a Graphene.Point (Free() then the OwnedHandle finalizer)";
+
+    /// <summary>
+    /// GTK4 head: the UI thread spins at 100% CPU inside a native GTK call and never returns (the agent
+    /// stops answering; the watchdog kills the app). dotnet-stack, taken twice ~1 min apart during the hang:
+    ///   [native] ← Gtk4.Handlers.EntryHandler.MapText (PlatformView.SetText) ← BindableObject.SetValue
+    ///   ← InputView.set_Text ← AutoCompleteEntry.OnItemTapped ← TapGestureRecognizer.SendTapped
+    ///   ← DevFlow HandleTap ← GtkDispatcher ← Gio.Application.Run
+    /// MapText itself is a plain compare-and-SetText (decompiled), so the loop is inside gtk_editable_set_text.
+    /// Reached from the suggestion tap; tests that never tap also wedge a few seconds after typing once
+    /// the dropdown has shown (5/6 AutoComplete tests; Typing_Filters_Local_Items passes).
+    /// </summary>
+    public const string LinuxAutoCompleteGtkWedge =
+        "BUG: GTK4 head wedges (UI thread spinning in native gtk_editable_set_text) once the AutoComplete dropdown is used";
+
+    /// <summary>
+    /// GTK4 head: the second ShellContent of a multi-content FlyoutItem can't be reached at all. Worse than
+    /// AppKit: there the route changes and the page doesn't; here Shell never even changes the route. Seen in
+    /// the targeted run for every ChipGroup test ("Shell did not reach '//chipgroup' within 30s (current route:
+    /// '//tagentry')") and both TreeDataGrid tests ("... '//treedatagrid' ... (current route: '//datagrid')"),
+    /// including after navigating to //home first. ChipGroupPage still gets created (the page-type wait passes
+    /// when the route check is skipped), but TagEntry's content stays on screen.
+    /// </summary>
+    public const string LinuxSiblingShellContentUnreachable =
+        "BUG: GTK4 Shell never navigates to the second ShellContent of a FlyoutItem - the route stays on the first";
+
     static readonly Dictionary<(UIPlatform, string), string> pages = new()
     {
         [(UIPlatform.MacOS, "floorplan")] = SkiaNoAppKitHandler,
@@ -58,6 +97,10 @@ public static class KnownGaps
         [(UIPlatform.MacOS, "musicbrowse")] = AppKitSiblingShellContentSwitch,
         [(UIPlatform.MacOS, "musiclibrary")] = AppKitSiblingShellContentSwitch,
         [(UIPlatform.Linux, "virtualizedgrid")] = VirtualizedGridNoHandler,
+        [(UIPlatform.Linux, "badge")] = LinuxBadgeHeapCorruption,
+        [(UIPlatform.Linux, "chipgroup")] = LinuxSiblingShellContentUnreachable,
+        [(UIPlatform.Linux, "treedatagrid")] = LinuxSiblingShellContentUnreachable,
+        [(UIPlatform.Linux, "passwordstrength")] = LinuxSiblingShellContentUnreachable,
     };
 
     /// <summary>Why <paramref name="route"/> can't build on the current head, or null.</summary>

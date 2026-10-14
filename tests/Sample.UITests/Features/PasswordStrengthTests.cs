@@ -5,6 +5,7 @@ namespace Sample.UITests.Features;
 /// flow out to the view model, IsAcceptable gates the submit button, and StrengthChanged writes the
 /// page's status line.
 /// </summary>
+[SkipOn(UIPlatform.Linux, KnownGaps.LinuxSiblingShellContentUnreachable)]
 public class PasswordStrengthTests : UITest
 {
     const string Field = "DefaultPasswordStrength";

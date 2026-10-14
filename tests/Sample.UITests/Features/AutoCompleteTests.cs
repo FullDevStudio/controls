@@ -46,7 +46,7 @@ public class AutoCompleteTests : UITest
         await Driver.WaitForValue("FruitAuto", "Text", "berry");
     }
 
-    [Test]
+    [Test, SkipOn(UIPlatform.Linux, KnownGaps.LinuxAutoCompleteGtkWedge)]
     public async Task Picking_A_Suggestion_Selects_It()
     {
         await Open(Route, PageType);
@@ -61,7 +61,7 @@ public class AutoCompleteTests : UITest
         await AssertNoAppErrors();
     }
 
-    [Test]
+    [Test, SkipOn(UIPlatform.Linux, KnownGaps.LinuxAutoCompleteGtkWedge)]
     public async Task Typing_Again_Clears_The_Selection()
     {
         await Open(Route, PageType);
@@ -77,7 +77,7 @@ public class AutoCompleteTests : UITest
         await WaitForSuggestions("FruitAuto", "Kiwi");
     }
 
-    [Test]
+    [Test, SkipOn(UIPlatform.Linux, KnownGaps.LinuxAutoCompleteGtkWedge)]
     public async Task TextMemberPath_Shows_And_Selects_Objects()
     {
         await Open(Route, PageType);
@@ -92,7 +92,7 @@ public class AutoCompleteTests : UITest
         await AssertNoAppErrors();
     }
 
-    [Test]
+    [Test, SkipOn(UIPlatform.Linux, KnownGaps.LinuxAutoCompleteGtkWedge)]
     public async Task SearchCommand_Results_Arrive_Asynchronously()
     {
         await Open(Route, PageType);
@@ -108,7 +108,7 @@ public class AutoCompleteTests : UITest
         await AssertNoAppErrors();
     }
 
-    [Test]
+    [Test, SkipOn(UIPlatform.Linux, KnownGaps.LinuxAutoCompleteGtkWedge)]
     public async Task Below_Threshold_Does_Not_Search()
     {
         await Open(Route, PageType);

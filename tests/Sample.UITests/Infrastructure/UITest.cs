@@ -38,7 +38,7 @@ public abstract class UITest
     /// to the console, so this is how a device-side event (a GC storm in logcat, a crash) is matched to the
     /// test that was running at that moment.
     /// </summary>
-    static void Timeline(string line)
+    internal static void Timeline(string line)
     {
         try
         {
@@ -65,7 +65,7 @@ public abstract class UITest
 
         if (!await Driver.IsAlive())
         {
-            await File.WriteAllTextAsync(Path.Combine(dir, name + ".txt"), "The app was not responding after this test — it most likely crashed here.");
+            await File.WriteAllTextAsync(Path.Combine(dir, name + ".txt"), "The app was not responding after this test — it most likely crashed or hung here.");
             return;
         }
 

@@ -15,10 +15,81 @@ the **correct** behaviour. To fix a bug: fix it, delete the skip, and the test p
 | MAUI iOS simulator | **All 8 MAUI bugs + 3 sample bugs FIXED (2026-10-14).** Full run: 599 pass / 6 platform skips / 1 fail (`ThemeTests.Flyout_Dark_Switch_Sets_The_App_Theme`, flaky: passes 4/4 in isolation). MAUI unit tests 1523/1523. Release notes added. |
 | MAUI Android emulator (devflow-tests-api35) | **Done 2026-10-14.** Final full run (all fixes): **597 pass / 2 fail / 7 skip** of 606. The 2 are intermittent navigation timeouts that only happen deep into a full run (Shell reports an empty route): `NavigationTests…(nav-right-drafts)` (failed in both full runs, right after Push_And_Pop) and the `marquee` sweep. Both pass when re-run (Navigation+Marquee 15/15). Not chased further. GREF: FrostedGlass + Office Ribbon churn fixed and measured flat; remaining growth is Shell page retention (~2k GREFs/page, Office editors ~18–23k each). |
 | MAUI macOS AppKit | 397 pass / 3 fail / 187 skip. The 3 are sweep-only: musiclibrary (now in KnownGaps, not re-run); calendarlist and quickentry (order-dependent empty-route hangs). |
-| MAUI Linux GTK | Not run to completion. GTK under macOS keeps locking up, so run it on a real Linux box. |
+| MAUI Linux GTK | **2026-10-14, real Linux box (Ubuntu, aarch64 VM):** now builds and runs on a clean machine. Deliberately not run to completion: an **upstream maui-labs double free** (see *MAUI Linux GTK — findings*) aborts the app at random whenever the GC finalizes a Graphene.Point, so a full run is mostly noise until it's fixed upstream. Targeted run of 8 classes: 65 total / 26 pass / 32 fail / 7 skip. |
 | MAUI Windows | Not run. Run it on Windows: `SHINY_UITEST_PLATFORM=windows dotnet run --project tests/Sample.UITests`. |
 
 Nothing is committed yet.
+
+## MAUI Linux GTK — findings (2026-10-14)
+
+Found by a Claude session on a real Ubuntu aarch64 VM driving `./uitest linux`.
+
+### Upstream bug: double free in `GtkViewHandler.ApplyTransform` (dotnet/maui-labs)
+
+This is in `Microsoft.Maui.Platforms.Linux.Gtk4` 0.1.0-preview.12.26479.1, decompiled:
+
+```csharp
+var point = Graphene.Point.Alloc();
+point.Init(x, y);
+transform = transform.Translate(point);
+point.Free();          // graphene_point_free
+```
+
+`Point.Alloc` returns a Gir.Core `OwnedHandle`. The explicit `Free()` releases the native point, then the handle's finalizer releases the same pointer again. Crash dump (createdump, then `dotnet-dump clrstack -f` on the .NET finalizer thread):
+
+```
+GObject.Internal.Functions.BoxedFree
+ <- Graphene.Internal.PointOwnedHandle.ReleaseHandle
+ <- SafeHandle.InternalRelease <- SafeHandle.Finalize <- GC.RunFinalizers
+```
+
+glibc then aborts, with "double free or corruption (!prev)", "free(): chunks in smallbin corrupted" or "free(): double free detected in tcache 2".
+
+- **Trigger:** any view whose Scale or Rotation is not 1, at a non-zero X+TranslationX or Y+TranslationY. That covers animated badges, Expander indicators and dialog animations.
+- **Why it hits random pages:** the abort happens whenever the GC finalizes the handle, not when the transform is applied. The Badge page dies about 2–19s after opening, with no input; Expander and Dialogs died the same way under test.
+- **Not Shiny:** BadgeView only exercises the path. Animating the scale to 0.01 instead of 0 dies the same way, and no `src/` change helps. The Badge page is pinned by `KnownGaps.LinuxBadgeHeapCorruption`.
+
+### Upstream packaging: two GTK backends loaded at once
+
+`Microsoft.Maui.DevFlow.Agent.Gtk` depends on the legacy `Platform.Maui.Linux.Gtk4` 0.6.0, so the app loads both `Platform.Maui.Linux.Gtk4.dll` and `Microsoft.Maui.Platforms.Linux.Gtk4.dll`; the dump's module list confirms it.
+
+### GTK platform gaps
+
+- **Second ShellContent unreachable:** the second ShellContent of a multi-content FlyoutItem (chipgroup, treedatagrid, passwordstrength) can't be reached. Shell never even changes the route, even when navigating from //home, so it's worse than AppKit. Pinned by `KnownGaps.LinuxSiblingShellContentUnreachable`.
+- **AutoComplete wedge:** the UI thread spins at 100% CPU inside native `gtk_editable_set_text`, reached via `EntryHandler.MapText` ← `AutoCompleteEntry.OnItemTapped`. Tests that never tap also wedge a few seconds after the dropdown shows. This is probably separate from the double free, since a finalizer abort can't explain a CPU spin. 5 of 6 tests are skipped (`KnownGaps.LinuxAutoCompleteGtkWedge`); `Typing_Filters` passes.
+- **Screenshots:** `maui devflow ui screenshot` fails on GTK, so failures there save no PNG. The driver's own screenshot call works.
+
+### Targeted run (8 classes, before the Linux skips were added)
+
+| Class | Failures | Verdict |
+|---|---|---|
+| ChipGroup | 9 | Real gap: sibling ShellContent (now skipped) |
+| DataGrid (tree) | 2 | Real gap: sibling ShellContent (now skipped) |
+| DataGrid (grid) | 5 | Untriaged: first-page waits |
+| Expander | 6 | Crash-induced (upstream double free) |
+| Dialogs | 4 | 2 crash-induced, 2 untriaged |
+| Docking | 2 | Untriaged: "Unknown panel type 'output'", empty main area |
+| ColorPicker | 2 | Untriaged: watchdog lockups |
+| CountryAddress | 1 | Untriaged: watchdog lockup |
+| DurationPicker | 1 | Untriaged |
+
+### Clean-machine fixes (all in v1)
+
+- `NuGet.config`: the `dotnet11-transport` feed. DevFlow.Driver needs an AndroidSdk tools preview that is only published there.
+- `Directory.Build.targets`: drops the Apple TFMs on Linux. The list must be built from literal text, because string property functions escape `;`.
+- `Sample.Linux` and `Sample.MacOS`: `DevFlowXamlSourceMapsEnabled=false`.
+- Harness:
+  - bash fallback when there is no zsh;
+  - `IsAlive` capped at 10s;
+  - desktop watchdog (`SHINY_UITEST_WATCHDOG_SECONDS`, default 15 on Linux, off elsewhere).
+- Tooling: install the maui-labs `maui` CLI for broker discovery (or pass `--port 9223`), and uninstall the legacy `maui-devflow` tool.
+
+### Draft upstream issues (dotnet/maui-labs) — not filed
+
+1. **GtkViewHandler.ApplyTransform double-frees a Graphene.Point.**
+   - **Repro:** loop `ScaleToAsync` on a view that isn't at (0,0); run with `MALLOC_CHECK_=3`; the app aborts when the GC finalizes the point.
+   - **Fix:** remove `point.Free()`, or dispose the `Point` instead. The `Translate` path in `GtkLayoutPanel` already leaves the point to its handle.
+2. **Microsoft.Maui.DevFlow.Agent.Gtk references the legacy `Platform.Maui.Linux.Gtk4` 0.6.0.** Both GTK backends end up in the app. Expected: it should reference `Microsoft.Maui.Platforms.Linux.Gtk4`.
 
 ## Open investigation: Android GREF growth / memory
 
@@ -167,7 +238,8 @@ tests skip with the reason.
   - A second photo added while MediaPickerButton shows its carousel aborts the load.
 - **Linux GTK**
   - No handler for CarouselGallery, StaggeredGrid or VirtualizedGrid.
-  - Shell sibling ShellContent navigation fails the same way as AppKit (passwordstrength beside securitypin, chipgroup beside tagentry).
+  - The second ShellContent of a FlyoutItem is unreachable (chipgroup, treedatagrid, passwordstrength); the route never changes. See *MAUI Linux GTK — findings*.
+  - Badge page: upstream maui-labs double free (see *MAUI Linux GTK — findings*).
 - **Build:** a plain `dotnet build` of `samples/Sample.MacOS` fails (InitializeComponent/x:Name missing). DevFlow Agent 0.1.0-preview.12.26479.1 double-adds the XAML on net10.0-macos. The workaround is `-p:DevFlowXamlSourceMapsEnabled=false`. Not yet put in the harness or csproj, and not yet re-verified by hand.
 
 ## MAUI — sample bugs (`samples/`)
@@ -217,4 +289,5 @@ tests skip with the reason.
 - Android: GREF exhaustion from Shell retention cripples the app after ~70 pages; the harness relaunches after 25 distinct routes or on a monodroid-gc warning.
 - Android: `monkey` refuses to start on a freshly booted emulator, so the app is launched with `am start` on the resolved activity.
 - iOS: simulator permission prompts block the UI, so the harness grants privacy permissions with `simctl privacy`.
+- GTK locks up (the UI thread spins in native code while the port stays open). The desktop watchdog kills the app after 15s without an agent answer, and `IsAlive` is capped at 10s, so a hang costs one test, not the whole run.
 - GTK on macOS needs the .so→dylib shims and must exec the apphost directly (SIP strips `DYLD_*` through zsh).

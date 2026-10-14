@@ -70,12 +70,14 @@ public class MauiDevFlowDriver : IAsyncDisposable
         throw new TimeoutException($"DevFlow agent on port {Port} did not respond within {timeoutSeconds}s", lastException);
     }
 
-    /// <summary>True while the agent still answers — false means the app died.</summary>
+    /// <summary>True while the agent still answers — false means the app died or its UI thread is wedged.</summary>
     public async Task<bool> IsAlive()
     {
         try
         {
-            await Client.GetStatusAsync();
+            // A wedged UI thread (GTK spinning inside a native call) keeps the process alive and the port
+            // open but never answers; without a cap every later test hangs on it instead of relaunching.
+            await Client.GetStatusAsync().WaitAsync(TimeSpan.FromSeconds(10));
             return true;
         }
         catch

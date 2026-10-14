@@ -293,7 +293,7 @@ public class DataGridTests : UITest
         await Open("treedatagrid", "TreeDataGridPage");
     }
 
-    [Test]
+    [Test, SkipOn(UIPlatform.Linux, KnownGaps.LinuxSiblingShellContentUnreachable)]
     public async Task Tree_Caret_Expands_And_Collapses_A_Branch()
     {
         await OpenTree();
@@ -316,7 +316,7 @@ public class DataGridTests : UITest
     }
 
 
-    [Test]
+    [Test, SkipOn(UIPlatform.Linux, KnownGaps.LinuxSiblingShellContentUnreachable)]
     public async Task Tree_Lazy_Branch_Loads_Its_Children()
     {
         await OpenTree();

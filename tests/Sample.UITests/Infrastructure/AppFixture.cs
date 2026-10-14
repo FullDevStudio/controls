@@ -45,6 +45,7 @@ public sealed class AppFixture : IAsyncInitializer, IAsyncDisposable
         };
         await Driver.WaitForAgent(timeoutSeconds: 180);
         await Driver.WaitUntilExists("HomePage", timeoutSeconds: 60);
+        StartWatchdog();
     }
 
     /// <summary>
@@ -62,13 +63,66 @@ public sealed class AppFixture : IAsyncInitializer, IAsyncDisposable
             return true;
 
         relaunchRequested = false;
+        StopWatchdog();
         Host.AgentSince = DateTimeOffset.UtcNow.AddSeconds(-2);
         await Host.LaunchAsync();
         Driver.Port = await Host.ResolvePortAsync(TimeSpan.FromSeconds(120));
         await Driver.WaitForAgent(timeoutSeconds: 120);
         await Driver.WaitUntilExists("HomePage", timeoutSeconds: 60);
         Relaunches++;
+        StartWatchdog();
         return true;
+    }
+
+    CancellationTokenSource? watchdog;
+
+    /// <summary>
+    /// Pings the agent every 2s once the app is up; after <see cref="UITestSettings.WatchdogSeconds"/> without
+    /// an answer the app is killed and a relaunch requested. A wedged app otherwise costs every pending
+    /// driver call its full timeout, and the next test its liveness check.
+    /// </summary>
+    void StartWatchdog()
+    {
+        StopWatchdog();
+        if (UITestSettings.WatchdogSeconds <= 0 || UITestSettings.Attach || Host is not DesktopAppHost desktop)
+            return;
+
+        var cts = watchdog = new CancellationTokenSource();
+        var limit = TimeSpan.FromSeconds(UITestSettings.WatchdogSeconds);
+        _ = Task.Run(async () =>
+        {
+            var lastAnswer = DateTime.UtcNow;
+            while (!cts.IsCancellationRequested)
+            {
+                try
+                {
+                    await Driver.Status().WaitAsync(TimeSpan.FromSeconds(4), cts.Token);
+                    lastAnswer = DateTime.UtcNow;
+                }
+                catch when (!cts.IsCancellationRequested)
+                {
+                    if (DateTime.UtcNow - lastAnswer > limit)
+                    {
+                        UITest.Timeline($"watchdog: no answer from the agent for {limit.TotalSeconds:0}s - killing the app");
+                        RequestRelaunch();
+                        desktop.Kill();
+                        return;
+                    }
+                }
+                catch
+                {
+                    return;
+                }
+
+                try { await Task.Delay(2000, cts.Token); } catch { return; }
+            }
+        });
+    }
+
+    void StopWatchdog()
+    {
+        watchdog?.Cancel();
+        watchdog = null;
     }
 
     /// <summary>
@@ -83,6 +137,7 @@ public sealed class AppFixture : IAsyncInitializer, IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        StopWatchdog();
         if (Driver != null)
             await Driver.DisposeAsync();
 

@@ -36,6 +36,15 @@ public static class UITestSettings
     public static string Avd { get; } = Env("SHINY_UITEST_AVD") ?? "devflow-tests-api35";
     public static string Configuration { get; } = Env("SHINY_UITEST_CONFIGURATION") ?? "Debug";
 
+    /// <summary>
+    /// Seconds the agent may go unanswered before the watchdog kills a desktop app (0 = off). GTK locks up
+    /// a lot — the UI thread spins inside a native call with the process and port still up — so Linux
+    /// defaults to a tight 15s; other heads default off.
+    /// </summary>
+    public static int WatchdogSeconds { get; } = int.TryParse(Env("SHINY_UITEST_WATCHDOG_SECONDS"), out var w)
+        ? w
+        : Platform == UIPlatform.Linux ? 15 : 0;
+
     public static string RepoRoot { get; } = FindRepoRoot();
 
     public static string ResultsDirectory { get; } = Path.Combine(

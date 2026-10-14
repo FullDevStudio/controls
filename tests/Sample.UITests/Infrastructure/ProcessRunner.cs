@@ -29,7 +29,10 @@ public static class ProcessRunner
     public static Task<ProcessResult> DotNet(string arguments, TimeSpan? timeout = null)
         => OperatingSystem.IsWindows()
             ? Run("dotnet", arguments, timeout)
-            : Run("/bin/zsh", ["-lc", "dotnet " + arguments], timeout);
+            : Run(LoginShell, ["-lc", "dotnet " + arguments], timeout);
+
+    /// <summary>zsh on macOS; plenty of Linux boxes don't have it, so fall back to bash there.</summary>
+    static string LoginShell => File.Exists("/bin/zsh") ? "/bin/zsh" : "/bin/bash";
 
     /// <summary>
     /// Runs with an argument vector. Use this whenever an argument holds shell quoting: .NET splits a
