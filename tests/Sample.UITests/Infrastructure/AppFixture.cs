@@ -34,6 +34,12 @@ public sealed class AppFixture : IAsyncInitializer, IAsyncDisposable
             if (!UITestSettings.NoBuild)
                 await Host.BuildAsync();
 
+            // The previous run's agent can still be registered with the broker (and still holding the
+            // default port) for a few seconds after its app is killed. EnsureRunningAsync guards the
+            // relaunch path this way; without the same guard here the first connection of a session can
+            // be handed a dead agent, and then nothing is ever found - every test in the session fails
+            // in InitializeAsync on "HomePage not found".
+            Host.AgentSince = DateTimeOffset.UtcNow.AddSeconds(-2);
             await Host.LaunchAsync();
         }
 

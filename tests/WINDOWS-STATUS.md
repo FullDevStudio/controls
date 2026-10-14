@@ -53,8 +53,29 @@ was ever requested and the page stayed dead for the rest of the session.
 `NavigateTo` now wraps that case in a new `MauiDevFlowDriver.PageMissingMessage`, and `CollectEvidence`
 relaunches on either marker.
 
-This is expected to collapse a large share of the 25 failures. Everything below marked *cascade* is
+This is expected to collapse a large share of the failures. Everything below marked *cascade* is
 unverified until the suite is re-run with the fix in place.
+
+### Two more Windows-only harness faults — relaunch could never succeed
+
+The first run died outright around `QuickEntryTests`: Shell wedged on an empty route, the relaunch was
+attempted, and from then on **every** test failed in its `BeforeTest` hook. Two independent causes, both
+invisible on macOS and Linux, both fixed in `ace7b73`:
+
+- **`app.log` was locked against the relaunch.** `ProcessRunner.StartLogged` opened the log with
+  `new StreamWriter(logFile, append: false)`, which shares the file for reading only, and disposed the
+  writer from the `Exited` handler — a pool-thread callback that races the next `LaunchAsync`. On Windows
+  the relaunch hit `The process cannot access the file … because it is being used by another process`
+  and the app never came back. Now opened `FileShare.ReadWrite | FileShare.Delete`, with a guard for
+  output arriving after disposal.
+- **The real failure was masked.** `UITest.TestStarted` stayed `default` when `PrepareApp` threw, and
+  `DateTimeOffset.MinValue.AddSeconds(-1)` overflows, so the After(Test) hook reported
+  `The added or subtracted value results in an un-representable DateTime` instead of the actual error.
+  Now seeded at construction.
+
+Because of this the first run's results past `QuickEntryTests` are worthless — it reached
+312 started / 264 passed / 55 failed before being stopped deliberately. A clean re-run is in progress and
+is the one that will be reported.
 
 ## Failures and verdicts
 
@@ -95,6 +116,20 @@ animation-driven controls, which is suggestive but not evidence. **Provisional.*
 ### DataGridTests — 6 of 6, one coherent shape
 
 Every failure is a **collapse that does not happen**; expanding works.
+
+**Lead (not yet verified): this may be `IsVisible`, not DataGrid.**
+`Header_Tap_Sorts_Ascending_Then_Descending` fails at `DataGridTests.cs:128` —
+`Assert.That(await HasText("Liskov")).IsFalse()` — which runs **before the test taps anything**. Liskov is
+on page two of an unsorted grid and should not be on screen, yet `HasText` finds it. `HasText` filters
+`QuerySelector` results on `e.IsVisible`, so if WinUI (or the DevFlow agent on WinUI) reports elements as
+visible when they are not, every "did not collapse" symptom here is explained without the grid being
+wrong at all: the rows did collapse, and the query still saw them.
+
+That would also make `IsVisible` unreliable for *any* test on this head, which matters well beyond
+DataGrid. Against it: `Tree_Lazy_Branch_Loads_Its_Children` fails the other way ("no visible element with
+text `▾`"), so the story is not purely "everything reports visible".
+
+To check directly against the running app: query a known off-page row and read `IsVisible`.
 
 | Test | Symptom |
 |---|---|
