@@ -1,0 +1,164 @@
+#!/usr/bin/env bash
+# Runs the end-to-end UI suites, one or more platforms per line. See tests/UITESTING.md.
+#
+#   ./uitest ios                        one platform
+#   ./uitest ios android                several, one after another
+#   ./uitest mobile | desktop | all     groups (all = everything this OS can run, plus Blazor)
+#   ./uitest blazor                     Chromium; also blazor-webkit, blazor-firefox, blazor-publish
+#   ./uitest android --filter Slider    one control class (Slider,Ribbon for several, or a raw /*/*/X/* filter)
+#   ./uitest ios --no-build             reuse the last build/install
+#   ./uitest ios --attach --port 9223   drive an app that is already running
+#
+# Platforms run in sequence, never side by side: they share build output, and two builds of the
+# sample at once corrupt each other. Each platform's log goes to artifacts/uitest-logs/<platform>.log.
+# Exits non-zero if any platform failed.
+
+set -uo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ARTIFACTS="$ROOT/artifacts/uitest"
+LOGS="$ROOT/artifacts/uitest-logs"
+
+usage() {
+    sed -n '2,14p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+    echo
+    echo "Platforms: ios android macos linux windows blazor blazor-webkit blazor-firefox blazor-publish"
+    echo "Groups:    mobile (ios android)  desktop (this OS's desktop head)  all"
+    exit "${1:-0}"
+}
+
+os="$(uname -s)"
+desktop_head() {
+    case "$os" in
+        Darwin) echo macos ;;
+        Linux) echo linux ;;
+        MINGW*|MSYS*|CYGWIN*) echo windows ;;
+    esac
+}
+
+platforms=()
+filter=""
+no_build=0
+attach=0
+port=""
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -h|--help) usage ;;
+        --filter|-f) filter="${2:-}"; shift ;;
+        --no-build) no_build=1 ;;
+        --attach) attach=1 ;;
+        --port) port="${2:-}"; shift ;;
+        mobile) platforms+=(ios android) ;;
+        desktop) platforms+=("$(desktop_head)") ;;
+        all)
+            [ "$os" = Darwin ] && platforms+=(ios)
+            platforms+=(android "$(desktop_head)" blazor)
+            ;;
+        ios|android|macos|linux|windows|blazor|blazor-webkit|blazor-firefox|blazor-publish) platforms+=("$1") ;;
+        *) echo "Unknown argument: $1" >&2; usage 1 ;;
+    esac
+    shift
+done
+
+[ ${#platforms[@]} -eq 0 ] && usage 1
+
+# "Slider" -> /*/*/SliderTests/*, "Slider,Ribbon" -> /*/*/(SliderTests|RibbonTests)/*, raw filters pass through.
+tree_filter=""
+if [ -n "$filter" ]; then
+    if [[ "$filter" == /* ]]; then
+        tree_filter="$filter"
+    else
+        classes=""
+        IFS=',' read -ra parts <<< "$filter"
+        for c in "${parts[@]}"; do
+            [[ "$c" == *Tests ]] || c="${c}Tests"
+            classes="${classes:+$classes|}$c"
+        done
+        [[ "$classes" == *"|"* ]] && classes="($classes)"
+        tree_filter="/*/*/$classes/*"
+    fi
+fi
+
+mkdir -p "$LOGS"
+
+needs_maui=0; needs_blazor=0
+for p in "${platforms[@]}"; do
+    case "$p" in blazor*) needs_blazor=1 ;; *) needs_maui=1 ;; esac
+done
+
+build() {
+    local project="$1"
+    echo "==> Building $project"
+    if ! dotnet build "$ROOT/tests/$project" --artifacts-path "$ARTIFACTS" > "$LOGS/build-$project.log" 2>&1; then
+        echo "Build of $project failed - see $LOGS/build-$project.log" >&2
+        grep -E " error " "$LOGS/build-$project.log" | sort -u | head -20 >&2
+        exit 2
+    fi
+}
+
+[ $needs_maui -eq 1 ] && build Sample.UITests
+[ $needs_blazor -eq 1 ] && build Sample.Blazor.UITests
+
+summary=()
+failed_any=0
+
+run() {
+    local platform="$1"
+    local log="$LOGS/$platform.log"
+    local dll args=(--no-progress)
+    [ -n "$tree_filter" ] && args+=(--treenode-filter "$tree_filter")
+
+    local env_vars=()
+    case "$platform" in
+        blazor*)
+            dll="$ARTIFACTS/bin/Sample.Blazor.UITests/debug/Sample.Blazor.UITests.dll"
+            case "$platform" in
+                blazor-webkit) env_vars+=(SHINY_BLAZOR_BROWSER=webkit) ;;
+                blazor-firefox) env_vars+=(SHINY_BLAZOR_BROWSER=firefox) ;;
+                blazor-publish) env_vars+=(SHINY_BLAZOR_MODE=publish) ;;
+            esac
+            ;;
+        *)
+            dll="$ARTIFACTS/bin/Sample.UITests/debug/Sample.UITests.dll"
+            env_vars+=(SHINY_UITEST_PLATFORM="$platform")
+            [ $no_build -eq 1 ] && env_vars+=(SHINY_UITEST_NOBUILD=1)
+            [ $attach -eq 1 ] && env_vars+=(SHINY_UITEST_ATTACH=1)
+            [ -n "$port" ] && env_vars+=(SHINY_UITEST_PORT="$port")
+            ;;
+    esac
+
+    echo "==> $platform  (log: $log)"
+    local start=$SECONDS
+    env ${env_vars[@]+"${env_vars[@]}"} dotnet "$dll" "${args[@]}" > "$log" 2>&1
+    local code=$?
+    local mins=$(( (SECONDS - start) / 60 ))m$(( (SECONDS - start) % 60 ))s
+
+    local total passed failed skipped
+    total=$(grep -m1 -E "^  total:" "$log" | awk '{print $2}')
+    passed=$(grep -m1 -E "^  succeeded:" "$log" | awk '{print $2}')
+    failed=$(grep -m1 -E "^  failed:" "$log" | awk '{print $2}')
+    skipped=$(grep -m1 -E "^  skipped:" "$log" | awk '{print $2}')
+
+    local status=PASS
+    if [ $code -ne 0 ] || [ "${failed:-0}" != 0 ]; then
+        status=FAIL
+        failed_any=1
+        grep -E "^failed " "$log" | head -10 | sed 's/^/      /'
+    fi
+    [ -z "$total" ] && status="ERROR (no results - see log)" && failed_any=1
+
+    summary+=("$(printf '%-16s %-6s total %-5s passed %-5s failed %-4s skipped %-4s %s' \
+        "$platform" "$status" "${total:--}" "${passed:--}" "${failed:--}" "${skipped:--}" "$mins")")
+}
+
+for p in "${platforms[@]}"; do
+    run "$p"
+done
+
+echo
+echo "==> Summary"
+printf '%s\n' "${summary[@]}"
+echo "Failure screenshots/logs: $ARTIFACTS/bin/<suite>/debug/uitest-results/<platform>/failures/"
+
+exit $failed_any

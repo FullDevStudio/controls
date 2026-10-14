@@ -120,6 +120,28 @@ public class RangePickerTests
         Count(h.Html, "data-date=").ShouldBe(31 + 30);
     }
 
+    /// <summary>
+    /// "Next month" on a two-month calendar used to do nothing: the month after the first is already
+    /// on screen, and paging went through the "already visible" guard meant for keyboard focus.
+    /// </summary>
+    [Fact]
+    public async Task NextMonthPagesAMultiMonthCalendar()
+    {
+        await using var h = await RenderAsync<DateRangeCalendar>(new() { ["Today"] = Today, ["Culture"] = En, ["Months"] = 2 });
+        h.Html.ShouldContain("March 2026");
+
+        await h.Run(c => c.ShiftMonthAsync(1));
+        await h.Rerender();
+
+        h.Html.ShouldNotContain("March 2026");
+        h.Html.ShouldContain("April 2026");
+        h.Html.ShouldContain("May 2026");
+
+        await h.Run(c => c.ShiftMonthAsync(-1));
+        await h.Rerender();
+        h.Html.ShouldContain("March 2026");
+    }
+
     [Fact]
     public async Task TwoClicksRaiseTheRange()
     {

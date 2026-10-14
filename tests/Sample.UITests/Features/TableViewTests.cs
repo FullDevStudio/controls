@@ -185,9 +185,6 @@ public class TableViewTests : UITest
 
 
     [Test]
-    [Skip("BUG: CellBase.ApplyCascadedStyles re-applies title/description/hint styles but never the value-text ones - LabelCell (and EntryCell) only run "
-        + "UpdateValueTextFontSize/Color from their own property's propertyChanged, so the table's CellValueTextFontSize/CellValueTextColor never reach a cell "
-        + "that doesn't set its own. iOS: 'Blue value text' renders at 14pt in #FFFFFF, the table says 16pt #007AFF")]
     public async Task Table_Value_Text_Styles_Cascade_To_Cells()
     {
         await Open("styling", "StylingPage");

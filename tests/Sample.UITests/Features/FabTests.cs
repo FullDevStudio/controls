@@ -112,8 +112,6 @@ public class FabTests : UITest
 
 
     [Test]
-    [Skip("BUG: FabMenu.AnimateToStateAsync returns early while isAnimating, so an IsOpen=false that lands during the open animation is dropped - "
-        + "IsOpen reads False but every item stays visible (reproduced on iOS: open, then close/tap an item within ~300ms)")]
     public async Task Closing_During_The_Open_Animation_Still_Closes()
     {
         await OpenFab();

@@ -68,6 +68,47 @@ public class RibbonTests
     }
 
 
+    /// <summary>
+    /// "Insert picture" makes the Format tab Visible and selects it in the same render. The ribbon's
+    /// SelectedKey lands before the tab's Visible does, so the request has to wait for the tab rather
+    /// than fall back to Home.
+    /// </summary>
+    [Fact]
+    public void ARequestedTabThatIsNotVisibleYetIsSelectedWhenItAppears()
+    {
+        var (ribbon, tabs) = Build("Home", "Insert", "Picture");
+        tabs[2].Visible = false;
+        ribbon.SyncSelection("insert");
+
+        ribbon.SyncSelection("picture");
+        ribbon.IsActive(tabs[1]).ShouldBeTrue();
+
+        tabs[2].Visible = true;
+        ribbon.EnsureSelection();
+
+        ribbon.IsActive(tabs[2]).ShouldBeTrue();
+        ribbon.ExpireRequestedKey().ShouldBeFalse();
+    }
+
+
+    [Fact]
+    public void ARequestForATabThatNeverAppearsIsDropped()
+    {
+        var (ribbon, tabs) = Build("Home", "Picture");
+        tabs[1].Visible = false;
+
+        ribbon.SyncSelection("picture");
+
+        ribbon.IsActive(tabs[0]).ShouldBeTrue();
+        ribbon.ExpireRequestedKey().ShouldBeTrue();
+
+        // expired: showing the tab later no longer jumps to it
+        tabs[1].Visible = true;
+        ribbon.EnsureSelection();
+        ribbon.IsActive(tabs[0]).ShouldBeTrue();
+    }
+
+
     [Fact]
     public void ADisabledTabIsNeverLandedOn()
     {

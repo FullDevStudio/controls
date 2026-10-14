@@ -200,7 +200,10 @@ public class MotionIconView : GraphicsView
         set => SetValue(SpeedProperty, value);
     }
 
-    /// <summary>How many cycles a triggered play runs for. Zero or less repeats forever.</summary>
+    /// <summary>
+    /// How many cycles a triggered play (<see cref="Play"/>, Press, Appear) runs for. Zero or less repeats
+    /// forever. Setting <see cref="IsPlaying"/> to true is not bounded by it.
+    /// </summary>
     public int RepeatCount
     {
         get => (int)GetValue(RepeatCountProperty);
@@ -229,8 +232,9 @@ public class MotionIconView : GraphicsView
     }
 
     /// <summary>
-    /// Whether the icon is animating. Settable: true plays, false stops and returns to rest — which
-    /// is the property to bind to a busy flag.
+    /// Whether the icon is animating. Settable: true loops (ignoring <see cref="RepeatCount"/>) until it
+    /// is set false, which stops and returns to rest — the property to bind to a busy flag. A finite
+    /// <see cref="Play"/> also raises it, and drops it again when its cycles run out.
     /// </summary>
     public bool IsPlaying
     {
@@ -324,13 +328,22 @@ public class MotionIconView : GraphicsView
 
         if (Trigger.HasFlag(MotionTrigger.Loop))
             Start(double.PositiveInfinity);
-        else if (Trigger.HasFlag(MotionTrigger.Appear) || pendingAutoPlay || IsPlaying)
-            Start(pendingAutoPlay || IsPlaying ? PlaybackIterations() : RepeatCount);
+        else if (pendingAutoPlay)
+            Start(pendingIterations);
+        else if (IsPlaying)
+            Start(double.PositiveInfinity);
+        else if (Trigger.HasFlag(MotionTrigger.Appear))
+            Start(RepeatCount);
 
         pendingAutoPlay = false;
     }
 
     double PlaybackIterations() => RepeatCount > 0 ? RepeatCount : double.PositiveInfinity;
+
+    double pendingIterations = double.PositiveInfinity;
+
+    /// <summary>Cycles the current (or last) play was started for; infinite while looping. Test seam.</summary>
+    internal double PlayIterations { get; private set; }
 
     void Start(double iterations)
     {
@@ -340,6 +353,7 @@ public class MotionIconView : GraphicsView
         if (!loaded)
         {
             pendingAutoPlay = true;
+            pendingIterations = iterations;
             return;
         }
 
@@ -363,6 +377,7 @@ public class MotionIconView : GraphicsView
             return;
 
         stopAtCycleEnd = false;
+        PlayIterations = iterations;
 
         player = new Player(timeline, ticker) { RestoreOnStop = true, Rate = Speed };
         player.Finished += OnPlayerFinished;
@@ -524,9 +539,12 @@ public class MotionIconView : GraphicsView
 
         Rebuild();
 
-        // A looping icon keeps looping; anything else picks up a fresh play of RepeatCount.
+        // A looping icon (Loop trigger, or a bound IsPlaying) keeps looping; anything else picks up a
+        // fresh play of RepeatCount.
         if (wasPlaying)
-            Start(Trigger.HasFlag(MotionTrigger.Loop) ? double.PositiveInfinity : PlaybackIterations());
+            Start(Trigger.HasFlag(MotionTrigger.Loop) || double.IsPositiveInfinity(PlayIterations)
+                ? double.PositiveInfinity
+                : PlaybackIterations());
         else
             Invalidate();
     }
@@ -639,8 +657,10 @@ public class MotionIconView : GraphicsView
         if (view.suppressPlaybackFeedback)
             return;
 
+        // Set from outside, IsPlaying is a busy flag: it loops until it is cleared, matching Blazor.
+        // RepeatCount bounds a *triggered* play (Play, Press, Appear), never the flag.
         if ((bool)newValue)
-            view.Start(view.PlaybackIterations());
+            view.Start(double.PositiveInfinity);
         else
             view.Stop();
     }

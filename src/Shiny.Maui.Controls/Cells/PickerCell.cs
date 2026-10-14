@@ -274,6 +274,8 @@ public class PickerCell : CellBase
         return string.Empty;
     }
 
+    protected override void ApplyValueTextStyles() => UpdateValueColor();
+
     void UpdateValueColor()
     {
         var color = ValueTextColor ?? ParentTableView?.CellValueTextColor;

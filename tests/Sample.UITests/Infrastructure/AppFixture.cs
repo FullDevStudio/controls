@@ -55,11 +55,11 @@ public sealed class AppFixture : IAsyncInitializer, IAsyncDisposable
     public async Task<bool> EnsureRunningAsync()
     {
         var alive = await Driver.IsAlive();
-        if (alive && !relaunchRequested)
-            return true;
-
         if (UITestSettings.Attach)
             return alive;
+
+        if (alive && !relaunchRequested && !await Host.NeedsFreshProcessAsync(Driver))
+            return true;
 
         relaunchRequested = false;
         Host.AgentSince = DateTimeOffset.UtcNow.AddSeconds(-2);

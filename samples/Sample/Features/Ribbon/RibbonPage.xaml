@@ -18,7 +18,7 @@
         <shiny:Ribbon x:Name="Bar"
                       Grid.Row="0"
                       ApplicationButtonText="File"
-                      ApplicationButtonCommand="{Binding OpenFileMenu}"
+                      ApplicationButtonCommand="{Binding OpenFileMenuCommand}"
                       DisplayMode="{Binding DisplayMode}"
                       AllowGroupCollapse="{Binding AllowGroupCollapse}"
                       AutomationId="SampleRibbon">
@@ -64,7 +64,7 @@
                      here declares a column, the sizes do. -->
                 <shiny:RibbonGroup Title="Font" Priority="40"
                                    ShowDialogLauncher="True"
-                                   DialogLauncherCommand="{Binding OpenFontDialog}">
+                                   DialogLauncherCommand="{Binding OpenFontDialogCommand}">
                     <shiny:RibbonToggleButton Text="Bold" Size="Small" IsChecked="{Binding Bold}"
                                               Icon="{local:Glyph B}" AutomationId="RibbonBold" />
                     <shiny:RibbonToggleButton Text="Italic" Size="Small" IsChecked="{Binding Italic}"
@@ -132,7 +132,7 @@
 
                 <shiny:RibbonGroup Title="Illustrations" Priority="10">
                     <shiny:RibbonButton Text="Picture" Icon="{local:Glyph &#x1F5BC;}"
-                                        Command="{Binding InsertPicture}" AutomationId="RibbonInsertPicture" />
+                                        Command="{Binding InsertPictureCommand}" AutomationId="RibbonInsertPicture" />
                     <shiny:RibbonButton Text="Shapes" Icon="{local:Glyph &#x25B3;}"
                                         Command="{Binding RunCommand}" CommandParameter="Insert shape" />
                     <shiny:RibbonButton Text="Chart" Icon="{local:Glyph &#x1F4CA;}"

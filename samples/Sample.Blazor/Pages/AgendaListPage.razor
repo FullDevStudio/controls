@@ -1,4 +1,5 @@
 @page "/agendalist"
+@implements IDisposable
 
 <PageTitle>Scheduler · List</PageTitle>
 
@@ -19,5 +20,12 @@
 
 @code {
     SampleEventProvider provider = new();
+
+    // The provider records what was tapped; the "Last event" line only shows it after a re-render.
+    protected override void OnInitialized() => provider.Changed += OnProviderChanged;
+
+    void OnProviderChanged() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose() => provider.Changed -= OnProviderChanged;
     DateOnly selectedDate = DateOnly.FromDateTime(DateTime.Today);
 }

@@ -206,7 +206,6 @@ public class SliderTests : BlazorTest
 
 
     [Test]
-    [Skip("BUG: releasing a RangeSlider drag also fires the track's click, which jumps the nearer thumb to the release point — dragging the upper thumb into the 2° minimum gap ends at 10°–18° instead of 18°–20°")]
     public async Task Range_Upper_Thumb_Cannot_Cross_The_Minimum_Gap()
     {
         await Open("rangeslider");

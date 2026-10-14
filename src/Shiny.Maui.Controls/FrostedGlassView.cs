@@ -280,11 +280,21 @@ public class FrostedGlassView : ContentView
 
     class BlurPreDrawListener : Java.Lang.Object, Android.Views.ViewTreeObserver.IOnPreDrawListener
     {
+        const float Scale = 0.25f; // Downsample for performance
+
         readonly Android.Views.View targetView;
         readonly float blurRadius;
         readonly float cornerRadius;
         Android.Widget.ImageView? blurLayer;
         bool isCapturing;
+
+        // OnPreDraw runs every frame, so everything it draws with is kept and reused. Allocating these per
+        // frame (a Bitmap, a Canvas, a RenderEffect and an outline provider, each a Java peer holding a JNI
+        // global reference) churned ~57 GREFs/s while the view was on screen, pushing the app to Android's
+        // GREF limit and a full GC on every new reference within minutes - and never recycled the bitmaps.
+        Android.Graphics.Bitmap? bitmap;
+        Android.Graphics.Canvas? canvas;
+        Android.Graphics.RenderEffect? effect;
 
         public BlurPreDrawListener(Android.Views.View target, float blur, float corner)
         {
@@ -303,23 +313,24 @@ public class FrostedGlassView : ContentView
             {
                 isCapturing = true;
 
+                // Capture the parent at our view's location
+                var w = (int)(targetView.Width * Scale);
+                var h = (int)(targetView.Height * Scale);
+                if (w <= 0 || h <= 0) return true;
+
+                var resized = this.EnsureBitmap(w, h);
+                if (bitmap == null || canvas == null) return true;
+
                 // Hide our view temporarily to capture what's behind it
                 var wasVisible = targetView.Visibility;
                 targetView.Visibility = Android.Views.ViewStates.Invisible;
 
-                // Capture the parent at our view's location
-                var scale = 0.25f; // Downsample for performance
-                var w = (int)(targetView.Width * scale);
-                var h = (int)(targetView.Height * scale);
-                if (w <= 0 || h <= 0) { targetView.Visibility = wasVisible; return true; }
-
-                var bitmap = Android.Graphics.Bitmap.CreateBitmap(w, h, Android.Graphics.Bitmap.Config.Argb8888!);
-                if (bitmap == null) { targetView.Visibility = wasVisible; return true; }
-
-                var canvas = new Android.Graphics.Canvas(bitmap);
-                canvas.Scale(scale, scale);
+                bitmap.EraseColor(Android.Graphics.Color.Transparent);
+                canvas.Save();
+                canvas.Scale(Scale, Scale);
                 canvas.Translate(-targetView.Left, -targetView.Top);
                 parent.Draw(canvas);
+                canvas.Restore();
 
                 targetView.Visibility = wasVisible;
 
@@ -337,23 +348,28 @@ public class FrostedGlassView : ContentView
                             Android.Views.ViewGroup.LayoutParams.MatchParent);
                         vg.AddView(blurLayer, 0);
                     }
+
+                    if (Android.OS.Build.VERSION.SdkInt >= Android.OS.BuildVersionCodes.S)
+                    {
+                        effect = Android.Graphics.RenderEffect.CreateBlurEffect(
+                            blurRadius / Scale, blurRadius / Scale,
+                            Android.Graphics.Shader.TileMode.Clamp!);
+                        blurLayer.SetRenderEffect(effect);
+                    }
+
+                    if (cornerRadius > 0)
+                    {
+                        blurLayer.ClipToOutline = true;
+                        blurLayer.OutlineProvider = new RoundedOutlineProvider(cornerRadius);
+                    }
+                    resized = true;
                 }
 
-                blurLayer.SetImageBitmap(bitmap);
-
-                if (Android.OS.Build.VERSION.SdkInt >= Android.OS.BuildVersionCodes.S)
-                {
-                    var effect = Android.Graphics.RenderEffect.CreateBlurEffect(
-                        blurRadius / scale, blurRadius / scale,
-                        Android.Graphics.Shader.TileMode.Clamp!);
-                    blurLayer.SetRenderEffect(effect);
-                }
-
-                if (cornerRadius > 0)
-                {
-                    blurLayer.ClipToOutline = true;
-                    blurLayer.OutlineProvider = new RoundedOutlineProvider(cornerRadius);
-                }
+                // A new bitmap has to be handed over; the same one redrawn only needs a repaint.
+                if (resized)
+                    blurLayer.SetImageBitmap(bitmap);
+                else
+                    blurLayer.Invalidate();
             }
             catch
             {
@@ -367,12 +383,41 @@ public class FrostedGlassView : ContentView
             return true;
         }
 
+        /// <summary>Keeps one capture bitmap (and its canvas), replacing it only when the view's size changes.</summary>
+        bool EnsureBitmap(int w, int h)
+        {
+            if (bitmap != null && bitmap.Width == w && bitmap.Height == h)
+                return false;
+
+            ReleaseBitmap();
+            bitmap = Android.Graphics.Bitmap.CreateBitmap(w, h, Android.Graphics.Bitmap.Config.Argb8888!);
+            canvas = bitmap == null ? null : new Android.Graphics.Canvas(bitmap);
+            return true;
+        }
+
+        void ReleaseBitmap()
+        {
+            canvas?.Dispose();
+            canvas = null;
+            if (bitmap != null)
+            {
+                // The old bitmap may still be on screen until the new one is set; Recycle() is safe only after.
+                blurLayer?.SetImageBitmap(null);
+                bitmap.Recycle();
+                bitmap.Dispose();
+                bitmap = null;
+            }
+        }
+
         protected override void Dispose(bool disposing)
         {
             if (disposing)
             {
                 if (blurLayer?.Parent is Android.Views.ViewGroup vg)
                     vg.RemoveView(blurLayer);
+                ReleaseBitmap();
+                effect?.Dispose();
+                effect = null;
                 blurLayer?.Dispose();
                 blurLayer = null;
             }

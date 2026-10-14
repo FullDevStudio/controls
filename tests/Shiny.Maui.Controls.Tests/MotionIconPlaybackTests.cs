@@ -278,4 +278,53 @@ public class MotionIconPlaybackTests
 
         view.Stop();
     }
+
+    // IsPlaying is a busy flag: it loops until cleared. RepeatCount bounds Play(), not the flag
+    // (it used to stop after RepeatCount cycles and drop IsPlaying back to false).
+
+    [Fact]
+    public void SettingIsPlayingLoopsRegardlessOfRepeatCount()
+    {
+        _ = new Application();
+
+        var view = new MotionIconView { Icon = "loader", Trigger = MotionTrigger.Manual, RepeatCount = 1 };
+        view.OnLoadedInternal();
+
+        view.IsPlaying = true;
+
+        double.IsPositiveInfinity(view.PlayIterations).ShouldBeTrue();
+        view.IsPlaying.ShouldBeTrue();
+
+        view.IsPlaying = false;
+        MotionTicker.For(view)!.IsRunning.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void IsPlayingSetBeforeLoadLoopsOnceLoaded()
+    {
+        _ = new Application();
+
+        var view = new MotionIconView { Icon = "loader", Trigger = MotionTrigger.Manual, RepeatCount = 2, IsPlaying = true };
+        view.OnLoadedInternal();
+
+        double.IsPositiveInfinity(view.PlayIterations).ShouldBeTrue();
+
+        view.Stop();
+    }
+
+    [Fact]
+    public void PlayStillRunsRepeatCountCycles()
+    {
+        _ = new Application();
+
+        var view = new MotionIconView { Icon = "loader", Trigger = MotionTrigger.Manual, RepeatCount = 2 };
+        view.OnLoadedInternal();
+
+        view.Play();
+
+        view.PlayIterations.ShouldBe(2d);
+        view.IsPlaying.ShouldBeTrue();
+
+        view.Stop();
+    }
 }

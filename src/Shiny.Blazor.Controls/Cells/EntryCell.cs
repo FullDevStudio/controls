@@ -6,6 +6,8 @@ namespace Shiny.Blazor.Controls.Cells;
 
 public class EntryCell : CellBase
 {
+    protected override bool AccessoryHandlesClicks => true;
+
     [Parameter] public string? ValueText { get; set; }
     [Parameter] public EventCallback<string> ValueTextChanged { get; set; }
     [Parameter] public string? Placeholder { get; set; }

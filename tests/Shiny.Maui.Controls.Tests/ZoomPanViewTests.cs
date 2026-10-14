@@ -198,4 +198,29 @@ public class ZoomPanViewTests
         host.Children.ShouldContain(view.Surface);
         ((ContentView)view.Surface).Content.ShouldBe(content);
     }
+
+
+    /// <summary>
+    /// A ZoomLevel change that lands while a zoom animation is still running supersedes it. It used to
+    /// be dropped (ZoomToAsync returned early while animating), so "zoom to 2x" then an immediate Reset
+    /// left ZoomLevel reading 1 while the content stayed at 2x and IsZoomed stayed true.
+    /// </summary>
+    [Fact]
+    public async Task AResetDuringTheZoomAnimationStillResets()
+    {
+        var host = new FrozenAnimationHost();
+        var view = host.Attach(new ZoomPanView { WidthRequest = 200, HeightRequest = 200 });
+        view.Layout(new Rect(0, 0, 200, 200));
+
+        view.ZoomLevel = 2;
+        view.IsZoomed.ShouldBeTrue();
+
+        // the 1x -> 2x animation is still in flight
+        view.ZoomLevel = 1;
+        await host.Finish();
+
+        view.ZoomLevel.ShouldBe(1);
+        view.IsZoomed.ShouldBeFalse();
+        view.Surface.Scale.ShouldBe(1, 0.001);
+    }
 }

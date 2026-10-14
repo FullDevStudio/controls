@@ -338,7 +338,7 @@ public partial class PromptView : ComponentBase, IDisposable
         this.highlightIndex = -1;
     }
 
-    async Task OnKeyDown(KeyboardEventArgs e)
+    internal async Task OnKeyDown(KeyboardEventArgs e)
     {
         // Arrow keys move the caret in a text input, so they have to be cancelled to navigate the
         // list instead. Everything else must stay cancellable-free or typing breaks.
@@ -359,9 +359,35 @@ public partial class PromptView : ComponentBase, IDisposable
                 break;
 
             case "Escape":
+                // Recorded before the first await: the same keydown bubbles on to a host (QuickEntryHost)
+                // that would otherwise ask again, find nothing left to peel and close the popup.
+                this.keyEscapeOutcome = this.WillConsumeEscape;
                 await this.HandleEscapeAsync();
                 break;
         }
+    }
+
+
+    bool? keyEscapeOutcome;
+
+    /// <summary>Whether <see cref="HandleEscapeAsync"/> would consume an Escape right now.</summary>
+    internal bool WillConsumeEscape
+        => this.IsBusy
+           || this.highlightIndex >= 0
+           || this.ResponseContent is not null
+           || !String.IsNullOrEmpty(this.Response)
+           || !String.IsNullOrEmpty(this.Text);
+
+    /// <summary>
+    /// For a host the keydown bubbles to: whether the prompt already handled this Escape from its own
+    /// field — true consumed, false declined — or null when the key never reached the field. Reading it
+    /// clears it, so a stale answer cannot leak into the next keypress.
+    /// </summary>
+    internal bool? TakeKeyEscapeOutcome()
+    {
+        var outcome = this.keyEscapeOutcome;
+        this.keyEscapeOutcome = null;
+        return outcome;
     }
 
     /// <summary>

@@ -67,6 +67,7 @@
     <h2>Validation</h2>
     <TextEntry Placeholder="Email"
                @bind-Text="email"
+               @bind-Text:after="ValidateEmail"
                HasError="@hasEmailError"
                HintText="@emailError"
                RightTools="emailTools" />
@@ -165,13 +166,6 @@
     List<TextEntryTool> stepperRightTools = [new TextEntryStepperTool { Step = 1 }];
     List<TextEntryTool> scoreLeftTools = [new TextEntryStepperTool { Step = -5 }];
     List<TextEntryTool> scoreRightTools = [new TextEntryStepperTool { Step = 5 }];
-
-    protected override void OnAfterRender(bool firstRender)
-    {
-        // Validate email when it changes
-        if (!string.IsNullOrEmpty(email))
-            ValidateEmail();
-    }
 
     void ValidateEmail()
     {

@@ -179,6 +179,8 @@ public class DatePickerCell : CellBase
         valueLabel.Text = Date?.ToString(Format) ?? string.Empty;
     }
 
+    protected override void ApplyValueTextStyles() => UpdateValueColor();
+
     void UpdateValueColor()
     {
         var color = ValueTextColor ?? ParentTableView?.CellValueTextColor;

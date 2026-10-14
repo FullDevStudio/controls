@@ -151,6 +151,35 @@ public class TagEntryTests
     }
 
 
+    /// <summary>
+    /// Pasting a tag that already exists must leave every chip alone. The refusal writes the field back
+    /// from inside TextChanged; MAUI defers a write to the property mid-set, so it landed after the guard
+    /// was released and read as a Backspace that had eaten the sentinel - removing the newest chip.
+    /// </summary>
+    [Fact]
+    public void PastingAnExistingTag_OverTheSentinel_RemovesNothing()
+    {
+        var field = new TagEntry { Tags = new ObservableCollection<string> { "design", "yyyq" } };
+
+        field.Editor.Text = TagEntry.Sentinel + "design,";
+
+        field.Tags!.ShouldBe(["design", "yyyq"]);
+        field.PendingText.ShouldBe(String.Empty);
+    }
+
+
+    [Fact]
+    public void PastingAnExistingTag_WhileFocused_RemovesNothing()
+    {
+        var field = Focused(new TagEntry { Tags = new ObservableCollection<string> { "design", "yyyq" } });
+
+        Paste(field, "design,");
+
+        field.Tags!.ShouldBe(["design", "yyyq"]);
+        field.PendingText.ShouldBe(String.Empty);
+    }
+
+
     [Fact]
     public void AllowDuplicates_LetsThemThrough()
     {

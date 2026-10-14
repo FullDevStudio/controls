@@ -6,6 +6,8 @@ namespace Shiny.Blazor.Controls.Cells;
 
 public class CheckboxCell : CellBase
 {
+    protected override bool AccessoryHandlesClicks => true;
+
     [Parameter] public bool Checked { get; set; }
     [Parameter] public EventCallback<bool> CheckedChanged { get; set; }
     [Parameter] public string? AccentColor { get; set; }

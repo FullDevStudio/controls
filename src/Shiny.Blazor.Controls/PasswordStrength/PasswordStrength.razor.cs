@@ -245,10 +245,7 @@ public partial class PasswordStrength : ComponentBase, IDisposable
 
     protected override void OnParametersSet()
     {
-        visibilityTool!.IsVisible = this.ShowVisibilityToggle;
-        visibilityTool.Text = this.IsPasswordRevealed
-            ? this.HidePasswordIcon ?? this.Localize(PasswordStrengthTextKey.HidePassword, "Hide")
-            : this.ShowPasswordIcon ?? this.Localize(PasswordStrengthTextKey.ShowPassword, "Show");
+        this.SyncVisibilityTool();
 
         // The policy can change without the password changing - a MinimumLength bound to a dropdown,
         // an email arriving into UserInputs. Re-scoring on every parent render instead would restart
@@ -297,7 +294,19 @@ public partial class PasswordStrength : ComponentBase, IDisposable
             return;
 
         this.IsPasswordRevealed = revealed;
+        // Relabelled here as well as in OnParametersSet: a click on the toggle re-renders only this
+        // component, so a label set only from parameters stayed on "Show" until the parent re-rendered.
+        this.SyncVisibilityTool();
         this.StateHasChanged();
+    }
+
+
+    void SyncVisibilityTool()
+    {
+        visibilityTool!.IsVisible = this.ShowVisibilityToggle;
+        visibilityTool.Text = this.IsPasswordRevealed
+            ? this.HidePasswordIcon ?? this.Localize(PasswordStrengthTextKey.HidePassword, "Hide")
+            : this.ShowPasswordIcon ?? this.Localize(PasswordStrengthTextKey.ShowPassword, "Show");
     }
 
 

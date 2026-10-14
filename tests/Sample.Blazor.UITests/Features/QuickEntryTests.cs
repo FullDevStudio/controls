@@ -108,7 +108,6 @@ public class QuickEntryTests : BlazorTest
 
 
     [Test]
-    [Skip("BUG: one Escape in the popup's prompt both clears the highlighted suggestion and closes the popup — PromptView handles the key on the <input>, the event bubbles to QuickEntryHost.OnKeyDown, which asks HandleEscapeAsync again, finds nothing left and hides")]
     public async Task Escape_Backs_Out_One_Step_Then_Dismisses()
     {
         await Open("/quickentry");

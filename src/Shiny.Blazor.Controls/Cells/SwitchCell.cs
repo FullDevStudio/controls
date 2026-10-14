@@ -6,6 +6,8 @@ namespace Shiny.Blazor.Controls.Cells;
 
 public class SwitchCell : CellBase
 {
+    protected override bool AccessoryHandlesClicks => true;
+
     [Parameter] public bool On { get; set; }
     [Parameter] public EventCallback<bool> OnChanged { get; set; }
     [Parameter] public string? OnColor { get; set; }

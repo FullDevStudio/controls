@@ -992,11 +992,15 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
 
     AVCaptureDevice? SelectDevice()
     {
-        var id = this.VirtualView.CameraId;
+        // runs on the session queue, which can outlive the handler's connection
+        if (this.MaybeVirtualView is not { } view)
+            return null;
+
+        var id = view.CameraId;
         if (!string.IsNullOrEmpty(id) && AVCaptureDevice.DeviceWithUniqueID(id) is { } byId)
             return byId;
 
-        var position = this.VirtualView.Facing == CameraFacing.Front
+        var position = view.Facing == CameraFacing.Front
             ? AVCaptureDevicePosition.Front
             : AVCaptureDevicePosition.Back;
         return DiscoverDevice(position) ?? DiscoverDevice(AVCaptureDevicePosition.Unspecified);
@@ -1047,10 +1051,16 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
 
         this.MainThread(() =>
         {
+            // MaybeVirtualView, not VirtualView: this runs after a session-queue hop, so the handler may have
+            // disconnected in between (navigating away mid-flip), and VirtualView throws once disconnected -
+            // on the main thread, outside any catch, which takes the app down.
+            if (this.MaybeVirtualView is not { } view)
+                return;
+
             this.OrientConnections();
             this.ReportZoomRange();
-            this.ApplyZoom(this.VirtualView.Zoom);
-            this.ApplyTorch(this.VirtualView.IsTorchOn);
+            this.ApplyZoom(view.Zoom);
+            this.ApplyTorch(view.IsTorchOn);
         });
     }
 

@@ -114,6 +114,8 @@ public class NumberPickerCell : CellBase
             valueLabel.Text = string.Empty;
     }
 
+    protected override void ApplyValueTextStyles() => UpdateValueColor();
+
     void UpdateValueColor()
     {
         var color = ValueTextColor ?? ParentTableView?.CellValueTextColor;

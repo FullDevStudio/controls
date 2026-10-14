@@ -6,6 +6,8 @@ namespace Shiny.Blazor.Controls.Cells;
 
 public class DatePickerCell : CellBase
 {
+    protected override bool AccessoryHandlesClicks => true;
+
     [Parameter] public DateTime? Date { get; set; }
     [Parameter] public EventCallback<DateTime?> DateChanged { get; set; }
     [Parameter] public DateTime? MinimumDate { get; set; }

@@ -138,9 +138,6 @@ public class TagEntryTests : UITest
     }
 
     [Test]
-    [Skip("BUG: pasting a tag that already exists deletes the newest chip. TryCommit refuses the duplicate, ProcessInput then writes the field "
-        + "back from inside TextChanged; MAUI defers that same-property write until suppressTextChanged is released, so it arrives as a change that "
-        + "dropped the sentinel and OnEntryTextChanged treats it as Backspace → RemoveAt(last). iOS: TeamTags [design, yyyq] + paste 'design,' → [design]")]
     public async Task Duplicates_Are_Dropped()
     {
         await Open(Route, PageType);

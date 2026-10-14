@@ -33,6 +33,13 @@ public partial class Ribbon : ComponentBase, IAsyncDisposable
     DotNetObjectReference<Ribbon>? selfReference;
 
     string? activeKey;
+
+    /// <summary>
+    /// A <see cref="SelectedKey"/> that named a tab which could not be selected yet — still to register,
+    /// or a contextual tab whose <c>Visible</c> arrives later in the same render. Honoured the moment
+    /// that tab can show, and dropped at the end of the render if it never does.
+    /// </summary>
+    string? requestedKey;
     bool peeking;
     bool placeMenus;
 
@@ -239,7 +246,20 @@ public partial class Ribbon : ComponentBase, IAsyncDisposable
     internal void SyncSelection(string? key)
     {
         if (key is not null && key != this.activeKey)
-            this.activeKey = key;
+        {
+            // The ribbon's own parameters land before its tabs' do, so a host that makes a contextual
+            // tab Visible and selects it in one go asks for a tab that is still hidden at this point.
+            // Falling back here pushed "home" back up the binding and the tab never got selected.
+            if (this.tabs.Any(x => x.IsSelectable && x.EffectiveKey == key))
+            {
+                this.activeKey = key;
+                this.requestedKey = null;
+            }
+            else
+            {
+                this.requestedKey = key;
+            }
+        }
 
         this.EnsureSelection();
     }
@@ -262,6 +282,15 @@ public partial class Ribbon : ComponentBase, IAsyncDisposable
             return;
         }
 
+        if (this.requestedKey is { } requested && selectable.Any(x => x.EffectiveKey == requested))
+        {
+            this.requestedKey = null;
+            if (requested != this.activeKey)
+                this.Move(requested, RibbonTabChangeReason.Programmatic);
+
+            return;
+        }
+
         if (this.activeKey is not null && selectable.Any(x => x.EffectiveKey == this.activeKey))
             return;
 
@@ -273,6 +302,8 @@ public partial class Ribbon : ComponentBase, IAsyncDisposable
     {
         if (!tab.IsSelectable)
             return;
+
+        this.requestedKey = null;
 
         if (tab.EffectiveKey == this.activeKey)
         {
@@ -687,6 +718,11 @@ public partial class Ribbon : ComponentBase, IAsyncDisposable
 
     protected override async Task OnAfterRenderAsync(bool first)
     {
+        // Every tab has had its parameters by now. A requested key still waiting names a tab that is
+        // not going to show, so give up on it and tell the binding where the ribbon really is.
+        if (this.ExpireRequestedKey())
+            await this.SelectedKeyChanged.InvokeAsync(this.activeKey).ConfigureAwait(false);
+
         if (first)
         {
             this.selfReference = DotNetObjectReference.Create(this);
@@ -713,6 +749,18 @@ public partial class Ribbon : ComponentBase, IAsyncDisposable
         // The observer only fires on a size change of the bar, so a render that changed which items are
         // in a group has to ask for the widths to be taken again.
         await this.module.InvokeVoidAsync("remeasure", this.rootElement).ConfigureAwait(false);
+    }
+
+
+    /// <summary>Drops a pending <see cref="requestedKey"/>. True when the binding needs correcting.</summary>
+    internal bool ExpireRequestedKey()
+    {
+        if (this.requestedKey is null)
+            return false;
+
+        var requested = this.requestedKey;
+        this.requestedKey = null;
+        return requested != this.activeKey;
     }
 
 

@@ -12,7 +12,8 @@ public class WalkthroughTests : UITest
     const string Status = "WalkthroughStatus";
 
     const string WalkthroughStopDuringStartup =
-        "BUG: Walkthrough - a Stop during the auto-start ends the run as Completed and a Start right after it is ignored while the old run unwinds (unbounded on AppKit)";
+        "UNVERIFIED on AppKit: the Stop-during-auto-start / ignored-Start bug is fixed in src (Walkthrough queues the Start and records the Stop) "
+        + "and verified on iOS, but the old run's unwind was unbounded on AppKit and that head has not been re-run";
 
     async Task OpenStopped(bool advanced = false)
     {

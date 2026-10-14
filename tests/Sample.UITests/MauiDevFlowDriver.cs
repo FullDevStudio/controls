@@ -37,8 +37,17 @@ public class MauiDevFlowDriver : IAsyncDisposable
         return ValueTask.CompletedTask;
     }
 
+    /// <summary>
+    /// Distinct Shell routes opened since the agent was last (re)connected. Shell keeps every page it has
+    /// shown alive, so this is how much UI the process is holding — on Android each page pins hundreds of
+    /// JNI global references, and the head relaunches before the runtime's GREF limit cripples it.
+    /// </summary>
+    public IReadOnlyCollection<string> RoutesSinceConnect => routesSinceConnect;
+    readonly HashSet<string> routesSinceConnect = new(StringComparer.Ordinal);
+
     public async Task WaitForAgent(int timeoutSeconds = 120)
     {
+        routesSinceConnect.Clear();
         client?.Dispose();
         client = new AgentClient("localhost", Port);
         var deadline = DateTime.UtcNow.AddSeconds(timeoutSeconds);
@@ -87,12 +96,14 @@ public class MauiDevFlowDriver : IAsyncDisposable
     /// page's own type is in the tree. A Shell that silently refuses (an unresolvable page wedges it
     /// on AppKit) fails here instead of letting the next assertion read the previous page.
     /// </summary>
-    public async Task NavigateTo(string route, string? pageType = null, int timeoutSeconds = 30)
+    public async Task NavigateTo(string route, string? pageType = null, int? timeoutSeconds = null)
     {
+        var timeout = timeoutSeconds ?? DefaultNavigationTimeoutSeconds;
         var target = route.TrimStart('/');
+        routesSinceConnect.Add(target);
         await RideOutLease(() => Client.NavigateAsync("//" + target));
 
-        var deadline = DateTime.UtcNow.AddSeconds(timeoutSeconds);
+        var deadline = DateTime.UtcNow.AddSeconds(timeout);
         string? current = null;
         while (DateTime.UtcNow < deadline)
         {
@@ -110,10 +121,10 @@ public class MauiDevFlowDriver : IAsyncDisposable
         }
 
         if (current == null || !RouteMatches(current, target))
-            throw new TimeoutException($"{NavigationTimeoutMessage} '//{target}' within {timeoutSeconds}s (current route: '{current}')");
+            throw new TimeoutException($"{NavigationTimeoutMessage} '//{target}' within {timeout}s (current route: '{current}')");
 
         if (pageType != null)
-            await WaitUntilTypeExists(pageType, timeoutSeconds);
+            await WaitUntilTypeExists(pageType, timeout);
     }
 
     /// <summary>
@@ -138,6 +149,13 @@ public class MauiDevFlowDriver : IAsyncDisposable
     }
 
     public const string NavigationTimeoutMessage = "Shell did not reach";
+
+    /// <summary>
+    /// The Android emulator builds the heavy pages slowly: after the other Office pages, //documenteditor's
+    /// navigate call blocks ~23s and the page shows ~27s in (a 13s main-thread stall, "Skipped 766 frames"),
+    /// right at the 30s every other head gets. A real wedge still fails, just later.
+    /// </summary>
+    int DefaultNavigationTimeoutSeconds => TargetPlatform == UIPlatform.Android ? 60 : 30;
 
     static bool RouteMatches(string current, string target)
         => current.TrimEnd('/').Split('/', StringSplitOptions.RemoveEmptyEntries).LastOrDefault() == target.Split('/').Last()

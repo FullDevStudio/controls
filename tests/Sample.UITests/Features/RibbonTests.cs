@@ -7,6 +7,13 @@ namespace Sample.UITests.Features;
 /// asserted relative to the state they started in, and everything a test changes is put back.
 /// </summary>
 [SkipOn(UIPlatform.Linux, "page not in the Linux head")]
+// Evidence (emulator API 35, 2026-10-14): opening //ribbon on a fresh app kills it - java.lang.IllegalStateException
+// "The specified child already has a parent" from ViewGroup.AddView <- LayoutHandler.SetVirtualView <- BorderHandler
+// <- the Ribbon's root Grid <- ShellFragmentContainer.OnCreateView, i.e. while the page is first realized. It began
+// when the sample's command bindings were corrected (OpenFileMenuCommand / OpenFontDialogCommand /
+// InsertPictureCommand): each binding that now resolves fires a Redraw property and Ribbon.Rebuild re-adds views
+// (Ribbon.Render.cs) during realization. UIKit reparents silently, Android refuses. The page opened fine with the
+// old, non-resolving bindings in the earlier sweep.
 public class RibbonTests : UITest
 {
     const string RibbonId = "SampleRibbon";
@@ -67,8 +74,6 @@ public class RibbonTests : UITest
     }
 
     [Test]
-    [Skip("BUG (sample): RibbonPage.xaml binds ApplicationButtonCommand=\"{Binding OpenFileMenu}\" but the [RelayCommand] is OpenFileMenuCommand - "
-        + "on iOS SampleRibbon.ApplicationButtonCommand reads null and the tap logs nothing (same for DialogLauncherCommand → OpenFontDialog)")]
     public async Task Application_Button_Runs_Its_Command()
     {
         await OpenRibbon();
@@ -241,8 +246,6 @@ public class RibbonTests : UITest
     }
 
     [Test]
-    [Skip("BUG (sample): the Picture button binds Command=\"{Binding InsertPicture}\" but the [RelayCommand] is InsertPictureCommand - "
-        + "the tap runs nothing on iOS, so PictureSelected never turns on and the Picture Tools tab never appears")]
     public async Task Insert_Picture_Brings_Up_The_Contextual_Tab()
     {
         await OpenRibbon();

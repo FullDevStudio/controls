@@ -52,13 +52,13 @@ public class Accordion : VerticalStackLayout
 
     public static readonly BindableProperty SelectionModeProperty = BindableProperty.Create(
         nameof(SelectionMode), typeof(AccordionSelectionMode), typeof(Accordion), AccordionSelectionMode.Single,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(Accordion), () => ((Accordion)b).EnforceRules(null)));
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(Accordion), () => ((Accordion)b).ApplyRuleChange()));
     /// <summary>One open at a time, or as many as the user likes. Defaults to <see cref="AccordionSelectionMode.Single"/>.</summary>
     public AccordionSelectionMode SelectionMode { get => (AccordionSelectionMode)GetValue(SelectionModeProperty); set => SetValue(SelectionModeProperty, value); }
 
     public static readonly BindableProperty AllowCollapseAllProperty = BindableProperty.Create(
         nameof(AllowCollapseAll), typeof(bool), typeof(Accordion), true,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(Accordion), () => ((Accordion)b).EnforceRules(null)));
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(Accordion), () => ((Accordion)b).ApplyRuleChange()));
     /// <summary>
     /// When false the accordion refuses to end up with nothing open: the last open item stops
     /// responding to taps, and if the list starts fully closed the first item is opened.
@@ -504,6 +504,17 @@ public class Accordion : VerticalStackLayout
         {
             this.syncing = false;
         }
+    }
+
+
+    /// <summary>
+    /// A rule change can open or close items on its own (switching AllowCollapseAll off opens the first
+    /// one, switching to Single closes all but one), and those silent changes still move ExpandedIndex.
+    /// </summary>
+    void ApplyRuleChange()
+    {
+        this.EnforceRules(null);
+        this.PublishIndex();
     }
 
 

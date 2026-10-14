@@ -93,6 +93,14 @@ public class LabelCell : CellBase
 
     protected Label ValueLabel => valueLabel;
 
+    protected override void ApplyValueTextStyles()
+    {
+        UpdateValueTextColor();
+        UpdateValueTextFontSize();
+        UpdateValueTextFontFamily();
+        UpdateValueTextFontAttributes();
+    }
+
     void UpdateValueTextColor()
     {
         var color = ValueTextColor ?? ParentTableView?.CellValueTextColor;

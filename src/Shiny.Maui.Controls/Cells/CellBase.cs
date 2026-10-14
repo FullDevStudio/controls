@@ -513,8 +513,17 @@ public abstract class CellBase : ContentView
         UpdateCellBackground();
         UpdateCellPadding();
         UpdateBorder();
+        ApplyValueTextStyles();
         ApplyAccentStyles();
     }
+
+    /// <summary>
+    /// Re-applies the value-text styles (the table's <c>CellValueText*</c> cascade) for the cells that show
+    /// a value. Like the accent styles, it has to run from the cascade: each cell's own ValueText* property
+    /// only raises propertyChanged when the cell sets it, so a table-level value style never reached a cell
+    /// that left its own unset.
+    /// </summary>
+    protected virtual void ApplyValueTextStyles() { }
 
     /// <summary>
     /// Binds the cell's accent-coloured accessory to the theme. Overridden by the cells that own one.

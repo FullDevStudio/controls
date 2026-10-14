@@ -65,7 +65,7 @@ Events: `Clicked`.
 
 | Property | Type | Default | Description |
 |---|---|---|---|
-| IsOpen | bool | false | Two-way bindable; opens/closes the menu with animation |
+| IsOpen | bool | false | Two-way bindable; opens/closes the menu with animation. A change made mid-animation is applied when the running animation finishes |
 | Items | `IList<FabMenuItem>` | empty | Menu items (content property — place items directly inside the FabMenu) |
 | FabSize | double | 56 | Main FAB button size (diameter) |
 | HasShadow | bool | true | Drop shadow on the main FAB |

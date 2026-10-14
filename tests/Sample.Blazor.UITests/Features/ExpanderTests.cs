@@ -154,7 +154,6 @@ public class ExpanderTests : BlazorTest
 
 
     [Test]
-    [Skip("BUG: Blazor Accordion only applies AllowCollapseAll=false on first render/item changes; turning it off on a fully closed list leaves nothing open (MAUI opens the first item)")]
     public async Task Accordion_Disallowing_All_Closed_Opens_The_First_Item()
     {
         await Open("expander");
@@ -182,7 +181,6 @@ public class ExpanderTests : BlazorTest
 
 
     [Test]
-    [Skip("BUG: Accordion.LoadContentOnDemand only reaches Items-generated expanders; markup (@foreach) children render their content up front")]
     public async Task Data_Accordion_Loads_Content_On_Demand()
     {
         await Open("expander");

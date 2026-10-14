@@ -14,6 +14,9 @@ public partial class DocumentEditorView
 
     void BuildBar()
     {
+        // Clearing and re-adding tabs and quick-access items is a ribbon rebuild per change; do one.
+        using var _ = this.ribbon.DeferRebuild();
+
         this.ribbon.Tabs.Clear();
         this.bindings.Clear();
         this.menuBindings.Clear();

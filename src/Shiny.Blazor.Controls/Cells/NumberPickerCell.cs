@@ -6,6 +6,8 @@ namespace Shiny.Blazor.Controls.Cells;
 
 public class NumberPickerCell : CellBase
 {
+    protected override bool AccessoryHandlesClicks => true;
+
     [Parameter] public double Value { get; set; }
     [Parameter] public EventCallback<double> ValueChanged { get; set; }
     [Parameter] public double Minimum { get; set; } = double.MinValue;

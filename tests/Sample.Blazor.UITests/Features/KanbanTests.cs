@@ -184,7 +184,6 @@ public class KanbanTests : BlazorTest
 
 
     [Test]
-    [Skip("BUG: Blazor KanbanView never raises OnDropRejected for a pointer drop on a blocked lane - kanban.js drops target=null and never calls OnDropJs, so the refusal is silent (docs promise DropRejected/WipLimitReached)")]
     public async Task Block_At_Wip_Reports_The_Refused_Drop()
     {
         await Open("kanban");

@@ -43,7 +43,7 @@ Zoom is a render transform, so the content keeps its laid-out size: nothing re-f
 |---|---|---|---|
 | `MinZoom` | `double` | `1` | Below 1 the content may sit smaller than its box — and **stay** there. Only a reset or double-tap-out returns it to 1. |
 | `MaxZoom` | `double` | `5` | |
-| `ZoomLevel` | `double` | `1` | Two-way bindable. Writing it zooms; every gesture reports back through it. |
+| `ZoomLevel` | `double` | `1` | Two-way bindable. Writing it zooms; every gesture reports back through it. A write during a running zoom animation supersedes it (MAUI), so a Reset straight after a zoom still resets. |
 | `IsZoomed` | `bool` | `false` | Read-only. Scaled past natural size — the same thing as "there is something to pan". |
 | `IsZoomEnabled` | `bool` | `true` | Turns every gesture off without unbinding anything, and drops any zoom already applied. |
 | `DoubleTapToZoom` | `bool` | `true` | Off when the content wants double taps of its own. |

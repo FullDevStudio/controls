@@ -4,6 +4,11 @@ namespace Sample.UITests.Features;
 /// MediaElement's page options reach the player's bindables. Nothing here waits on the remote trailer
 /// to load, so it holds offline and on a simulator without a codec for it.
 /// </summary>
+// Evidence (emulator API 35, 2026-10-14): opening //mediaelement kills the app as soon as ExoPlayer reports a surface
+// size - java.lang.AbstractMethodError: abstract method "void androidx.media3.common.Player$Listener.onSurfaceSizeChanged(int, int)"
+// at crc64e2eedcbc58f65dad.AndroidPlayerListener.n_onSurfaceSizeChanged. The Java stub forwards the callback to
+// managed code, but src/Shiny.Maui.Controls.MediaElement/Platforms/Android/AndroidPlayerListener.cs doesn't
+// implement OnSurfaceSizeChanged (a default interface method in the Media3 binding), so every test here crashes.
 public class MediaElementTests : UITest
 {
     // Shell keeps the page alive between visits, so each test sets the state it starts from.

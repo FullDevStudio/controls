@@ -122,9 +122,6 @@ public class ZoomPanTests : UITest
 
 
     [Test]
-    [Skip("BUG: a ZoomLevel change that lands while a zoom animation is running is lost. Every animation frame writes back through the two-way "
-        + "ZoomLevel (OnControllerZoomChanged), so Reset's ZoomLevel=1 collides with the in-flight 1→2 animation; iOS ends with ZoomLevel 1 / label "
-        + "1.00x while IsZoomed stays True and the content stays at 2x (Zoom to 2x then Reset straight away, reproducible every run)")]
     public async Task Reset_Mid_Animation_Still_Resets()
     {
         await OpenPage();

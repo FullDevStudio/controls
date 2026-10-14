@@ -18,6 +18,25 @@ public class ButtonsTests : UITest
         }, $"{automationId}.Text {description} (last: '{text}')", timeoutSeconds);
     }
 
+    /// <summary>
+    /// Success/Error revert after 1.5-2s. A tap plus the first reads can use most of that on the Android
+    /// emulator, so the state was sometimes gone before it was read. Holds it longer for the duration of
+    /// <paramref name="body"/> (the revert itself is still asserted where a test cares) and restores it.
+    /// </summary>
+    async Task WithLongerRevert(string button, Func<Task> body)
+    {
+        var original = await Driver.GetProperty("StateRevertDelay", automationId: button) ?? "00:00:01.5000000";
+        await Driver.SetProperty("StateRevertDelay", "00:00:05", automationId: button);
+        try
+        {
+            await body();
+        }
+        finally
+        {
+            await Driver.SetProperty("StateRevertDelay", original, automationId: button);
+        }
+    }
+
     async Task OpenButtons()
     {
         await Open("buttons", "ButtonsPage");
@@ -62,11 +81,23 @@ public class ButtonsTests : UITest
     {
         await OpenButtons();
 
-        await Driver.Tap(automationId: "BusyReplaceContent");
+        // The command is busy for 1.8s. Reading State, IsBusy and the status one after another can take
+        // longer than that on a slow head (each read is a round trip — on the Android emulator three of them
+        // overran the window and the status already said "Saved"), so poll all three together and require
+        // each to have been seen during the busy window.
+        // Ids are resolved once, before the tap, so each poll is a single round trip.
+        var button = (await Driver.Find("BusyReplaceContent")).Id;
+        var status = (await Driver.Find(Status)).Id;
+        await Driver.Tap(elementId: button);
 
-        await Driver.WaitForProperty("BusyReplaceContent", "State", "Busy", timeoutSeconds: 5);
-        await Assert.That(await Driver.GetProperty("IsBusy", automationId: "BusyReplaceContent")).IsEqualTo("True");
-        await Driver.WaitForProperty(Status, "Text", "Saving...", timeoutSeconds: 5);
+        bool sawBusy = false, sawIsBusy = false, sawSaving = false;
+        await Driver.WaitUntil(async () =>
+        {
+            sawBusy |= await Driver.GetProperty("State", elementId: button) == "Busy";
+            sawIsBusy |= await Driver.GetProperty("IsBusy", elementId: button) == "True";
+            sawSaving |= await Driver.GetProperty("Text", elementId: status) == "Saving...";
+            return sawBusy && sawIsBusy && sawSaving;
+        }, "State=Busy, IsBusy=True and 'Saving...' while the command runs", timeoutSeconds: 5);
 
         await Driver.WaitForProperty(Status, "Text", "Saved", timeoutSeconds: 10);
         await Driver.WaitForProperty("BusyReplaceContent", "State", "Normal");
@@ -75,17 +106,19 @@ public class ButtonsTests : UITest
 
 
     [Test]
-    [Skip("SUSPECTED BUG (from source, not run): ButtonsViewModel.SaveAsync's [RelayCommand] has no FlowExceptionsToTaskScheduler, so CommunityToolkit's AsyncRelayCommand.Execute rethrows the deliberate fault through async void — on MAUI that is an unhandled exception that can take the app down instead of just showing the Error state")]
     public async Task Faulted_Command_Shows_The_Error_State()
     {
         await OpenButtons();
         await Driver.SetProperty("IsChecked", "True", automationId: "ShouldFailCheckBox");
         try
         {
-            await Driver.Tap(automationId: "BusyKeepContent");
+            await WithLongerRevert("BusyKeepContent", async () =>
+            {
+                await Driver.Tap(automationId: "BusyKeepContent");
 
-            await Driver.WaitForProperty("BusyKeepContent", "State", "Busy", timeoutSeconds: 5);
-            await Driver.WaitForProperty("BusyKeepContent", "State", "Error", timeoutSeconds: 10);
+                await Driver.WaitForProperty("BusyKeepContent", "State", "Busy", timeoutSeconds: 5);
+                await Driver.WaitForProperty("BusyKeepContent", "State", "Error", timeoutSeconds: 10);
+            });
         }
         finally
         {
@@ -101,14 +134,25 @@ public class ButtonsTests : UITest
         await OpenButtons();
         await Driver.WaitForProperty("SubmitButton", "State", "Normal");
 
-        await Driver.Tap(automationId: "SubmitButton");
+        await WithLongerRevert("SubmitButton", async () =>
+        {
+            // Busy lasts 1.5s: resolve the id first so each poll is one round trip, and require Busy then
+            // Success to both be seen (the emulator's slower reads skipped straight past Busy).
+            var button = (await Driver.Find("SubmitButton")).Id;
+            await Driver.Tap(elementId: button);
 
-        await Driver.WaitForProperty("SubmitButton", "State", "Busy", timeoutSeconds: 5);
-        // The command sets Success itself; the button must keep it rather than resetting to Normal...
-        await Driver.WaitForProperty("SubmitButton", "State", "Success", timeoutSeconds: 10);
-        await Driver.WaitForProperty(Status, "Text", "Submitted");
-        // ...until StateRevertDelay (2s) puts it back.
-        await Driver.WaitForProperty("SubmitButton", "State", "Normal", timeoutSeconds: 10);
+            var sawBusy = false;
+            await Driver.WaitUntil(async () =>
+            {
+                var state = await Driver.GetProperty("State", elementId: button);
+                sawBusy |= state == "Busy";
+                // The command sets Success itself; the button must keep it rather than resetting to Normal...
+                return sawBusy && state == "Success";
+            }, "SubmitButton to go Busy and then Success", timeoutSeconds: 10);
+            await Driver.WaitForProperty(Status, "Text", "Submitted");
+            // ...until StateRevertDelay puts it back.
+            await Driver.WaitForProperty("SubmitButton", "State", "Normal", timeoutSeconds: 10);
+        });
         await AssertNoAppErrors();
     }
 
@@ -118,13 +162,16 @@ public class ButtonsTests : UITest
     {
         await OpenButtons();
 
-        await Driver.Tap(automationId: "ForceError");
-        await Driver.WaitForProperty("SubmitButton", "State", "Error");
+        await WithLongerRevert("SubmitButton", async () =>
+        {
+            await Driver.Tap(automationId: "ForceError");
+            await Driver.WaitForProperty("SubmitButton", "State", "Error");
 
-        await Driver.Tap(automationId: "ForceSuccess");
-        await Driver.WaitForProperty("SubmitButton", "State", "Success");
+            await Driver.Tap(automationId: "ForceSuccess");
+            await Driver.WaitForProperty("SubmitButton", "State", "Success");
 
-        await Driver.WaitForProperty("SubmitButton", "State", "Normal", timeoutSeconds: 10);
+            await Driver.WaitForProperty("SubmitButton", "State", "Normal", timeoutSeconds: 10);
+        });
         await AssertNoAppErrors();
     }
 

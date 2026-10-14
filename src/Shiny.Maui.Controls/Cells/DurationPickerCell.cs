@@ -275,6 +275,8 @@ public class DurationPickerCell : CellBase
         valueLabel.Text = Duration.HasValue ? Duration.Value.ToString(Format) : string.Empty;
     }
 
+    protected override void ApplyValueTextStyles() => UpdateValueColor();
+
     void UpdateValueColor()
     {
         var color = ValueTextColor ?? ParentTableView?.CellValueTextColor;

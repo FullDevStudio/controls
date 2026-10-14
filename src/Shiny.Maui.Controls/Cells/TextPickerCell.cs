@@ -254,6 +254,8 @@ public class TextPickerCell : CellBase
         }
     }
 
+    protected override void ApplyValueTextStyles() => UpdateValueColor();
+
     void UpdateValueColor()
     {
         var color = ValueTextColor ?? ParentTableView?.CellValueTextColor;

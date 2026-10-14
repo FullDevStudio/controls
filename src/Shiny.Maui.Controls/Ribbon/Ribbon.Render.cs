@@ -8,6 +8,48 @@ namespace Shiny.Maui.Controls.Ribbons;
 public partial class Ribbon
 {
     string? shapeSignature;
+    int rebuildDeferrals;
+    bool rebuildPending;
+    bool rebuildQueued;
+    bool rebuilding;
+    bool rebuildAgain;
+    int followUpRebuilds;
+
+
+    /// <summary>
+    /// Holds every rebuild back until the returned scope is disposed, then rebuilds once if anything
+    /// asked for one.
+    /// </summary>
+    /// <remarks>
+    /// A rebuild re-creates every tab's views, and a host that changes several Redraw properties in a
+    /// row (ShowQuickAccess, ApplicationButtonText, ApplicationButtonCommand) pays for one rebuild
+    /// each. On Android that is hundreds of new handlers - and JNI global references - per property,
+    /// and a few shell toggles pushed the Document Editor past the process's GREF limit.
+    /// </remarks>
+    internal IDisposable DeferRebuild()
+    {
+        this.rebuildDeferrals++;
+        return new RebuildDeferral(this);
+    }
+
+
+    sealed class RebuildDeferral(Ribbon ribbon) : IDisposable
+    {
+        bool disposed;
+
+        public void Dispose()
+        {
+            if (this.disposed)
+                return;
+
+            this.disposed = true;
+            if (--ribbon.rebuildDeferrals == 0 && ribbon.rebuildPending)
+            {
+                ribbon.rebuildPending = false;
+                ribbon.Rebuild();
+            }
+        }
+    }
 
 
     // ---------------------------------------------------------------------------------------------
@@ -27,6 +69,75 @@ public partial class Ribbon
         if (this.root is null)
             return;  // A property changed from the constructor's own initialisers.
 
+        if (this.rebuildDeferrals > 0)
+        {
+            this.rebuildPending = true;
+            return;
+        }
+
+        // Building the bar pushes binding contexts and builds items, and a binding or item change that
+        // lands during that asks for a rebuild from inside this one. Run nested, it cleared the body and
+        // added the scroll fades, then the outer pass added them again - the same BoxView twice in one
+        // Grid, which Android refuses when the bar is first realized ("The specified child already has a
+        // parent"; UIKit just reparents). Finish this pass, then run one more.
+        if (this.rebuilding)
+        {
+            this.rebuildAgain = true;
+            return;
+        }
+
+        // Once the bar has a native view, never rebuild synchronously. A binding that resolves while
+        // Android is still realizing the bar (the sample's command bindings did) rebuilt it mid
+        // SetVirtualView: the re-added fades still had their native parent and Android threw "The
+        // specified child already has a parent" - UIKit just reparents, so only Android crashed. The
+        // next main-loop turn is after realization, and requests arriving meanwhile become one rebuild.
+        if (this.Handler is not null && this.Dispatcher is { } dispatcher)
+        {
+            if (!this.rebuildQueued)
+            {
+                this.rebuildQueued = true;
+                dispatcher.Dispatch(() =>
+                {
+                    this.rebuildQueued = false;
+                    this.RebuildNow();
+                });
+            }
+            return;
+        }
+
+        this.RebuildNow();
+    }
+
+
+    void RebuildNow()
+    {
+        this.rebuilding = true;
+        try
+        {
+            this.RebuildOnce();
+        }
+        finally
+        {
+            this.rebuilding = false;
+        }
+
+        // One follow-up pass picks up what changed during this one. Capped, so a change that every pass
+        // re-triggers (a binding context push that always raises) cannot spin rebuilds forever.
+        if (this.rebuildAgain)
+        {
+            this.rebuildAgain = false;
+            if (this.followUpRebuilds++ < 2)
+                this.Rebuild();
+        }
+        else
+        {
+            this.followUpRebuilds = 0;
+        }
+    }
+
+
+    void RebuildOnce()
+    {
         this.suppress++;
         try
         {

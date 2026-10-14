@@ -11,6 +11,25 @@ Both have a **route sweep** that opens every page the sample has (read from `App
 directives, so new pages are swept automatically) and fails on a crash, a navigation that doesn't land,
 a logged error, or a console error. Per-control tests then exercise behaviour.
 
+## Quick start: one line, any platforms
+
+From the repo root (`./uitest.ps1` takes the same arguments on Windows):
+
+```bash
+./uitest ios                        # one platform
+./uitest ios android                # several, run one after another
+./uitest mobile                     # ios + android
+./uitest all                        # every head this OS can run, plus Blazor
+./uitest blazor                     # Chromium; also blazor-webkit, blazor-firefox, blazor-publish
+./uitest android --filter Slider    # one class; Slider,Ribbon for several, or a raw /*/*/X/* filter
+./uitest ios --no-build             # reuse the last build/install
+./uitest ios --attach --port 9223   # drive an app that is already running
+```
+
+It builds the test projects once into `artifacts/uitest`, runs the platforms one at a time (they share
+build output), writes each platform's log to `artifacts/uitest-logs/<platform>.log`, prints a summary
+table, and exits non-zero if anything failed. The sections below are what it does under the hood.
+
 ## Running the MAUI suite
 
 One run drives one head. Pick it with `SHINY_UITEST_PLATFORM`; the fixture builds the head, installs/launches

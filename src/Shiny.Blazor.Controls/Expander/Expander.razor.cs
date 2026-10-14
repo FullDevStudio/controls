@@ -276,7 +276,7 @@ public partial class Expander : IDisposable
         this.UserClass = userClass;
         this.UserStyle = userStyle;
 
-        if (this.IsExpanded || !this.LoadContentOnDemand)
+        if (this.IsExpanded || !this.EffectiveLoadContentOnDemand)
             this.contentRealized = true;
     }
 
@@ -348,6 +348,10 @@ public partial class Expander : IDisposable
     bool WasSet(string name) => this.explicitParameters.Contains(name);
 
     AccordionDefaults? Defaults => this.AccordionHost?.Defaults;
+
+    // The accordion's LoadContentOnDemand reaches markup children too, not only the Items it generates.
+    bool EffectiveLoadContentOnDemand
+        => this.WasSet(nameof(this.LoadContentOnDemand)) || this.Defaults is null ? this.LoadContentOnDemand : this.Defaults.LoadContentOnDemand;
 
     ExpanderAnimation EffectiveAnimation
         => this.WasSet(nameof(this.Animation)) || this.Defaults is null ? this.Animation : this.Defaults.Animation;

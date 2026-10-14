@@ -32,7 +32,11 @@ public partial class ButtonsViewModel : ObservableObject
     // Without it, AsyncRelayCommand reports CanExecute=false while it runs, and since all four share
     // this one command, starting any of them disables the other three - correct behaviour, and exactly
     // what the CanExecute wiring is for, but it makes the modes impossible to see together.
-    [RelayCommand(AllowConcurrentExecutions = true)]
+    //
+    // FlowExceptionsToTaskScheduler: the "This will fail" demo faults on purpose. Without it
+    // AsyncRelayCommand.Execute rethrows that fault through async void - an unhandled exception on
+    // MAUI - instead of leaving it on ExecutionTask, where the button reads it and shows Error.
+    [RelayCommand(AllowConcurrentExecutions = true, FlowExceptionsToTaskScheduler = true)]
     async Task SaveAsync()
     {
         this.StatusMessage = "Saving...";

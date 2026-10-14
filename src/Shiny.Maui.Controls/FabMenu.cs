@@ -436,77 +436,92 @@ public class FabMenu : ContentView
 
     async Task AnimateToStateAsync(bool open)
     {
+        // A change that lands mid-animation is not dropped: the running animation re-reads IsOpen when it
+        // finishes and plays again towards whatever it says now (open-then-close within ~300ms used to
+        // leave IsOpen False with every item still on screen).
         if (isAnimating)
             return;
         isAnimating = true;
         try
         {
-            var duration = AnimationDuration;
-            var items = itemsLayout.Children.OfType<FabMenuItem>().ToList();
-            var rotation = RotateMainFab() ? IconRotation : 0;
-
-            if (open)
+            while (true)
             {
-                // show backdrop
-                if (HasBackdrop)
-                {
-                    backdrop.IsVisible = true;
-                    backdrop.Opacity = 0;
-                }
-
-                // prime items
-                foreach (var item in items)
-                {
-                    item.IsVisible = true;
-                    item.Opacity = 0;
-                    item.TranslationY = ItemTravelDistance;
-                    item.Scale = ItemCollapsedScale;
-                }
-
-                var tasks = new List<Task>();
-                if (HasBackdrop)
-                    tasks.Add(backdrop.FadeToAsync(BackdropOpacity, duration, Easing.CubicOut));
-                if (rotation != 0)
-                    tasks.Add(mainFab.RotateToAsync(rotation, duration, Easing.CubicInOut));
-
-                // Stagger from bottom to top (closest to the main Fab animates first)
-                for (var i = items.Count - 1; i >= 0; i--)
-                {
-                    var item = items[i];
-                    var delay = (items.Count - 1 - i) * ItemStaggerMs;
-                    tasks.Add(AnimateItemAsync(item, 1, 0, 1, duration, delay, Easing.CubicOut));
-                }
-
-                await Task.WhenAll(tasks);
-            }
-            else
-            {
-                var tasks = new List<Task>();
-                if (HasBackdrop)
-                    tasks.Add(backdrop.FadeToAsync(0, duration, Easing.CubicIn));
-                if (mainFab.Rotation != 0)
-                    tasks.Add(mainFab.RotateToAsync(0, duration, Easing.CubicInOut));
-
-                // Animate top to bottom on close
-                for (var i = 0; i < items.Count; i++)
-                {
-                    var item = items[i];
-                    var delay = i * ItemStaggerMs;
-                    tasks.Add(AnimateItemAsync(item, 0, ItemTravelDistance, ItemCollapsedScale, duration, delay, Easing.CubicIn));
-                }
-
-                await Task.WhenAll(tasks);
-
-                foreach (var item in items)
-                    item.IsVisible = false;
-
-                if (HasBackdrop)
-                    backdrop.IsVisible = false;
+                await RunStateAnimationAsync(open);
+                if (IsOpen == open)
+                    break;
+                open = IsOpen;
             }
         }
         finally
         {
             isAnimating = false;
+        }
+    }
+
+
+    async Task RunStateAnimationAsync(bool open)
+    {
+        var duration = AnimationDuration;
+        var items = itemsLayout.Children.OfType<FabMenuItem>().ToList();
+        var rotation = RotateMainFab() ? IconRotation : 0;
+
+        if (open)
+        {
+            // show backdrop
+            if (HasBackdrop)
+            {
+                backdrop.IsVisible = true;
+                backdrop.Opacity = 0;
+            }
+
+            // prime items
+            foreach (var item in items)
+            {
+                item.IsVisible = true;
+                item.Opacity = 0;
+                item.TranslationY = ItemTravelDistance;
+                item.Scale = ItemCollapsedScale;
+            }
+
+            var tasks = new List<Task>();
+            if (HasBackdrop)
+                tasks.Add(backdrop.FadeToAsync(BackdropOpacity, duration, Easing.CubicOut));
+            if (rotation != 0)
+                tasks.Add(mainFab.RotateToAsync(rotation, duration, Easing.CubicInOut));
+
+            // Stagger from bottom to top (closest to the main Fab animates first)
+            for (var i = items.Count - 1; i >= 0; i--)
+            {
+                var item = items[i];
+                var delay = (items.Count - 1 - i) * ItemStaggerMs;
+                tasks.Add(AnimateItemAsync(item, 1, 0, 1, duration, delay, Easing.CubicOut));
+            }
+
+            await Task.WhenAll(tasks);
+        }
+        else
+        {
+            var tasks = new List<Task>();
+            if (HasBackdrop)
+                tasks.Add(backdrop.FadeToAsync(0, duration, Easing.CubicIn));
+            if (mainFab.Rotation != 0)
+                tasks.Add(mainFab.RotateToAsync(0, duration, Easing.CubicInOut));
+
+            // Animate top to bottom on close
+            for (var i = 0; i < items.Count; i++)
+            {
+                var item = items[i];
+                var delay = i * ItemStaggerMs;
+                tasks.Add(AnimateItemAsync(item, 0, ItemTravelDistance, ItemCollapsedScale, duration, delay, Easing.CubicIn));
+            }
+
+            await Task.WhenAll(tasks);
+
+            foreach (var item in items)
+                item.IsVisible = false;
+
+            if (HasBackdrop)
+                backdrop.IsVisible = false;
         }
     }
 

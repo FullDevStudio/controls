@@ -33,9 +33,6 @@ public class MotionIconsTests : UITest
 
 
     [Test]
-    [Skip("BUG: MAUI MotionIconView plays RepeatCount (default 1) cycles when IsPlaying is set, then drops IsPlaying to False - a busy-flag spinner stops after ~1s. "
-        + "Docs/skill say bind IsPlaying to a busy flag, and Blazor's MotionIcon loops while IsPlaying is set (OnIsPlayingChanged → Start(PlaybackIterations()) uses RepeatCount). "
-        + "Verified on iOS: IsPlaying=True reads False 3s later")]
     public async Task Toggle_Busy_Starts_And_Stops_The_Spinner()
     {
         await OpenPage();

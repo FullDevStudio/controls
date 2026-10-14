@@ -71,7 +71,6 @@ public class MermaidTests : BlazorTest
     }
 
     [Test]
-    [Skip("BUG: MermaidDiagram re-renders only when Diagram changes, so picking a theme does nothing until the source is edited")]
     public async Task Changing_Theme_Rerenders_With_That_Theme()
     {
         await Open("mermaid");

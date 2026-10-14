@@ -182,6 +182,45 @@ public class ModalViewTests
     }
 
 
+    /// <summary>Stands in for the page: a component that owns the handler and re-renders after events.</summary>
+    sealed class OwningPage : IHandleEvent
+    {
+        public bool IsOpen { get; set; } = true;
+        public int Renders { get; private set; }
+
+        public Task CloseItself()
+        {
+            this.IsOpen = false;
+            return Task.CompletedTask;
+        }
+
+        public async Task HandleEventAsync(EventCallbackWorkItem item, object? arg)
+        {
+            await item.InvokeAsync(arg);
+            this.Renders++;
+        }
+    }
+
+
+    /// <summary>
+    /// "Delete project": ClosesModal=false and an OnClick that sets the page's bound IsOpen=false. The
+    /// page has to re-render for that false to reach the modal, so the handler goes through the page.
+    /// </summary>
+    [Fact]
+    public async Task AFooterButtonHandlerOnAComponentRerendersThatComponent()
+    {
+        var page = new OwningPage();
+        var button = new ModalButton("Delete") { ClosesModal = false, OnClick = page.CloseItself };
+        var modal = new ModalView { Buttons = [button] };
+
+        await modal.ShowAsync();
+        await modal.OnFooterButtonClick(button);
+
+        page.IsOpen.ShouldBeFalse();
+        page.Renders.ShouldBe(1);
+    }
+
+
     [Fact]
     public async Task AFooterButtonThatDoesNotCloseLeavesItOpen()
     {

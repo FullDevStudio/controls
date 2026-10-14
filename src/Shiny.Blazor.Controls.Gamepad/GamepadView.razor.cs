@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
 using Microsoft.AspNetCore.Components;
@@ -188,13 +189,18 @@ public partial class GamepadView : ComponentBase, IAsyncDisposable
     }
 
 
+    [DynamicDependency(DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.PublicParameterlessConstructor, typeof(GamepadJsOptions))]
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         this.renderQueued = false;
         if (this.disposed)
             return;
 
-        var options = new GamepadJsOptions(this.IdleOpacity, this.IdleDelay.TotalMilliseconds);
+        var options = new GamepadJsOptions
+        {
+            IdleOpacity = this.IdleOpacity,
+            IdleDelayMs = this.IdleDelay.TotalMilliseconds
+        };
         if (firstRender)
         {
             this.module = await this.JS.InvokeAsync<IJSObjectReference>("import", ModulePath);
@@ -439,5 +445,15 @@ public partial class GamepadView : ComponentBase, IAsyncDisposable
 }
 
 
-/// <summary>Options handed to the JS module. A named record: anonymous types break trimmed WASM interop.</summary>
-public sealed record GamepadJsOptions(double IdleOpacity, double IdleDelayMs);
+/// <summary>Options handed to the JS module.</summary>
+/// <remarks>
+/// A named type with plain properties, kept alive by the <c>DynamicDependency</c> on
+/// <c>OnAfterRenderAsync</c>. Not an anonymous type and not a positional record: the trimmer drops a
+/// positional record's constructor parameter names, and System.Text.Json then refuses to serialize it
+/// (ConstructorContainsNullParameterNames) in a published WebAssembly build and nowhere else.
+/// </remarks>
+public sealed record GamepadJsOptions
+{
+    public double IdleOpacity { get; init; }
+    public double IdleDelayMs { get; init; }
+}

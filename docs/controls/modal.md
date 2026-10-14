@@ -43,6 +43,8 @@ There is **no MAUI equivalent** — use `FloatingPanel` / `ShinyContentPage` or 
 | Close | the ✕ button | `CloseButtonTemplate` (already wired) | `ShowCloseButton="false"` |
 | Footer | `Buttons` (a list of `ModalButton`, rendered as `ShinyButton`) | `FooterTemplate` | neither set |
 
+A footer button's `OnClick` is awaited before the modal closes and is invoked like an `EventCallback`: when it is a method group (`OnClick = SaveAsync`) or a lambda that captures only `this`, the page that owns it re-renders when it returns. That is what lets `ClosesModal = false` plus an `OnClick` that sets the bound `IsOpen = false` close the modal once the work is done. A lambda that captures locals has no component behind it, so call `StateHasChanged()` from that one.
+
 **State and events** — two-way `IsOpen`, plus `ShowAsync()` / `CloseAsync(reason)` / `ToggleAsync()` on the component reference. `Opened` fires once focus is inside; `Closing` is cancellable (`ModalClosingEventArgs.Cancel`); `Closed` carries a `ModalCloseReason` — `CloseButton`, `Backdrop`, `Escape`, `Button` or `Programmatic`. Binding `IsOpen` to false is the one path that skips the veto: the page has already decided.
 
 **Sizing and chrome** — `Size` (`Small` 360 / `Medium` 520 / `Large` 760 / `ExtraLarge` 1080 / `Full`, all caps rather than fixed widths) or explicit `Width`/`Height`/`MaxWidth`/`MaxHeight`; `Placement` `Center`/`Top`/`Bottom`; `Animation` `None`/`Fade`/`Zoom`/`Pop`/`SlideTop`/`SlideBottom` with `AnimationDuration`; `ShowBackdrop`, `BackdropOpacity`, `BlurBackdrop`; `CornerRadius`, `Background`, `ContentPadding`, `CssClass`.

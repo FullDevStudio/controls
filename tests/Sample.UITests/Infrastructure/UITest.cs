@@ -30,11 +30,31 @@ public abstract class UITest
 
         TestStarted = DateTimeOffset.UtcNow;
         App.Host.TakeOutputErrors(); // drop output from before this test
+        Timeline($"start {TestContext.Current?.Metadata.TestDetails.ClassType.Name}.{TestContext.Current?.Metadata.DisplayName}");
+    }
+
+    /// <summary>
+    /// One line per test start/end in uitest-results/&lt;platform&gt;/timeline.log. Successful tests print nothing
+    /// to the console, so this is how a device-side event (a GC storm in logcat, a crash) is matched to the
+    /// test that was running at that moment.
+    /// </summary>
+    static void Timeline(string line)
+    {
+        try
+        {
+            Directory.CreateDirectory(UITestSettings.ResultsDirectory);
+            File.AppendAllText(Path.Combine(UITestSettings.ResultsDirectory, "timeline.log"), $"{DateTimeOffset.Now:HH:mm:ss.fff} {line}{Environment.NewLine}");
+        }
+        catch (IOException)
+        {
+        }
     }
 
     [After(Test)]
     public async Task CollectEvidence(TestContext context)
     {
+        Timeline($"end   {context.Metadata.TestDetails.ClassType.Name}.{context.Metadata.DisplayName} {context.Execution.Result?.State}");
+
         // Driver is null when the fixture itself failed (build/launch) — that error is already the test's.
         if (App.UnavailableReason != null || App.Driver == null || context.Execution.Result?.State != TestState.Failed)
             return;
@@ -62,8 +82,25 @@ public abstract class UITest
     }
 
     /// <summary>Navigates to a Shell route and waits for its page type (or a marker AutomationId) to be on screen.</summary>
-    protected Task Open(string route, string? pageType = null)
-        => Driver.NavigateTo(route, pageType);
+    protected async Task Open(string route, string? pageType = null)
+    {
+        // Android: the Office editors need ~20k JNI global refs just to open (every ribbon tab built up front,
+        // hundreds of GraphicsView icons), so a first visit on top of ~20 retained pages crosses monodroid's
+        // GREF threshold and the app stalls in back-to-back full GCs. Give them a fresh process.
+        if (Platform == UIPlatform.Android
+            && HeavyAndroidRoutes.Contains(route)
+            && !Driver.RoutesSinceConnect.Contains(route)
+            && Driver.RoutesSinceConnect.Count > 3)
+        {
+            App.RequestRelaunch();
+            await App.EnsureRunningAsync();
+        }
+
+        await Driver.NavigateTo(route, pageType);
+    }
+
+    static readonly HashSet<string> HeavyAndroidRoutes =
+        ["documenteditor", "slideeditor", "spreadsheet", "notebook", "documentviewer", "slideviewer"];
 
     /// <summary>Fails the test with the app's own error log lines written since the test started.</summary>
     protected async Task AssertNoAppErrors(Func<AppLogError, bool>? ignore = null)

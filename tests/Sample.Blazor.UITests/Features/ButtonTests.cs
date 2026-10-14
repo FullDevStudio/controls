@@ -106,13 +106,11 @@ public class ButtonTests : BlazorTest
         await Expect(failing).ToHaveClassAsync(new System.Text.RegularExpressions.Regex("shiny-btn--error"));
         await Expect(failing).Not.ToHaveAttributeAsync("aria-busy", "true");
 
-        // No AssertNoConsoleErrors here: ShinyButton rethrows the handler's exception by design, and
-        // the page does not catch it — see Faulting_Demo_Does_Not_Crash_The_Page.
+        await AssertNoConsoleErrors();
     }
 
 
     [Test]
-    [Skip("BUG: the 'This will fail' demo's handler throws and ShinyButton rethrows it (by design), so the button page raises Blazor's unhandled-error bar and the page's status never updates to 'It failed'")]
     public async Task Faulting_Demo_Does_Not_Crash_The_Page()
     {
         await Open("button");

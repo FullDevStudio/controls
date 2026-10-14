@@ -410,6 +410,14 @@ public class EntryCell : CellBase, IKeyboardAccessoryHost
         OnValueTextChanged(ValueText);
     }
 
+    protected override void ApplyValueTextStyles()
+    {
+        UpdateEntryColor();
+        UpdateEntryFontSize();
+        UpdateEntryFontFamily();
+        UpdateEntryFontAttributes();
+    }
+
     void UpdateEntryColor()
     {
         var color = ValueTextColor ?? ParentTableView?.CellValueTextColor;

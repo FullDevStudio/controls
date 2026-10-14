@@ -19,7 +19,7 @@
 <MotionIcon Icon="bell" Trigger="MotionTrigger.Loop" Interval="TimeSpan.FromSeconds(1.5)" Size="32" />
 ```
 
-**Triggers** are a `[Flags]` enum and combine: `Loop`, `Hover`, `Press`, `Appear`, or `Manual` for `Play()` / `Stop()` / binding `IsPlaying` to a busy flag. `Interval` rests the icon between cycles.
+**Triggers** are a `[Flags]` enum and combine: `Loop`, `Hover`, `Press`, `Appear`, or `Manual` for `Play()` / `Stop()` / binding `IsPlaying` to a busy flag. `Interval` rests the icon between cycles. `RepeatCount` bounds a triggered play (`Play()`, Press, Appear); setting `IsPlaying` to `true` loops until it is cleared, on both hosts.
 
 **Presets** work on any icon, including your own artwork — `Pulse`, `Beat`, `Spin`, `Shake`, `Wobble`, `Bounce`, `Float`, `Pop`, `Tada`, `Flip`, `Swing`, `Blink`, `Draw`, `Nudge`, `Jiggle`. `Default` plays the motion drawn for that icon and falls back to `Pulse` for artwork that has none.
 

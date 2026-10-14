@@ -94,8 +94,14 @@ public partial class QuickEntryHost : ComponentBase, IDisposable
 
         // The prompt gets first refusal, so the first Escape backs out of its own state and only an
         // Escape it declines closes the popup.
-        if (this.prompt is not null && await this.prompt.HandleEscapeAsync())
-            return;
+        if (this.prompt is not null)
+        {
+            // An Escape typed in the prompt's own field was already handled there and bubbled up here;
+            // asking again would peel a second layer (or close) on one keypress.
+            var consumed = this.prompt.TakeKeyEscapeOutcome() ?? await this.prompt.HandleEscapeAsync();
+            if (consumed)
+                return;
+        }
 
         this.Service.Hide();
     }

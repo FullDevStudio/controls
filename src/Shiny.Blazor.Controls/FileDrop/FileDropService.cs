@@ -133,10 +133,12 @@ public sealed class FileDropService : IFileDropService
 
     [JSInvokable]
     [DynamicDependency(DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.PublicParameterlessConstructor, typeof(FileDropItem))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.PublicParameterlessConstructor, typeof(FileDropPayload))]
     public void OnDragEnter(FileDropPayload payload) => this.Raise(this.DragEnter, payload);
 
     [JSInvokable]
     [DynamicDependency(DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.PublicParameterlessConstructor, typeof(FileDropItem))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.PublicParameterlessConstructor, typeof(FileDropPayload))]
     public void OnDragOver(FileDropPayload payload) => this.Raise(this.DragOver, payload);
 
     [JSInvokable]
@@ -148,6 +150,7 @@ public sealed class FileDropService : IFileDropService
 
     [JSInvokable]
     [DynamicDependency(DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.PublicParameterlessConstructor, typeof(FileDropItem))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.PublicParameterlessConstructor, typeof(FileDropPayload))]
     public async Task OnDrop(FileDropPayload payload)
     {
         if (!this.IsEnabled)

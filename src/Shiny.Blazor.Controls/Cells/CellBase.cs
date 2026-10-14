@@ -163,6 +163,13 @@ public abstract class CellBase : ComponentBase
     protected virtual void BuildAccessory(RenderTreeBuilder builder, int sequence) { }
 
     protected virtual Task OnTapped() => Task.CompletedTask;
+
+    /// <summary>
+    /// True for a cell whose accessory is a live control (a switch, a checkbox, an input). Its clicks
+    /// are kept from bubbling to the row, so the control's own change is not undone by the row tap.
+    /// A passive accessory (a value label, a chevron) leaves the whole row tappable.
+    /// </summary>
+    protected virtual bool AccessoryHandlesClicks => false;
     protected virtual bool ShouldKeepSelectionHighlight() => false;
 
     async Task HandleClick(MouseEventArgs e)
@@ -246,7 +253,9 @@ public abstract class CellBase : ComponentBase
         // Accessory
         builder.OpenElement(40, "div");
         builder.AddAttribute(41, "class", "shiny-tv-cell-accessory");
-        builder.AddAttribute(42, "onclick:stopPropagation", true);
+        // A RenderTreeBuilder needs the dedicated call; AddAttribute("onclick:stopPropagation") only writes a
+        // literal DOM attribute, so a click on the switch/radio bubbled to the row tap and undid itself.
+        builder.AddEventStopPropagationAttribute(42, "onclick", AccessoryHandlesClicks);
         BuildAccessory(builder, 50);
         builder.CloseElement();
 

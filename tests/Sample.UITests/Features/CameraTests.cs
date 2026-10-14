@@ -14,11 +14,13 @@ public class CameraTests : UITest
     Task OpenCamera() => Open("camera", "CameraPage");
 
 
-    [Test]
-    [Skip("BUG (crash): a Facing change queues CameraViewHandler.ReconfigureInput on the session queue, whose InvokeOnMainThread block reads "
-        + "this.VirtualView.Zoom unguarded (CameraViewHandler.Apple.cs:1052). When the handler disconnects first (navigating away while the simulator's "
-        + "capture session is still failing with err=-12782) it throws 'VirtualView cannot be null here' on the main thread and SIGABRTs the app - "
-        + "seen on iOS 2026-10-13 19:48 right after this test, taking the next test down with it")]
+    // Evidence (emulator API 35, 2026-10-14; the AVD has hw.camera.front=none): tapping Flip sets Facing=Front,
+    // CameraViewHandler.Android BindUseCases -> cameraProvider.BindToLifecycle throws IllegalArgumentException
+    // "No available camera can be found" straight out of MapFacing, so the exception escapes the Facing setter
+    // (DevFlow reports "Failed to set property: No available camera can be found"; from a real tap it is unhandled
+    // in Clicked). After that the property is wedged: the second Flip (Facing=Back) is ignored and Facing reads
+    // Front for good. An unavailable lens should surface through OnCameraError, not throw from a setter.
+    [Test, SkipOn(UIPlatform.Android, "BUG: selecting a facing the device lacks throws out of the Facing setter (BindToLifecycle 'No available camera') and wedges the property - emulator has no front camera")]
     public async Task Flip_Swaps_The_Facing()
     {
         await OpenCamera();

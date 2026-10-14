@@ -75,7 +75,6 @@ public class ToolbarTests : BlazorTest
     }
 
     [Test]
-    [Skip("BUG: ShinyToolbar binds aria-expanded to a bool, so Blazor renders it as aria-expanded=\"\" when open and drops it when closed - never \"true\"/\"false\"")]
     public async Task Dropdown_Reports_Its_Expanded_State()
     {
         await Open("toolbar");
@@ -145,7 +144,6 @@ public class ToolbarTests : BlazorTest
     }
 
     [Test]
-    [Skip("BUG: the click-outside scrim (.shiny-toolbar-menu-backdrop, a popover) renders 14x14px - the UA popover fit-content sizing wins over inset:0 - so clicking outside an open toolbar menu never closes it")]
     public async Task Clicking_Outside_Closes_An_Open_Menu()
     {
         await Open("toolbar");

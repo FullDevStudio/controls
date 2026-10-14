@@ -103,7 +103,6 @@ public class TextEntryTests : BlazorTest
     }
 
     [Test]
-    [Skip("BUG (sample): TextEntryPage.razor validates the email in OnAfterRender without re-rendering, so HasError/HintText lag one render - pasting a corrected address leaves the error showing until the next keystroke")]
     public async Task Correcting_The_Email_Clears_The_Error()
     {
         await Open("textentry");

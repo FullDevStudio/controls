@@ -530,6 +530,8 @@
     {
         await Task.Delay(600);
         status = $"Loaded {node.Name}";
+        // ChildrenLoader is a plain Func, not an EventCallback, so nothing re-renders this page for us.
+        StateHasChanged();
         return new List<CostNode>
         {
             new() { Name = "Northern region", Kind = "Team", Budget = 128_000 },

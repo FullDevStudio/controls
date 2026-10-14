@@ -232,4 +232,36 @@ public class AccordionTests
         item.Owner.ShouldBeNull();
         accordion.Items.Count.ShouldBe(2);
     }
+
+
+    /// <summary>
+    /// Switching AllowCollapseAll off at runtime opens the first item silently; ExpandedIndex has to
+    /// follow it rather than stay at -1 while item 0 is plainly open.
+    /// </summary>
+    [Fact]
+    public void DisallowingAllClosedAtRuntimePublishesTheIndex()
+    {
+        var accordion = Build(new Accordion());
+        accordion.ExpandedIndex.ShouldBe(-1);
+
+        accordion.AllowCollapseAll = false;
+
+        accordion.Items[0].IsExpanded.ShouldBeTrue();
+        accordion.ExpandedIndex.ShouldBe(0);
+    }
+
+
+    [Fact]
+    public void SwitchingToSingleModePublishesTheSurvivor()
+    {
+        var accordion = Build(new Accordion { SelectionMode = AccordionSelectionMode.Multiple });
+        accordion.Items[1].IsExpanded = true;
+        accordion.Items[2].IsExpanded = true;
+        accordion.ExpandedIndex.ShouldBe(1);
+
+        accordion.SelectionMode = AccordionSelectionMode.Single;
+
+        accordion.ExpandedIndexes.Count.ShouldBe(1);
+        accordion.ExpandedIndex.ShouldBe(accordion.ExpandedIndexes[0]);
+    }
 }

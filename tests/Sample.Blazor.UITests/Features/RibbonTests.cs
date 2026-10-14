@@ -137,7 +137,6 @@ public class RibbonTests : BlazorTest
     }
 
     [Test]
-    [Skip("BUG: setting a contextual tab Visible and SelectedKey to it in the same render falls back to Home instead of selecting it (Ribbon.OnParametersSet runs EnsureSelection before the child RibbonTab's Visible lands)")]
     public async Task Insert_Picture_Brings_Up_And_Selects_The_Contextual_Tab()
     {
         await Open("ribbon");

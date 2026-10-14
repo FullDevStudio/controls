@@ -40,6 +40,7 @@ public interface IAccordionHost
 /// <param name="CornerRadius">Default corner radius, as CSS.</param>
 /// <param name="HeaderBackground">Default header fill, as CSS.</param>
 /// <param name="ContentBackground">Default content fill, as CSS.</param>
+/// <param name="LoadContentOnDemand">Default <see cref="Expander.LoadContentOnDemand"/>.</param>
 public record AccordionDefaults(
     ExpanderAnimation Animation,
     ExpanderSlideFrom SlideFrom,
@@ -52,5 +53,6 @@ public record AccordionDefaults(
     string? BorderThickness,
     string? CornerRadius,
     string? HeaderBackground,
-    string? ContentBackground
+    string? ContentBackground,
+    bool LoadContentOnDemand = false
 );

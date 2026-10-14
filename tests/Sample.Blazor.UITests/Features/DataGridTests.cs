@@ -478,8 +478,7 @@ public class DataGridTests : BlazorTest
         await Expect(TreeRow("Northern region")).ToHaveCountAsync(1, new() { Timeout = 10_000 });
         await Expect(TreeRow("Southern region")).ToHaveCountAsync(1);
         await Expect(TreeRow("Field operations").Locator(".shiny-dg-tree-caret")).ToHaveTextAsync("▾");
-        // (The page's "Loaded …" status is set inside the ChildrenLoader Func, which never re-renders
-        // the page - a sample quirk, so it isn't asserted here.)
+        await Expect(Page.Locator("p.status-message")).ToHaveTextAsync("Loaded Field operations");
         await AssertNoConsoleErrors();
     }
 

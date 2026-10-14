@@ -106,7 +106,6 @@ public class RangePickersTests : BlazorTest
 
 
     [Test]
-    [Skip("BUG: 'Next month' never pages a multi-month DateRangeCalendar - ShiftMonthAsync(+1) goes through ShowMonthAsync, whose 'already on screen' guard returns because displayMonth+1 is the second visible month (Months=2)")]
     public async Task Inline_Next_Month_Pages_Forward()
     {
         await Open("rangepickers");

@@ -25,7 +25,10 @@ This is that assembly, done once and at parity on both hosts.
   is an async one (`AsyncRelayCommand` and friends) it drives its own `Busy` for exactly as long as
   the command runs. Nothing binds `IsBusy`. It does this through MAUI's own `IsEnabledCore`, so a
   button you explicitly set `IsEnabled="False"` on **stays** disabled when the command becomes
-  executable again.
+  executable again. A command that can fault should be declared
+  `[RelayCommand(FlowExceptionsToTaskScheduler = true)]` (MVVM Toolkit): by default
+  `AsyncRelayCommand.Execute` rethrows the fault through `async void`, an unhandled exception that can
+  take the app down, rather than just leaving the button in `Error`.
 - **Appearance × Type** — `Filled` / `Tonal` / `Outlined` / `Text` / `Elevated` crossed with
   `Primary` / `Secondary` / `Success` / `Warning` / `Critical` / `Info`, all resolved from the theme
   tokens. Any explicit colour property wins over both.
@@ -53,7 +56,7 @@ This is that assembly, done once and at parity on both hosts.
 
 Blazor mirrors the parameters one-for-one. There is no `ICommand` on the web, so the command-state
 integration is MAUI-only; its equivalent is that `Clicked` is awaited — an `async` handler holds the
-button busy for as long as it runs, and a synchronous one never flickers.
+button busy for as long as it runs, and a synchronous one never flickers. A handler that throws puts the button into `Error` (`ShowErrorOnFault`) and the exception is still rethrown — the button reflects a fault, it does not swallow it. An exception escaping a Blazor event handler raises the error UI on WebAssembly and ends the circuit on Blazor Server, so catch failures in the handler and set `State="ButtonState.Error"` (bound with `@bind-State`) yourself.
 
 ```razor
 <ShinyButton Text="Save" BusyText="Saving..." LeftMotionIcon="download" Clicked="SaveAsync" />

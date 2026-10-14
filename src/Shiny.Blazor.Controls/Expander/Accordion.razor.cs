@@ -38,6 +38,7 @@ public partial class Accordion : IAccordionHost
 
     bool syncing;
     bool hasRendered;
+    bool? appliedAllowCollapseAll;
     int publishedIndex = -1;
 
     /// <summary>Expanders written straight into the accordion.</summary>
@@ -73,7 +74,11 @@ public partial class Accordion : IAccordionHost
     /// <summary>Raised when an item closes.</summary>
     [Parameter] public EventCallback<AccordionItemChangedEventArgs> OnItemCollapsed { get; set; }
 
-    /// <summary>Hold each item's content out of the DOM until it is first opened.</summary>
+    /// <summary>
+    /// Hold each item's content out of the DOM until it is first opened. Reaches markup children
+    /// (a <c>@foreach</c> of <c>&lt;Expander&gt;</c>) as well as <see cref="Items"/>; an expander that
+    /// sets <see cref="Expander.LoadContentOnDemand"/> itself keeps its own value.
+    /// </summary>
     [Parameter] public bool LoadContentOnDemand { get; set; }
 
     /// <summary>Gap between items, as CSS. Bare numbers are read as pixels.</summary>
@@ -210,7 +215,8 @@ public partial class Accordion : IAccordionHost
         this.BorderThickness,
         this.CornerRadius,
         this.HeaderBackground,
-        this.ContentBackground
+        this.ContentBackground,
+        this.LoadContentOnDemand
     );
 
 
@@ -304,6 +310,15 @@ public partial class Accordion : IAccordionHost
             else
                 this.ExpandItem(this.ExpandedIndex);
         }
+        else if (this.appliedAllowCollapseAll is { } applied && applied != this.AllowCollapseAll)
+        {
+            // Turning AllowCollapseAll off at runtime on a fully closed list has to open the first
+            // item (and turning it back on gives the open item its close affordance back) - the rules
+            // otherwise only ran on first render and on item changes.
+            this.AfterChange();
+        }
+
+        this.appliedAllowCollapseAll = this.AllowCollapseAll;
     }
 
 

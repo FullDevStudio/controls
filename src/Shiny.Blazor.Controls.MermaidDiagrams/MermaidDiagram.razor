@@ -9,6 +9,7 @@
     Microsoft.AspNetCore.Components.ElementReference hostEl;
     Microsoft.JSInterop.IJSObjectReference? module;
     string? lastRendered;
+    string? lastTheme;
 
     [Parameter] public string? Diagram { get; set; }
     [Parameter] public string Theme { get; set; } = "default";
@@ -24,9 +25,11 @@
 
         if (module is null) return;
 
-        if (Diagram != lastRendered)
+        // The theme is baked into the SVG mermaid produces, so a theme change needs a fresh render too.
+        if (Diagram != lastRendered || Theme != lastTheme)
         {
             lastRendered = Diagram;
+            lastTheme = Theme;
             await module.InvokeVoidAsync("render", hostEl, Diagram ?? string.Empty, Theme);
         }
     }

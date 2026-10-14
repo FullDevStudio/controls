@@ -620,8 +620,12 @@ public partial class ModalView : IAsyncDisposable
         if (button.Disabled)
             return;
 
-        if (button.OnClick is not null)
-            await button.OnClick();
+        // Run through an EventCallback aimed at the component that owns the handler (a method group's
+        // or a this-only lambda's Target), so that component re-renders when it returns. A bare
+        // delegate call left the page un-rendered, and an OnClick that set the bound IsOpen=false
+        // never got that false back down to this modal - it stayed open forever.
+        if (button.OnClick is { } onClick)
+            await new EventCallback(onClick.Target as IHandleEvent, onClick).InvokeAsync();
 
         if (button.ClosesModal)
             await this.CloseAsync(ModalCloseReason.Button);

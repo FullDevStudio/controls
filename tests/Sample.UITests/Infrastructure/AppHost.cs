@@ -49,6 +49,12 @@ public abstract class AppHost : IAsyncDisposable
     public virtual ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
     /// <summary>
+    /// True when the running app, though alive, should be replaced by a fresh process before the next
+    /// test — a head-specific resource it can only exhaust by living long (Android's JNI global refs).
+    /// </summary>
+    public virtual Task<bool> NeedsFreshProcessAsync(MauiDevFlowDriver driver) => Task.FromResult(false);
+
+    /// <summary>
     /// After a relaunch the broker can still list the old process's agent for a moment; agents that
     /// connected before this are ignored.
     /// </summary>
@@ -245,7 +251,57 @@ public sealed class AndroidAppHost : AppHost
     public override async Task BuildAsync()
     {
         serial = await ResolveDeviceAsync();
-        await BuildProject("net10.0-android", $"-t:Install -p:AdbTarget={ProcessRunner.Quote("-s " + serial)}");
+        var install = $"-t:Install -p:AdbTarget={ProcessRunner.Quote("-s " + serial)}";
+
+        // Optional isolated output, so an Android build never shares src/*/obj with another head building at once.
+        if (ArtifactsPath is string artifacts)
+            install += $" --artifacts-path {ProcessRunner.Quote(artifacts)}";
+        await BuildProject("net10.0-android", install);
+
+        // Shiny.Maui.Controls.Desktop has no Android TFM, so the Android sample also receives its net10.0
+        // build of Shiny.Maui.Controls.dll. On a clean build the Java stub scanner can read that copy and
+        // write an empty scan for Shiny.Maui.Controls ("Found 0 Java types") — every Java.Lang.Object
+        // subclass in the core package (CarouselAdapter, StaggeredGridAdapter, BlurPreDrawListener, …) then
+        // dies at runtime with "no Java peer type found" and takes the app down. An incremental rebuild with
+        // the empty scan deleted usually re-scans the Android copy (which assembly the scanner's resolver
+        // caches first depends on build order, so it can take more than one try): drop it and rebuild.
+        for (var attempt = 0; ; attempt++)
+        {
+            var emptyScans = EmptyCoreJavaScans();
+            if (emptyScans.Count == 0)
+                return;
+
+            if (attempt == 3)
+                throw new InvalidOperationException(
+                    "The Android build kept scanning Shiny.Maui.Controls as having no Java types — the app would crash " +
+                    "on any page with an Android adapter/listener. Delete the Android obj/bin of samples/Sample and retry."
+                );
+
+            foreach (var file in emptyScans)
+            {
+                File.Delete(file);
+                var typemap = file[..^".jlo.xml".Length] + ".typemap.xml";
+                if (File.Exists(typemap))
+                    File.Delete(typemap);
+            }
+            await BuildProject("net10.0-android", install);
+        }
+    }
+
+    /// <summary>Per-ABI Java stub scans of the core package that came out empty (see <see cref="BuildAsync"/>).</summary>
+    List<string> EmptyCoreJavaScans()
+    {
+        var root = ArtifactsPath is string artifacts
+            ? Path.Combine(artifacts, "obj", "Sample")
+            : Path.Combine(ProjectDirectory, "obj", UITestSettings.Configuration, "net10.0-android");
+        if (!Directory.Exists(root))
+            return [];
+
+        return Directory
+            .EnumerateFiles(root, "Shiny.Maui.Controls.jlo.xml", SearchOption.AllDirectories)
+            .Where(f => f.Contains("android", StringComparison.OrdinalIgnoreCase))
+            .Where(f => new FileInfo(f).Length < 64 && File.ReadAllText(f).Contains("<api />"))
+            .ToList();
     }
 
     public override async Task LaunchAsync()
@@ -268,6 +324,49 @@ public sealed class AndroidAppHost : AppHost
         (await AdbShell($"am start -W -n {activity}"))
             .EnsureSuccess("Launching the Android sample");
     }
+
+    /// <summary>
+    /// Shell keeps every page it has shown alive, and on Android each one pins its native views as JNI
+    /// global references. Past ~90% of the runtime's GREF limit (46,080 of 51,200 on the emulator) monodroid
+    /// forces a full GC on every new reference — "N outstanding GREFs. Performing a full GC!" several times a
+    /// second — and the main thread stalls for 30-95s at a time: page types never appear in the tree, the
+    /// screenshot fails, and Shell reports route ''. A bare route sweep reaches it after ~70 pages; the
+    /// per-control tests, which also add content (chat messages, grid edits, regrouping), reached it after ~20
+    /// routes (A* through Docking, 7 min). So the app is restarted after <see cref="RoutesPerLaunch"/> distinct
+    /// pages, or as soon as monodroid reports the GREF pressure anyway. (A cheap live GREF count isn't
+    /// available: it needs debug.mono.log=gref, which slows the app several-fold, and Mono owns SIGQUIT.)
+    /// </summary>
+    public override async Task<bool> NeedsFreshProcessAsync(MauiDevFlowDriver driver)
+    {
+        if (driver.RoutesSinceConnect.Count >= RoutesPerLaunch)
+            return true;
+
+        var pid = (await AdbShell($"pidof {PackageId}")).Output.Trim();
+        if (pid.Length == 0)
+            return false;
+
+        // -s keeps it to the one tag, so this stays cheap even with a full log buffer
+        var gc = await ProcessRunner.Run(Adb, $"-s {serial} logcat -d -s monodroid-gc:W");
+        return gc.Output
+            .Split('\n')
+            .Any(line => line.Contains("outstanding GREFs", StringComparison.Ordinal) && IsPidColumn(line, pid));
+    }
+
+    /// <summary>The default logcat format puts the pid in its own column ("10-13 22:50:05.125 12490 12490 W …").</summary>
+    static bool IsPidColumn(string line, string pid)
+    {
+        var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length > 2 && parts[2] == pid;
+    }
+
+    /// <summary>SHINY_UITEST_ANDROID_ARTIFACTS: build the Android head with this --artifacts-path (absolute or repo-relative).</summary>
+    static string? ArtifactsPath
+        => Environment.GetEnvironmentVariable("SHINY_UITEST_ANDROID_ARTIFACTS") is { Length: > 0 } path
+            ? Path.GetFullPath(path, UITestSettings.RepoRoot)
+            : null;
+
+    static int RoutesPerLaunch
+        => Int32.TryParse(Environment.GetEnvironmentVariable("SHINY_UITEST_ANDROID_ROUTES_PER_LAUNCH"), out var n) && n > 0 ? n : 25;
 
     public override async Task<int> ResolvePortAsync(TimeSpan timeout)
     {

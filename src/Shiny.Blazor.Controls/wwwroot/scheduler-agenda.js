@@ -169,6 +169,10 @@ function onPointerMove(state, e) {
     if (!drag) return;
     drag.lastEvent = e;
 
+    if (!drag.moved &&
+        (Math.abs(e.clientX - drag.originX) > SLOP || Math.abs(e.clientY - drag.originY) > SLOP))
+        drag.moved = true;
+
     if (!drag.armed) {
         // Moved before the long press elapsed - this was a scroll all along. Bail silently.
         if (drag.awaitingDelay &&
@@ -319,7 +323,10 @@ async function onPointerUp(state, e) {
 
     // A pointer drag still produces a trailing click, which would fire the event's @onclick and
     // "select" the thing you just dropped. Same problem as MAUI's trailing tap, different mechanism.
-    suppressNextClick(drag.el);
+    // Only a press that actually moved is a drag, though: a mouse arms on pointerdown with no delay,
+    // so swallowing the click unconditionally meant a plain click could never select an event.
+    if (drag.moved)
+        suppressNextClick(drag.el);
 
     if (drag.deltaMinutes === 0 && drag.dayDelta === 0) return;
 

@@ -36,6 +36,7 @@ sealed class ZoomPanController
     bool doubleTapToZoom = true;
     bool isPinching;
     bool isAnimating;
+    int animationGeneration;
     bool isAttached;
 
 
@@ -164,8 +165,11 @@ sealed class ZoomPanController
     /// </summary>
     public async Task ZoomToAsync(double zoom, Point? focus = null)
     {
-        if (this.isAnimating)
-            return;
+        // A request that lands mid-animation supersedes it rather than being dropped: MAUI aborts a
+        // running ScaleTo/TranslateTo when another of the same name starts, and the state below is
+        // committed up front. Dropping it (the old behaviour) left a Reset straight after "zoom to 2x"
+        // with ZoomLevel reading 1 while the content stayed at 2x and IsZoomed stayed true.
+        var generation = ++this.animationGeneration;
 
         var next = Math.Clamp(zoom, this.MinZoom, this.MaxZoom);
         double tx, ty;
@@ -215,7 +219,9 @@ sealed class ZoomPanController
         }
         finally
         {
-            this.isAnimating = false;
+            // Only the newest request clears the flag; a superseded one unwinding late must not.
+            if (generation == this.animationGeneration)
+                this.isAnimating = false;
         }
     }
 

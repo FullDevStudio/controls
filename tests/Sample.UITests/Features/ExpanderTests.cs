@@ -158,7 +158,6 @@ public class ExpanderTests : UITest
 
 
     [Test]
-    [Skip("BUG (code reading): Accordion.EnforceRules opens the first item silently and AllowCollapseAll's propertyChanged never calls PublishIndex, so ExpandedIndex stays -1 while item 0 is open")]
     public async Task Accordion_Disallowing_All_Closed_Publishes_The_Index()
     {
         await OpenPage();

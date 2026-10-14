@@ -938,8 +938,11 @@ public partial class DocumentEditorView : ContentView, IDisposable
     {
         var on = show || this.ShowShell;
         this.ribbon.ApplicationButtonText = on ? "File" : null;
-        this.ribbon.ApplicationButtonCommand = on ? new Command(() => this.FileRequested?.Invoke(this, EventArgs.Empty)) : null;
+        // One command for the view's lifetime: a new instance is a new value, and the ribbon rebuilds for it.
+        this.ribbon.ApplicationButtonCommand = on ? this.fileCommand ??= new Command(() => this.FileRequested?.Invoke(this, EventArgs.Empty)) : null;
     }
+
+    Command? fileCommand;
 
     /// <summary>
     /// A picture drawn behind the content. Forwarded to the surface.

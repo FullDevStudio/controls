@@ -21,7 +21,9 @@ public class KeyframeTests : UITest
             scales.Add(await Driver.GetDouble("Scale", "PulseBox"));
             translations.Add(await Driver.GetDouble("TranslationX", "SlideBox"));
             return scales.Count > 2 && translations.Count > 2;
-        }, "the keyframed properties keep changing");
+            // Element reads are slow while everything animates (DevFlow retries "UI kept changing"), and on
+            // the Android emulator 10s gathered too few samples - more time, same requirement.
+        }, "the keyframed properties keep changing", timeoutSeconds: 30);
 
         await Assert.That(scales.All(s => s is >= 0.99 and <= 1.16)).IsTrue();
         await Assert.That(translations.All(t => t is >= -201 and <= 50)).IsTrue();

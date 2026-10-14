@@ -47,7 +47,7 @@
                             <button type="button"
                                     class="shiny-toolbar-item shiny-toolbar-more"
                                     aria-haspopup="true"
-                                    aria-expanded="@overflowOpen"
+                                    aria-expanded="@(overflowOpen ? "true" : "false")"
                                     aria-label="@OverflowAriaLabel"
                                     @onclick="ToggleOverflow"
                                     @onclick:stopPropagation="true">
@@ -361,7 +361,7 @@
                             disabled="@item.IsDisabled"
                             tabindex="@(measuring ? "-1" : null)"
                             aria-haspopup="true"
-                            aria-expanded="@(!measuring && IsOpenAt(0, item))"
+                            aria-expanded="@(!measuring && IsOpenAt(0, item) ? "true" : "false")"
                             @onclick="@(_ => ToggleRootMenu(item))"
                             @onclick:stopPropagation="true">
                         @ItemBody(item)
@@ -456,7 +456,7 @@
                                 style="@ItemStyle(item)"
                                 disabled="@item.IsDisabled"
                                 aria-haspopup="true"
-                                aria-expanded="@IsOpenAt(depth, item)"
+                                aria-expanded="@(IsOpenAt(depth, item) ? "true" : "false")"
                                 @onclick="@(_ => ToggleSubmenu(item, depth))"
                                 @onclick:stopPropagation="true">
                             @MenuItemBody(item)

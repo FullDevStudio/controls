@@ -60,6 +60,8 @@
         <MauiFont Include="..\Sample\Resources\Fonts\*" Link="Resources\Fonts\%(Filename)%(Extension)" />
         <MauiAsset Include="..\Sample\Resources\Raw\**" Link="Resources\Raw\%(RecursiveDir)%(Filename)%(Extension)" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
         <MauiAsset Include="..\..\README.md" LogicalName="README.md" />
+        <!-- ShinyImage's resource:// demo on the Images page; must match the main head's LogicalName. -->
+        <EmbeddedResource Include="..\Sample\Assets\embedded-icon.svg" LogicalName="Sample.Assets.embedded-icon.svg" />
     </ItemGroup>
     <!-- The gallery renders its own source under each demo page. -->
     <Import Project="..\Sample\Sample.Source.targets" />

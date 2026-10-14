@@ -9,6 +9,8 @@ namespace Shiny.Blazor.Controls.Cells;
 /// </summary>
 public class TextPickerCell : CellBase
 {
+    protected override bool AccessoryHandlesClicks => true;
+
     [Parameter] public IReadOnlyList<string>? Items { get; set; }
     [Parameter] public string? SelectedItem { get; set; }
     [Parameter] public EventCallback<string?> SelectedItemChanged { get; set; }

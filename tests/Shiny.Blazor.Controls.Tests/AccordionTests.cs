@@ -1,3 +1,9 @@
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Rendering;
+using Microsoft.AspNetCore.Components.Web;
+using Microsoft.AspNetCore.Components.Web.HtmlRendering;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Shiny.Blazor.Controls;
 using Shouldly;
 using Xunit;
@@ -204,5 +210,105 @@ public class AccordionTests
 
         accordion.ItemViews.Count.ShouldBe(2);
         accordion.ItemViews.ShouldNotContain(items[1]);
+    }
+
+
+    // ---------------------------------------------------------------------------------------------
+    // Rendered: parameters that change after the first render, and markup children
+    // ---------------------------------------------------------------------------------------------
+
+    sealed class Holder
+    {
+        public MarkupHost? Host;
+    }
+
+    sealed class MarkupHost : ComponentBase
+    {
+        [Parameter] public bool AllowCollapseAll { get; set; } = true;
+        [Parameter] public bool LoadContentOnDemand { get; set; }
+        [Parameter] public Holder Holder { get; set; } = default!;
+
+        public Accordion? Accordion { get; private set; }
+
+        public void Rerender() => this.StateHasChanged();
+
+        protected override void OnInitialized() => this.Holder.Host = this;
+
+        protected override void BuildRenderTree(RenderTreeBuilder b)
+        {
+            b.OpenComponent<Accordion>(0);
+            b.AddAttribute(1, nameof(Accordion.AllowCollapseAll), this.AllowCollapseAll);
+            b.AddAttribute(2, nameof(Accordion.LoadContentOnDemand), this.LoadContentOnDemand);
+            b.AddAttribute(3, nameof(Accordion.ChildContent), (RenderFragment)(c =>
+            {
+                // a @foreach of markup children, not Items
+                for (var i = 0; i < 3; i++)
+                {
+                    var body = "BODY-" + i;
+                    c.OpenComponent<Expander>(10);
+                    c.SetKey(i);
+                    c.AddAttribute(11, nameof(Expander.HeaderText), "Item " + i);
+                    c.AddAttribute(12, nameof(Expander.ChildContent), (RenderFragment)(x => x.AddContent(0, body)));
+                    c.CloseComponent();
+                }
+            }));
+            b.AddComponentReferenceCapture(4, r => this.Accordion = (Accordion)r);
+            b.CloseComponent();
+        }
+    }
+
+    static async Task<(HtmlRenderer Renderer, HtmlRootComponent Root, MarkupHost Host)> RenderHostAsync(bool loadContentOnDemand = false)
+    {
+        var renderer = new HtmlRenderer(new ServiceCollection().BuildServiceProvider(), NullLoggerFactory.Instance);
+        var holder = new Holder();
+        var root = await renderer.Dispatcher.InvokeAsync(() => renderer.RenderComponentAsync<MarkupHost>(
+            ParameterView.FromDictionary(new Dictionary<string, object?>
+            {
+                [nameof(MarkupHost.Holder)] = holder,
+                [nameof(MarkupHost.LoadContentOnDemand)] = loadContentOnDemand
+            })));
+        return (renderer, root, holder.Host!);
+    }
+
+
+    [Fact]
+    public async Task TurningAllowCollapseAllOffOnAClosedListOpensTheFirstItem()
+    {
+        var (renderer, _, host) = await RenderHostAsync();
+        await using var _ = renderer;
+
+        host.Accordion!.ExpandedIndex.ShouldBe(-1);
+
+        await renderer.Dispatcher.InvokeAsync(() =>
+        {
+            host.AllowCollapseAll = false;
+            host.Rerender();
+        });
+
+        host.Accordion.ExpandedIndex.ShouldBe(0);
+        host.Accordion.ItemViews[0].IsExpanded.ShouldBeTrue();
+    }
+
+
+    [Fact]
+    public async Task LoadContentOnDemandReachesMarkupChildren()
+    {
+        var (renderer, root, _) = await RenderHostAsync(loadContentOnDemand: true);
+        await using var _r = renderer;
+
+        var html = await renderer.Dispatcher.InvokeAsync(() => root.ToHtmlString());
+        html.ShouldContain("Item 1");
+        html.ShouldNotContain("BODY-1");
+    }
+
+
+    [Fact]
+    public async Task MarkupChildrenRenderTheirContentUpFrontByDefault()
+    {
+        var (renderer, root, _) = await RenderHostAsync();
+        await using var _r = renderer;
+
+        var html = await renderer.Dispatcher.InvokeAsync(() => root.ToHtmlString());
+        html.ShouldContain("BODY-1");
     }
 }

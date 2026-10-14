@@ -61,6 +61,13 @@ public sealed class ModalButton
     public bool ClosesModal { get; set; } = true;
 
     /// <summary>Runs before the modal closes, and is awaited.</summary>
+    /// <remarks>
+    /// Invoked like an <c>EventCallback</c>: when the delegate belongs to a component (a method group
+    /// such as <c>OnClick = SaveAsync</c>, or a lambda that captures only <c>this</c>), that component
+    /// re-renders when it completes — so a handler that sets the page's bound <c>IsOpen</c> to false
+    /// closes the modal. A lambda that captures locals has no component to re-render; call
+    /// <c>StateHasChanged</c> yourself from one of those.
+    /// </remarks>
     public Func<Task>? OnClick { get; set; }
 
     /// <summary>Extra classes for this button.</summary>

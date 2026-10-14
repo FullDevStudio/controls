@@ -12,6 +12,8 @@ export function init(trackEl, dotNetRef) {
     };
 
     const onPointerUp = () => {
+        if (state.dragging)
+            suppressNextClick(trackEl);
         state.dragging = false;
         document.removeEventListener('pointermove', onPointerMove);
         document.removeEventListener('pointerup', onPointerUp);
@@ -35,6 +37,21 @@ export function init(trackEl, dotNetRef) {
     state.onPointerMove = onPointerMove;
     state.onPointerUp = onPointerUp;
     instances.set(trackEl, state);
+}
+
+// Letting go of a thumb still produces a click, and when the pointer is no longer over the thumb (it
+// was held back by MinimumRange, or ran off the end) that click lands on the track, whose handler jumps
+// the nearer thumb to the release point. The drag already decided where the thumbs go; swallow it.
+function suppressNextClick(el) {
+    const swallow = ev => {
+        ev.stopPropagation();
+        ev.preventDefault();
+        el.removeEventListener('click', swallow, true);
+    };
+    el.addEventListener('click', swallow, true);
+
+    // pointercancel and some touch stacks produce no click; don't leave it armed for the next tap.
+    setTimeout(() => el.removeEventListener('click', swallow, true), 400);
 }
 
 export function getClickPercent(trackEl, clientX) {

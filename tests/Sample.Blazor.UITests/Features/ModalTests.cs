@@ -61,7 +61,6 @@ public class ModalTests : BlazorTest
     }
 
     [Test]
-    [Skip("BUG: a ModalButton.OnClick that sets the bound IsOpen=false never closes the modal - OnClick is a Func<Task>, not an EventCallback, so the page never re-renders and the false never reaches ModalView (the sample's Delete project modal stays open forever)")]
     public async Task Busy_Button_Keeps_Modal_Open_Until_Its_Work_Finishes()
     {
         await Open("modal");

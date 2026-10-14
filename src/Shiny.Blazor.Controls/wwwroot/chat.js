@@ -46,6 +46,23 @@ export function init(messagesEl, dotnetRef) {
     }, true);
 }
 
+// Enter-to-send has to cancel the keydown, or the browser still inserts the newline after the message
+// has gone and the composer is left holding it. Blazor's @onkeydown:preventDefault cannot depend on
+// which key it was, so the decision is made here. Shift+Enter and an IME composition keep the newline.
+export function sendOnEnter(textareaEl, enabled) {
+    if (!textareaEl) return;
+
+    textareaEl.dataset.shinySendOnEnter = enabled ? 'true' : 'false';
+    if (textareaEl.dataset.shinySendOnEnterHooked) return;
+
+    textareaEl.dataset.shinySendOnEnterHooked = 'true';
+    textareaEl.addEventListener('keydown', e => {
+        if (textareaEl.dataset.shinySendOnEnter === 'true'
+            && e.key === 'Enter' && !e.shiftKey && !e.isComposing)
+            e.preventDefault();
+    });
+}
+
 // Grow the composer with its content up to maxRows, then let it scroll. The cap is computed from the
 // live font metrics rather than hardcoded so a restyled entry still gets maxRows worth of text.
 export function autoGrow(textareaEl, maxRows) {

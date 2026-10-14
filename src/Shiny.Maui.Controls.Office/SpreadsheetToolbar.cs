@@ -571,6 +571,9 @@ public class SpreadsheetToolbar : ContentView
         if (this.ribbon is null)
             return;
 
+        // Clearing and re-adding tabs and quick-access items is a ribbon rebuild per change; do one.
+        using var _ = this.ribbon.DeferRebuild();
+
         this.ribbon.Tabs.Clear();
 
         this.fontPicker = this.CreateFontPicker();
@@ -1394,6 +1397,7 @@ public class SpreadsheetToolbar : ContentView
                 return;
 
             this.isInShell = value;
+            using var _ = this.ribbon.DeferRebuild();
             this.ApplyAccent();
             this.BuildBar();
         }

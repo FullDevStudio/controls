@@ -48,15 +48,27 @@ public class CarouselGalleryTests : UITest
     public async Task Setting_CurrentPosition_Scrolls_And_Sticks()
     {
         await OpenPage();
+
+        // Shell keeps the page alive, so an earlier test can leave the carousel elsewhere (on Android,
+        // re-enabling snap re-centres it: LinearSnapHelper snaps to the centre item while
+        // ScrollToPositionWithOffset start-aligns, so 0 becomes 2). Start from a known position.
+        await Driver.SetProperty("CurrentPosition", "0", automationId: "BasicCarousel");
         await Driver.WaitForProperty("CarouselPositionLabel", "Text", "Position: 0");
 
-        await Driver.SetProperty("CurrentPosition", "5", automationId: "BasicCarousel");
-        await Driver.WaitForProperty("CarouselPositionLabel", "Text", "Position: 5");
+        try
+        {
+            await Driver.SetProperty("CurrentPosition", "5", automationId: "BasicCarousel");
+            await Driver.WaitForProperty("CarouselPositionLabel", "Text", "Position: 5");
 
-        // The native scroll it triggers must not report a different position back.
-        await Task.Delay(1500);
-        await Assert.That(await Driver.GetProperty("CurrentPosition", automationId: "BasicCarousel")).IsEqualTo("5");
-        await Assert.That(await Driver.GetProperty("Text", automationId: "CarouselPositionLabel")).IsEqualTo("Position: 5");
+            // The native scroll it triggers must not report a different position back.
+            await Task.Delay(1500);
+            await Assert.That(await Driver.GetProperty("CurrentPosition", automationId: "BasicCarousel")).IsEqualTo("5");
+            await Assert.That(await Driver.GetProperty("Text", automationId: "CarouselPositionLabel")).IsEqualTo("Position: 5");
+        }
+        finally
+        {
+            await Driver.SetProperty("CurrentPosition", "0", automationId: "BasicCarousel");
+        }
         await AssertNoAppErrors();
     }
 }

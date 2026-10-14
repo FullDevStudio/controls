@@ -18,7 +18,6 @@ public class TableViewTests : BlazorTest
     // ── /cells ──────────────────────────────────────────────────────────────
 
     [Test]
-    [Skip("BUG: CellBase adds \"onclick:stopPropagation\" as a literal attribute (renders in the DOM, does nothing), so a click on the switch bubbles to the row's tap handler and toggles it straight back")]
     public async Task Switch_Cell_Toggles_Its_Binding()
     {
         await Open("cells");
@@ -76,7 +75,6 @@ public class TableViewTests : BlazorTest
 
 
     [Test]
-    [Skip("BUG: clicking a RadioCell's radio leaves NO radio checked (state does update via the bubbled row tap). RadioCell.HandleChange reads e.Value as bool but a radio's change value is the string \"on\"; plus the literal onclick:stopPropagation in CellBase")]
     public async Task Radio_Cells_Behave_As_One_Group()
     {
         await Open("cells");

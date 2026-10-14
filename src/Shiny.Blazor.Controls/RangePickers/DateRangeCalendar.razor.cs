@@ -236,17 +236,26 @@ public partial class DateRangeCalendar
     }
 
 
-    Task ShiftMonthAsync(int months) => this.ShowMonthAsync(this.displayMonth.AddMonths(months));
+    // Pages outright. Going through ShowMonthAsync made "next" a no-op whenever more than one month
+    // shows: the month after the first is already on screen, so its "no paging needed" guard returned.
+    internal Task ShiftMonthAsync(int months) => this.SetDisplayMonthAsync(this.displayMonth.AddMonths(months));
 
 
-    async Task ShowMonthAsync(DateOnly date)
+    Task ShowMonthAsync(DateOnly date)
     {
         var first = CalendarMath.StartOfMonth(date);
 
         // A date already on screen in a later month of a multi-month view needs no paging.
         if (first >= this.displayMonth && first < this.displayMonth.AddMonths(this.MonthCount))
-            return;
+            return Task.CompletedTask;
 
+        return this.SetDisplayMonthAsync(first);
+    }
+
+
+    async Task SetDisplayMonthAsync(DateOnly date)
+    {
+        var first = CalendarMath.StartOfMonth(date);
         this.displayMonth = first;
         this.lastDisplayParameter = first;
         await this.DisplayMonthChanged.InvokeAsync(first);

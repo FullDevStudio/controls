@@ -225,7 +225,6 @@ public class SchedulerTests : BlazorTest
 
 
     [Test]
-    [Skip("BUG: with AllowEventDrag/AllowEventResize on, a plain mouse click on an agenda event never reaches OnEventSelected - scheduler-agenda.js arms a drag on mouse pointerdown with no delay, and onPointerUp calls suppressNextClick for any armed drag even with zero movement, swallowing the click; works with both switches off")]
     public async Task Agenda_Clicking_An_Event_Reports_It()
     {
         await Open("agenda");
@@ -293,7 +292,6 @@ public class SchedulerTests : BlazorTest
 
 
     [Test]
-    [Skip("BUG (sample): AgendaListPage.razor never re-renders on provider.Changed, so 'Last event' stays '—' after a click (the control does call OnEventSelected)")]
     public async Task List_Clicking_An_Event_Reports_It()
     {
         await Open("agendalist");

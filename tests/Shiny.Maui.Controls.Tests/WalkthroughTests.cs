@@ -228,4 +228,112 @@ public class WalkthroughTests
         (step.Highlight ?? walkthrough.Highlight).ShouldBe(WalkthroughHighlight.Circle);
         (step.HighlightPadding ?? walkthrough.HighlightPadding).ShouldBe(12);
     }
+
+
+    static (Walkthrough Tour, ContentPage Page) OnAPage(params string[] names)
+    {
+        var walkthrough = Build(names);
+        var page = new ContentPage { Content = new Grid { Children = { walkthrough } } };
+        return (walkthrough, page);
+    }
+
+    static async Task<WalkthroughEndReason> NextEnd(Walkthrough walkthrough)
+    {
+        var ended = new TaskCompletionSource<WalkthroughEndReason>(TaskCreationOptions.RunContinuationsAsynchronously);
+        void OnEnded(object? sender, WalkthroughEndedEventArgs e) => ended.TrySetResult(e.Reason);
+        walkthrough.Ended += OnEnded;
+        try
+        {
+            (await Task.WhenAny(ended.Task, Task.Delay(10_000))).ShouldBe(ended.Task, "the run never ended");
+            return await ended.Task;
+        }
+        finally
+        {
+            walkthrough.Ended -= OnEnded;
+        }
+    }
+
+
+    /// <summary>
+    /// A Stop that lands while the run is still starting (waiting for layout, before the first step) is a
+    /// Stop. The loop used to fall straight out as Completed, which also recorded the tour as run, so it
+    /// would never auto-start again.
+    /// </summary>
+    [Fact]
+    public async Task StoppingDuringStartUpEndsAsStoppedAndRecordsNothing()
+    {
+        var (walkthrough, _) = OnAPage("One", "Two");
+        walkthrough.RememberRunKey = "tour-startup-stop";
+
+        var end = NextEnd(walkthrough);
+        walkthrough.Start();
+        walkthrough.IsRunning.ShouldBeTrue();
+        walkthrough.CurrentStepIndex.ShouldBe(-1);
+
+        walkthrough.Stop();
+
+        (await end).ShouldBe(WalkthroughEndReason.Stopped);
+        Walkthrough.Store.HasRun("tour-startup-stop").ShouldBeFalse();
+        walkthrough.IsRunning.ShouldBeFalse();
+    }
+
+
+    /// <summary>
+    /// A Start straight after a Stop, while the old run is still unwinding, starts a fresh run once the
+    /// old one is gone instead of being ignored.
+    /// </summary>
+    [Fact]
+    public async Task StartingWhileTheOldRunUnwindsStartsAgain()
+    {
+        var (walkthrough, _) = OnAPage("One", "Two");
+
+        var first = NextEnd(walkthrough);
+        walkthrough.Start();
+        walkthrough.Stop();
+        walkthrough.Start();
+
+        (await first).ShouldBe(WalkthroughEndReason.Stopped);
+
+        // the queued Start has begun a new run
+        walkthrough.IsRunning.ShouldBeTrue();
+
+        var second = NextEnd(walkthrough);
+        walkthrough.Stop();
+        (await second).ShouldBe(WalkthroughEndReason.Stopped);
+    }
+
+
+    /// <summary>
+    /// A Start that lands while the old run is tearing itself down (here: held mid scrim fade-out) waits
+    /// for the teardown. It used to start at once, and the old run's teardown then dismantled the new
+    /// one - IsRunning false, the run never ending, and every later Start ignored.
+    /// </summary>
+    [Fact]
+    public async Task StartingDuringTheTeardownStartsAFreshWorkingRun()
+    {
+        var host = new FrozenAnimationHost();
+        var (walkthrough, page) = OnAPage("One", "Two");
+        host.Attach(page);
+
+        var first = NextEnd(walkthrough);
+        walkthrough.Start();
+        walkthrough.Stop();
+
+        // past the start-up layout wait: the stopped run is now held in its scrim fade-out
+        await Task.Delay(1_500);
+        first.IsCompleted.ShouldBeFalse();
+
+        walkthrough.Start();
+        await host.Finish();
+        (await first).ShouldBe(WalkthroughEndReason.Stopped);
+
+        // the queued run is alive and still answers to Stop
+        walkthrough.IsRunning.ShouldBeTrue();
+        var second = NextEnd(walkthrough);
+        walkthrough.Stop();
+        await Task.Delay(1_500);
+        await host.Finish();
+        (await second).ShouldBe(WalkthroughEndReason.Stopped);
+        walkthrough.IsRunning.ShouldBeFalse();
+    }
 }

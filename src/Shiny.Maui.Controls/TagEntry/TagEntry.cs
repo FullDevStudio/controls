@@ -46,6 +46,12 @@ public partial class TagEntry : ContentView
 
     IDisposable? tagsSubscription;
     bool suppressTextChanged;
+
+    // Writes made from inside the entry's own TextChanged that MAUI deferred (a SetValue on a property
+    // that is mid-set is queued until the outer set unwinds), oldest first. They land with
+    // suppressTextChanged already released, so they are recognised here instead and never re-read as
+    // typing — a refused duplicate's "clear the field" used to arrive as a Backspace and delete a chip.
+    readonly List<string> deferredWrites = [];
     bool rebuilding;
     bool isFocused;
 
@@ -321,6 +327,19 @@ public partial class TagEntry : ContentView
         if (this.suppressTextChanged)
             return;
 
+        if (this.deferredWrites.Count > 0)
+        {
+            var echo = this.deferredWrites.IndexOf(e.NewTextValue ?? String.Empty);
+            if (echo >= 0)
+            {
+                this.deferredWrites.RemoveRange(0, echo + 1);
+                return;
+            }
+
+            // Anything else is real input, and the queued writes always land before input can.
+            this.deferredWrites.Clear();
+        }
+
         var oldText = e.OldTextValue ?? String.Empty;
         var newText = e.NewTextValue ?? String.Empty;
 
@@ -418,6 +437,10 @@ public partial class TagEntry : ContentView
         {
             this.entry.Text = value;
             this.entry.CursorPosition = value.Length;
+
+            // Not applied yet: this write was made while Text was mid-set and MAUI has queued it.
+            if (this.entry.Text != value)
+                this.deferredWrites.Add(value);
         }
         finally
         {

@@ -6,6 +6,8 @@ namespace Shiny.Blazor.Controls.Cells;
 
 public class RadioCell : CellBase
 {
+    protected override bool AccessoryHandlesClicks => true;
+
     [Parameter] public bool Checked { get; set; }
     [Parameter] public EventCallback<bool> CheckedChanged { get; set; }
     [Parameter] public string? AccentColor { get; set; }
@@ -13,7 +15,8 @@ public class RadioCell : CellBase
 
     protected override async Task OnTapped() => await SetChecked(true);
 
-    async Task HandleChange(ChangeEventArgs e) => await SetChecked(e.Value is bool b && b);
+    // A radio only raises change when it becomes checked, and its value is the string "on", not a bool.
+    async Task HandleChange(ChangeEventArgs e) => await SetChecked(true);
 
     async Task SetChecked(bool value)
     {

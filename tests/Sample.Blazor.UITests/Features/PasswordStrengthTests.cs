@@ -89,7 +89,6 @@ public class PasswordStrengthTests : BlazorTest
 
 
     [Test]
-    [Skip("BUG: Blazor PasswordStrength only relabels its Show/Hide toggle in OnParametersSet, so after clicking Show the field is revealed but the button still reads \"Show\" until the next keystroke re-renders the parent")]
     public async Task Show_Toggle_Relabels_Itself_And_Hides_Again()
     {
         await Open("passwordstrength");

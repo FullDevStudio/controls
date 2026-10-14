@@ -76,7 +76,6 @@ public class ProgressLineTests : BlazorTest
     }
 
     [Test]
-    [Skip("BUG: ProgressLineHost passes config strings without @ (BarColor=\"config.BarColor\", Offset=\"config.Offset\" ...), so service lines get literal 'config.X' CSS values")]
     public async Task Bottom_Run_Puts_A_Line_On_The_Viewport_Bottom()
     {
         await Open("progressline");
@@ -95,7 +94,6 @@ public class ProgressLineTests : BlazorTest
     }
 
     [Test]
-    [Skip("BUG: ProgressLineHost passes config strings without @ (BarColor=\"config.BarColor\", Offset=\"config.Offset\" ...), so service lines get literal 'config.X' CSS values")]
     public async Task Service_Line_Uses_The_Configured_Colour()
     {
         await Open("progressline");
@@ -108,7 +106,6 @@ public class ProgressLineTests : BlazorTest
     }
 
     [Test]
-    [Skip("BUG: ProgressLineHost passes config strings without @ (BarColor=\"config.BarColor\", Offset=\"config.Offset\" ...), so service lines get literal 'config.X' CSS values")]
     public async Task Trickle_Run_Puts_A_Line_On_The_Viewport_Top()
     {
         await Open("progressline");

@@ -293,6 +293,9 @@ public partial class SlideEditorView
         if (!this.shellBuilt)
             return;
 
+        // Several of these are ribbon Redraw properties; rebuild the ribbon once, not per property.
+        using var _ = this.ribbon.DeferRebuild();
+
         var on = this.ShowShell;
         this.titleBar.IsVisible = on && this.ShowTitleBar;
         this.officeStatusBar.IsVisible = on && this.ShowStatusBar && this.ShowStatus;
@@ -320,8 +323,11 @@ public partial class SlideEditorView
     {
         var on = (this.shellBuilt && this.ShowShell) || this.fileMenuRequested is not null;
         this.ribbon.ApplicationButtonText = on ? "File" : null;
-        this.ribbon.ApplicationButtonCommand = on ? new Command(() => this.fileMenuRequested?.Invoke(this, EventArgs.Empty)) : null;
+        // One command for the view's lifetime: a new instance is a new value, and the ribbon rebuilds for it.
+        this.ribbon.ApplicationButtonCommand = on ? this.fileCommand ??= new Command(() => this.fileMenuRequested?.Invoke(this, EventArgs.Empty)) : null;
     }
+
+    Command? fileCommand;
 
     void ApplyEditMode()
     {

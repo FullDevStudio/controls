@@ -22,6 +22,7 @@ public partial class ChatEntry : IAsyncDisposable
     bool disposed;
     ElementReference inputEl;
     int appliedMaxRows = -1;
+    bool? appliedSendOnEnter;
 
     /// <summary>The composer text. Use <c>@bind-Text</c> for two-way binding.</summary>
     [Parameter] public string? Text { get; set; }
@@ -89,6 +90,12 @@ public partial class ChatEntry : IAsyncDisposable
             appliedMaxRows = MaxRows;
             await module.InvokeVoidAsync("autoGrow", inputEl, MaxRows);
         }
+
+        if (appliedSendOnEnter != SendOnEnter)
+        {
+            appliedSendOnEnter = SendOnEnter;
+            await module.InvokeVoidAsync("sendOnEnter", inputEl, SendOnEnter);
+        }
     }
 
 
@@ -105,7 +112,7 @@ public partial class ChatEntry : IAsyncDisposable
 
     async Task OnKeyDownAsync(KeyboardEventArgs e)
     {
-        if (SendOnEnter && e.Key == "Enter" && !e.ShiftKey)
+        if (SendOnEnter && e.Key == "Enter" && !e.ShiftKey && !e.IsComposing)
             await SubmitAsync();
     }
 

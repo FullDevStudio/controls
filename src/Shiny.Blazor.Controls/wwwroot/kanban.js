@@ -137,6 +137,7 @@ async function beginDrag(state, e) {
         startY: p.startY,
         allowed: new Set(allowed),
         target: null,
+        blocked: null,
         pointer: { x: e.clientX, y: e.clientY },
     };
 
@@ -149,6 +150,7 @@ async function beginDrag(state, e) {
 function resolveTarget(state, x, y) {
     const d = state.drag;
     d.target = null;
+    d.blocked = null;
 
     const cell = cellAt(state, x, y);
     if (!cell) {
@@ -160,6 +162,9 @@ function resolveTarget(state, x, y) {
     const swimlaneId = cell.getAttribute('data-kanban-swimlane') ?? '';
 
     if (!d.allowed.has(`${columnId}${LANE_SEPARATOR}${swimlaneId}`)) {
+        // Remembered so a release here can still be reported as refused (WIP limit, locked lane...)
+        // rather than ending in silence.
+        d.blocked = { columnId, swimlaneId };
         hideIndicator(state);
         return;
     }
@@ -296,10 +301,15 @@ function onPointerUp(state) {
     }
 
     const target = d.target;
+    const blocked = d.blocked;
     endDrag(state);
 
     if (target) {
         state.dotnet.invokeMethodAsync('OnDropJs', d.cardId, target.columnId, target.swimlaneId, target.index);
+    }
+    else if (blocked) {
+        // .NET re-evaluates the lane, refuses the move and raises OnDropRejected with the reason.
+        state.dotnet.invokeMethodAsync('OnDropJs', d.cardId, blocked.columnId, blocked.swimlaneId, 0);
     }
 }
 

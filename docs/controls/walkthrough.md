@@ -81,6 +81,10 @@ Blazor. `Walkthrough` renders nothing where it sits, so put it anywhere on the p
 navigation (arrows and Enter move, Escape leaves) and a scroll lock, both on by default; register the
 `localStorage` store with `builder.Services.AddShinyWalkthrough()`.
 
+On MAUI a `Stop()` that lands while the tour is still starting (before the first step shows) ends it as
+`Stopped`, so nothing is remembered and an auto-start will show it again. A `Start()` made while a run is
+still tearing down (spotlight shrinking, dim fading) is queued and runs once the old run is gone.
+
 `AllowTargetInteraction` is implemented by fencing the backdrop with four transparent panels *around* the
 cut-out rather than one full-screen catcher — hit testing has no notion of a hole, so the hole has to be a
 gap between panels.

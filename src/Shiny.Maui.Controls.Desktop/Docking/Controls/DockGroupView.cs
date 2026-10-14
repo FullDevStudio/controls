@@ -118,6 +118,13 @@ public class DockGroupView : ContentView
             var view = viewResolver(tab) ?? MissingPanelView(tab);
             view.IsVisible = i == activeIndex;
             panelViews[tab.PanelInstanceId] = view;
+
+            // Panel views are cached across rebuilds (lock, collapse, re-dock), so the view can still sit in
+            // the group view it was last shown in. UIKit/AppKit reparent silently; Android's ViewGroup.addView
+            // throws "The specified child already has a parent" — detach it from the old layout first.
+            if (view.Parent is Layout previous && !ReferenceEquals(previous, content))
+                previous.Remove(view);
+
             content.Children.Add(view);
 
             if (view is IDockableContent dockable)

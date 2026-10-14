@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
@@ -409,6 +410,7 @@ public partial class MediaElement : IAsyncDisposable
     // ── JS callbacks ─────────────────────────────────────────────────────────────────────────────
 
     [JSInvokable]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.PublicParameterlessConstructor, typeof(MediaStatus))]
     public async Task OnStatus(MediaStatus status)
     {
         var previousState = this.CurrentState;
@@ -445,6 +447,7 @@ public partial class MediaElement : IAsyncDisposable
     }
 
     [JSInvokable]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.PublicParameterlessConstructor, typeof(MediaStatus))]
     public async Task OnOpened(MediaStatus status)
     {
         this.Duration = ToTimeSpan(status.Duration);

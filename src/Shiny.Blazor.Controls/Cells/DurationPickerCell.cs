@@ -9,6 +9,8 @@ namespace Shiny.Blazor.Controls.Cells;
 /// </summary>
 public class DurationPickerCell : CellBase
 {
+    protected override bool AccessoryHandlesClicks => true;
+
     [Parameter] public TimeSpan Duration { get; set; }
     [Parameter] public EventCallback<TimeSpan> DurationChanged { get; set; }
     [Parameter] public int MinHours { get; set; }

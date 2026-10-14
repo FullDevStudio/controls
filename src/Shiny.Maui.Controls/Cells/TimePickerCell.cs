@@ -162,6 +162,8 @@ public class TimePickerCell : CellBase
         valueLabel.Text = dt.ToString(Format);
     }
 
+    protected override void ApplyValueTextStyles() => UpdateValueColor();
+
     void UpdateValueColor()
     {
         var color = ValueTextColor ?? ParentTableView?.CellValueTextColor;

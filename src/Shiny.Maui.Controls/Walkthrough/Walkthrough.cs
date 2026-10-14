@@ -83,7 +83,9 @@ public partial class Walkthrough : ContentView
     TapGestureRecognizer? tapTargetGesture;
     Rect currentHole = Rect.Zero;
     bool running;
+    bool ending;
     bool suppressIsRunning;
+    int? queuedStart;
     bool startScheduled;
 
 
@@ -147,7 +149,15 @@ public partial class Walkthrough : ContentView
     public void Start(int fromIndex = 0)
     {
         if (this.running)
+        {
+            // A run that has been told to end is still unwinding (shrinking the spotlight, fading the
+            // scrim). A Start in that window runs once the old run is gone. It used to start straight
+            // away, and the old run's teardown then dismantled the new one - leaving it "running" with
+            // no chrome and IsRunning false, so every later Start was ignored.
+            if (this.ending || this.runCancel?.IsCancellationRequested == true)
+                this.queuedStart = fromIndex;
             return;
+        }
 
         _ = this.RunAsync(fromIndex);
     }
@@ -194,7 +204,7 @@ public partial class Walkthrough : ContentView
     /// <summary>Jumps to a step by position among the visible steps.</summary>
     public void GoTo(int index)
     {
-        if (!this.running)
+        if (!this.running || this.ending)
         {
             this.Start(index);
             return;
@@ -220,11 +230,22 @@ public partial class Walkthrough : ContentView
         if (!this.running)
             return;
 
+        // Already ending: nothing left to move, but a Stop still cancels a Start queued behind it.
+        if (this.ending)
+        {
+            if (delta is SignalStop or SignalSkip)
+                this.queuedStart = null;
+            return;
+        }
+
         this.dwellTimer?.Stop();
         this.dwellTimer = null;
 
         if (delta is SignalStop or SignalSkip)
+        {
+            this.queuedStart = null;
             this.runCancel?.Cancel();
+        }
 
         if (this.move?.TrySetResult(delta) == true)
             return;
@@ -354,7 +375,7 @@ public partial class Walkthrough : ContentView
     {
         this.StepCount = this.VisibleSteps().Count;
 
-        if (this.running)
+        if (this.running && !this.ending)
             this.ApplyChrome();
     }
 
@@ -392,15 +413,25 @@ public partial class Walkthrough : ContentView
         if (this.StartedCommand?.CanExecute(null) == true)
             this.StartedCommand.Execute(null);
 
-        await this.FadeScrimAsync(true);
+        if (!token.IsCancellationRequested)
+            await this.FadeScrimAsync(true);
 
         var reason = WalkthroughEndReason.Completed;
         var index = Math.Clamp(fromIndex, 0, visible.Count - 1);
 
         try
         {
-            while (!token.IsCancellationRequested)
+            while (true)
             {
+                // Ended before (or between) steps - e.g. a Stop while the run was still starting up. The
+                // signal says how; falling out of the loop as Completed recorded a Stop as a finished
+                // tour, which then never auto-started again.
+                if (token.IsCancellationRequested)
+                {
+                    reason = this.pendingSignal == SignalSkip ? WalkthroughEndReason.Skipped : WalkthroughEndReason.Stopped;
+                    break;
+                }
+
                 // Re-read every iteration: a step's IsVisible can be bound, and an EnteredCommand on
                 // the previous step is exactly where an app flips one.
                 visible = this.VisibleSteps();
@@ -569,7 +600,9 @@ public partial class Walkthrough : ContentView
 
     async Task EndRunAsync(WalkthroughEndReason reason)
     {
-        this.running = false;
+        // Still "running" until the teardown below has finished, so a Start in the meantime is queued
+        // rather than racing it.
+        this.ending = true;
         this.dwellTimer?.Stop();
         this.dwellTimer = null;
         this.UnwireTargetTap();
@@ -611,6 +644,14 @@ public partial class Walkthrough : ContentView
 
         this.runCancel?.Dispose();
         this.runCancel = null;
+        this.running = false;
+        this.ending = false;
+
+        if (this.queuedStart is { } from)
+        {
+            this.queuedStart = null;
+            this.Start(from);
+        }
     }
 
 

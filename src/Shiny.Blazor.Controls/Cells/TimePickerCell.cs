@@ -6,6 +6,8 @@ namespace Shiny.Blazor.Controls.Cells;
 
 public class TimePickerCell : CellBase
 {
+    protected override bool AccessoryHandlesClicks => true;
+
     [Parameter] public TimeSpan? Time { get; set; }
     [Parameter] public EventCallback<TimeSpan?> TimeChanged { get; set; }
 

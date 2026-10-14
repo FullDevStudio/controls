@@ -88,6 +88,9 @@ public partial class DocumentEditorView
         propertyChanged: (b, _, _) =>
         {
             var view = (DocumentEditorView)b;
+
+            // Several of these are ribbon Redraw properties; rebuild the ribbon once, not per property.
+            using var _ = view.ribbon.DeferRebuild();
             view.ApplyShell();
             view.ApplyNavigationPane();
             view.ApplyAccent();

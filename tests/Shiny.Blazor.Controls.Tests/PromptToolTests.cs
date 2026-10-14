@@ -127,4 +127,25 @@ public class PromptToolTests
         state.TrailingTools.ShouldNotBeNull();
         state.LeadingTools.ShouldNotBeNull();
     }
+
+
+    /// <summary>
+    /// An Escape in the prompt's field bubbles on to QuickEntryHost. The host has to learn the field
+    /// already handled it, or one keypress peels a layer AND closes the popup.
+    /// </summary>
+    [Fact]
+    public async Task An_escape_typed_in_the_field_is_reported_once_to_the_host()
+    {
+        var view = new PromptView { Text = "draft" };
+
+        await view.OnKeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Escape" });
+
+        view.Text.ShouldBe(string.Empty);
+        view.TakeKeyEscapeOutcome().ShouldBe(true);
+        view.TakeKeyEscapeOutcome().ShouldBeNull();
+
+        // nothing left to back out of: the field declines, and the host is told so it can close
+        await view.OnKeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Escape" });
+        view.TakeKeyEscapeOutcome().ShouldBe(false);
+    }
 }

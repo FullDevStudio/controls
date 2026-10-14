@@ -104,6 +104,16 @@
 .shiny-toolbar-menu-backdrop {
     position: fixed;
     inset: 0;
+    /* it is a popover (so it can sit in the top layer under the panels), and the UA's [popover] rules
+       size it fit-content with padding and a border - which beats inset:0 and left a 14px scrim that
+       no outside click ever landed on. Stretch it back over the whole viewport. */
+    width: auto;
+    height: auto;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
     z-index: 1;
     background: transparent;
 }

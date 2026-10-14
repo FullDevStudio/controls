@@ -73,7 +73,10 @@
 <section class="demo-section">
     <h2>Success &amp; error states</h2>
     <p>The first handler reports its own outcome; the button respects it rather than resetting to
-       normal. The second throws, and <code>ShowErrorOnFault</code> catches that on the way past.</p>
+       normal. The second fails, catches its own exception and sets <code>State</code> to <code>Error</code>.
+       <code>ShowErrorOnFault</code> would flag an exception that escapes the handler too, but the button
+       still rethrows it - and an unhandled exception in a Blazor event handler raises the error UI (and
+       ends a Blazor Server circuit) - so handle failures in the handler.</p>
     <div class="row">
         <ShinyButton Text="Submit"
                      @bind-State="submitState"
@@ -82,6 +85,7 @@
                      StateRevertDelay="@TimeSpan.FromSeconds(2)"
                      Clicked="SubmitAsync" />
         <ShinyButton Text="This will fail"
+                     @bind-State="failState"
                      Appearance="ButtonAppearance.Outlined"
                      Type="ButtonType.Critical"
                      BusyText="Trying..."
@@ -124,6 +128,7 @@
 @code {
     string status = "Nothing has happened yet";
     ButtonState submitState = ButtonState.Normal;
+    ButtonState failState = ButtonState.Normal;
     bool locked = true;
 
     void Note(string which) => status = $"{which} clicked";
@@ -145,8 +150,17 @@
     async Task FailAsync()
     {
         status = "Trying...";
-        await Task.Delay(1200);
-        status = "It failed";
-        throw new InvalidOperationException("This failed on purpose.");
+        try
+        {
+            await Task.Delay(1200);
+            throw new InvalidOperationException("This failed on purpose.");
+        }
+        catch (InvalidOperationException)
+        {
+            // Caught here rather than left to ShinyButton: the button reflects a fault but rethrows it,
+            // and an exception escaping a Blazor event handler is fatal to the page (or the circuit).
+            status = "It failed";
+            failState = ButtonState.Error;
+        }
     }
 }

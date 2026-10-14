@@ -51,7 +51,6 @@ public class ChatTests : BlazorTest
     }
 
     [Test]
-    [Skip("BUG: Enter-to-send doesn't preventDefault the keydown, so the composer is left holding a stray newline after the message goes")]
     public async Task Enter_Send_Leaves_The_Composer_Empty()
     {
         await OpenChat();

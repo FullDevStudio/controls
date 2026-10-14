@@ -383,4 +383,47 @@ public class RibbonTests
 
         changed.ShouldBeGreaterThan(0);
     }
+
+
+    static RibbonGroupView GroupView(Ribbon ribbon)
+        => ((IVisualTreeElement)ribbon).GetVisualTreeDescendants().OfType<RibbonGroupView>().First();
+
+
+    [Fact]
+    public void DeferredRebuildRunsOnceAfterSeveralRedrawChanges()
+    {
+        var ribbon = Build(Tab("Home", Button("Bold")));
+        var original = GroupView(ribbon);
+
+        // Unbatched, a Redraw property re-creates the views straight away.
+        ribbon.ShowQuickAccess = false;
+        var afterOne = GroupView(ribbon);
+        afterOne.ShouldNotBeSameAs(original);
+
+        using (ribbon.DeferRebuild())
+        {
+            ribbon.ShowQuickAccess = true;
+            ribbon.ApplicationButtonText = "File";
+            ribbon.ApplicationButtonCommand = new Command(() => { });
+
+            // Held back: three rebuilds' worth of handlers on Android, unfixed.
+            GroupView(ribbon).ShouldBeSameAs(afterOne);
+        }
+
+        GroupView(ribbon).ShouldNotBeSameAs(afterOne, "the deferred rebuild runs once the scope ends");
+    }
+
+
+    [Fact]
+    public void DeferredRebuildWithNoChangesDoesNothing()
+    {
+        var ribbon = Build(Tab("Home", Button("Bold")));
+        var original = GroupView(ribbon);
+
+        using (ribbon.DeferRebuild())
+        {
+        }
+
+        GroupView(ribbon).ShouldBeSameAs(original);
+    }
 }
