@@ -55,8 +55,27 @@ public static class KnownGaps
         "DevFlow cannot read the UI on WinUI while the page animates continuously - every capture returns " +
         "'The UI kept changing while DevFlow was reading it', so the page looks absent";
 
+    /// <summary>
+    /// Quick entry hosts its popup in a second MAUI <c>Window</c> on desktop by design
+    /// (<c>DesktopQuickEntryPresenter</c> calls <c>Application.OpenWindow</c>, then hides it). On WinUI the
+    /// agent reports the Shell route from a window that has no Shell once that second window exists, so
+    /// <c>status.route</c> reads <c>''</c> for the rest of the session and <see cref="MauiDevFlowDriver.NavigateTo"/>
+    /// can never confirm the route.
+    ///
+    /// Verified live: after <c>//quickentry</c>, <c>windowCount</c> is 2 — window 0 holds
+    /// <c>Sample.Features.QuickEntry.QuickEntryPage</c> (so the page really is displayed) and window 1 holds
+    /// <c>Shiny.Maui.Controls.Desktop.QuickEntry.QuickEntryPage</c> — while <c>route</c> is <c>''</c>.
+    ///
+    /// The page works; the suite cannot prove it got there. The harness could fall back to "the expected page
+    /// type is displayed" when the route is empty, which would recover these tests.
+    /// </summary>
+    public const string WinUiSecondWindowHidesTheRoute =
+        "quick entry's popup lives in a second Window on desktop, and with it open the WinUI agent reports " +
+        "the Shell route as '' - the page is displayed but navigation can't be confirmed";
+
     static readonly Dictionary<(UIPlatform, string), string> pages = new()
     {
+        [(UIPlatform.Windows, "quickentry")] = WinUiSecondWindowHidesTheRoute,
         [(UIPlatform.Windows, "marquee")] = WinUiAnimationBlocksCapture,
         [(UIPlatform.Windows, "progressbar")] = WinUiAnimationBlocksCapture,
         [(UIPlatform.Windows, "motionicons")] = WinUiAnimationBlocksCapture,
