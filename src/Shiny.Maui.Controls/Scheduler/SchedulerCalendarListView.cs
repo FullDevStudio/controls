@@ -16,6 +16,7 @@ public class SchedulerCalendarListView : ContentView
     DateOnly rangeEnd;
     int lastFirstVisibleIndex;
     bool isLoadingMore;
+    bool initialLoading;
     CancellationTokenSource? loadCts;
     PinchGestureRecognizer? pinchGesture;
     double currentScale = 1;
@@ -330,6 +331,7 @@ public class SchedulerCalendarListView : ContentView
             rangeEnd = MaxDate.Value;
 
         ShowLoader(true);
+        initialLoading = true;
 
         try
         {
@@ -354,7 +356,10 @@ public class SchedulerCalendarListView : ContentView
         finally
         {
             if (!token.IsCancellationRequested)
+            {
+                initialLoading = false;
                 ShowLoader(false);
+            }
         }
     }
 
@@ -362,14 +367,22 @@ public class SchedulerCalendarListView : ContentView
     {
         if (isLoadingMore || Provider == null) return;
         if (MaxDate.HasValue && rangeEnd >= MaxDate.Value) return;
+        if (initialLoading) return;
         isLoadingMore = true;
+
+        // Tied to the current load: a SelectedDate change while this is in flight re-centres the
+        // list, and this page belongs to the range that was just thrown away.
+        var token = loadCts?.Token ?? CancellationToken.None;
 
         try
         {
             var newEnd = rangeEnd.AddDays(DaysPerPage);
             if (MaxDate.HasValue && newEnd > MaxDate.Value)
                 newEnd = MaxDate.Value;
-            var loadedGroups = await LoadRange(rangeEnd, newEnd, CancellationToken.None);
+            var loadedGroups = await LoadRange(rangeEnd, newEnd, token);
+            if (token.IsCancellationRequested)
+                return;
+
             rangeEnd = newEnd;
 
             foreach (var g in loadedGroups)
@@ -400,14 +413,26 @@ public class SchedulerCalendarListView : ContentView
         if (e.FirstVisibleItemIndex > 3) return;
         if (MinDate.HasValue && rangeStart <= MinDate.Value) return;
 
+        // Android raises Scrolled (index 0) when LoadInitial clears the list; paging backwards from
+        // a range that is still loading would put days ahead of it.
+        if (initialLoading) return;
+
         isLoadingMore = true;
+
+        // Tied to the current load. Unfixed, a page that finished after a SelectedDate jump
+        // inserted the old range's days at the top and reset rangeStart to them, so the list kept
+        // paging backwards through the old year and the new date was never shown.
+        var token = loadCts?.Token ?? CancellationToken.None;
 
         try
         {
             var newStart = rangeStart.AddDays(-DaysPerPage);
             if (MinDate.HasValue && newStart < MinDate.Value)
                 newStart = MinDate.Value;
-            var loadedGroups = await LoadRange(newStart, rangeStart, CancellationToken.None);
+            var loadedGroups = await LoadRange(newStart, rangeStart, token);
+            if (token.IsCancellationRequested)
+                return;
+
             rangeStart = newStart;
 
             for (var i = loadedGroups.Count - 1; i >= 0; i--)
