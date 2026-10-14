@@ -1,6 +1,5 @@
 namespace Sample.UITests.Features;
 
-[SkipOn(UIPlatform.Linux, KnownGaps.LinuxBadgeHeapCorruption)]
 public class BadgeTests : UITest
 {
     Task OpenPage() => Open("badge", "BadgePage");

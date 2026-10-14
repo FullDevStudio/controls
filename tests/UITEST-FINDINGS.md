@@ -22,6 +22,8 @@ Nothing is committed yet.
 
 ## MAUI Linux GTK — findings (2026-10-14)
 
+> **Update:** the double free, the legacy-package issue and the unreachable second ShellContent are all **already fixed upstream** in maui-labs `0.1.0-preview.13.26514.2`. v1 now uses that version, and their Linux skips are removed. On preview.13 the Badge idle repro survives 60s (3/3), and Badge, ChipGroup, DataGrid and Dialogs pass. Still open on Linux: the AutoComplete wedge, one Expander test and one PasswordStrength test. The text below describes preview.12.
+
 Found by a Claude session on a real Ubuntu aarch64 VM driving `./uitest linux`.
 
 ### Upstream bug: double free in `GtkViewHandler.ApplyTransform` (dotnet/maui-labs)

@@ -7,7 +7,6 @@ namespace Sample.UITests.Features;
 /// tap gesture (a Command, so DevFlow can invoke it); the ✕ is the ContentView in the chip's row.
 /// Shell caches the page, so each test reads the state it arrives to rather than assuming one.
 /// </summary>
-[SkipOn(UIPlatform.Linux, KnownGaps.LinuxSiblingShellContentUnreachable)]
 public class ChipGroupTests : UITest
 {
     const string Route = "chipgroup";
