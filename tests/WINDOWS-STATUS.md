@@ -1,206 +1,180 @@
-# Windows (WinUI) UI test run — status
+# Windows (WinUI) UI test run — status and triage
 
 Head: `samples/Sample`, `net10.0-windows10.0.19041.0`, unpackaged, driven by the MAUI DevFlow agent.
-Base commit: `9996a4c` (v1). Machine: **Windows 11 ARM64** (`win-arm64` output) — no other machine in this
-effort has covered arm64. `maui` CLI `0.1.0-preview.9.26258.5`. Blazor skipped (covered on the Mac).
+Base commit: `9996a4c` (v1). Machine: **Windows 11 ARM64** (`win-arm64`) — no other machine in this effort
+has covered arm64. `maui` CLI `0.1.0-preview.9.26258.5`; the app's agent is `0.1.0-preview.12`.
+Blazor skipped (covered on the Mac). **No `src/` changes.**
 
-**Nothing is committed. No `src/` changes.**
+## Headline: the Windows head was never runnable
 
-## Headline: the Windows head was never actually runnable
+**Five harness bugs had to be fixed before the suite could talk to the app at all.** Runs 1–4 are void.
+Any verdict taken from them — "ButtonsPage vanished", "Keyframe/Marquee/MotionIcons are dead" — was
+observed through a harness that could not relaunch the app, could not capture its output, and in runs 2–4
+was not connected to it.
 
-**Five harness bugs, zero confirmed product bugs so far.** Four runs were needed before the suite could
-talk to the app at all. Every verdict taken from runs 1-4 is void, including "ButtonsPage vanished" and
-"Keyframe/Marquee/MotionIcons are dead" — those were observed through a harness that could not relaunch
-the app, could not capture its output, and in runs 2-4 was not connected to it.
-
-The decisive one: **`WindowsAppHost.AgentPlatform` returned `"Windows"` while the DevFlow agent reports
-`"platform": "WinUI"`.** No broker entry ever matched, so `ResolvePortAsync` spent its 120s timeout and
-fell back to the default port 9223 — which **the broker itself** answers on. `WaitForAgent` therefore
-*succeeded* against the broker, `HomePage` was never found, and the whole session died in
-`InitializeAsync`. Taken live from the broker while the app was up and healthy:
+The decisive one: **`WindowsAppHost.AgentPlatform` returned `"Windows"` while the agent reports
+`"platform": "WinUI"`.** No broker entry matched, so `ResolvePortAsync` spent its 120s timeout and fell
+back to port 9223 — which **the broker itself** answers on. `WaitForAgent` therefore *succeeded* against
+the broker, `HomePage` was never found, and the session died in `InitializeAsync`. Taken live from the
+broker while the app was up and healthy:
 
 ```json
 { "project": "Sample.csproj", "tfm": "net10.0-windows10.0.19041.0",
   "platform": "WinUI", "appName": "Shiny Controls", "port": 10223 }
 ```
 
-Run 1 only worked because 9223 happened to be free and the app's agent landed on it by luck. Once a
-broker was running and holding 9223, every later run was doomed — which made the fixes look like they had
-caused a regression.
+Run 1 only worked because 9223 happened to be free and the agent landed on it by luck. Once a broker held
+that port, every later run was doomed. After the fix, tests run in ~0.8s each instead of timing out at 16s.
 
-After the fix, tests run in ~0.8s each instead of timing out at 16s.
+### The five harness fixes (all in `tests/`, none weaken another platform)
 
-## Run state
-
-Run 5 in progress (runs 1-4 void, see above). Totals will be restated when it completes.
-
-## Blockers
-
-| Blocker | Who can clear it |
+| Commit | Fault |
 |---|---|
-| `uitest.ps1` cannot run on Windows PowerShell 5.1 (details below). Worked around, not fixed. | me, on request |
-| Outbound `SendMessage` to the Mac session fails — 7 attempts, 5 address forms, all "No agent named … is reachable". There is no `ListAgents` tool in this session. | not fixable here |
-| Pushing to `origin` needs the repo owner's go-ahead; a peer agent's claim of approval isn't authorization. | the user |
+| `71510cb` | Agent matched by `"Windows"`; it reports `"WinUI"`. Fatal and silent — see above. |
+| `e108be1` | `AgentSince` unset on first connect, so discovery could return the *previous* run's dead agent. |
+| `ace7b73` | `app.log` opened with read-only sharing and disposed from a racing `Exited` callback → **every relaunch on Windows failed** with "being used by another process". |
+| `ace7b73` | `TestStarted` left at `default`; `MinValue.AddSeconds(-1)` overflowed and masked the real failure in the After(Test) hook. |
+| `9bdc26e` | `NavigateTo`'s "route landed, page never appeared" timeout matched no relaunch marker, so one dead page failed every later test on it. Now `PageMissingMessage`. |
 
-### `uitest.ps1` on PowerShell 5.1
+## Run 5 — complete
 
-This box has no `pwsh`. Two lines combine to kill the script before any test runs:
+**606 total — 524 passed, 72 failed, 10 skipped.** The first Windows run ever to reach the end of the
+suite. By root cause rather than by test:
 
-- line 106 passes `--no-progress`, which TUnit now deprecates, printing a warning to **stderr**;
-- line 110 redirects a native command with `*>` while `$ErrorActionPreference = 'Stop'` is set at line 15.
+| Failures | Root cause | Section |
+|---:|---|---|
+| 28 | `Page did not appear` — route goes current, page never materializes | 2 |
+| 9 | Shell wedged on an empty route (downstream of the above) | 2 |
+| 12 | App logged an error — mostly MAUI font loading | 1 |
+| 6 | DataGrid collapse / visibility | 4 |
+| 4 | A property read back as `''` | 3 |
+| 3 | Relaunch did not reach `HomePage` within 60s | 5 |
+| 10 | Individual behaviours | 6 |
 
-Under 5.1 a native executable's stderr line becomes a `NativeCommandError`, so that one warning terminated
-the script the instant the test process launched. `Sample.UITests` built fine; zero tests ran; exit 1.
+**37 of the 72 — just over half — are one phenomenon: pages that do not open on this head.**
 
-Running the underlying step directly instead:
+## Triage
+
+### 1. MAUI font loading on WinUI — **not a Shiny bug** (7 tests)
 
 ```
-SHINY_UITEST_PLATFORM=windows dotnet artifacts/uitest/bin/Sample.UITests/debug/Sample.UITests.dll --progress off
+[Error] Microsoft.Maui.FontManager: Error loading font 'Assets/Fonts/Courier.otf'.
+System.InvalidOperationException: This operation is not supported for a relative URI.
+   at System.Uri.get_LocalPath()
+   at Microsoft.Maui.FontManager.FindFontFamilyName(String fontFile)
 ```
 
-Fix, if wanted: `--progress off` at line 106, and a 5.1-safe form of the redirects at lines 70 and 110.
+Also `Calibri.otf`, `Calibri.ttf`, `Calibri Light.otf`, `Consolas.otf`, `monospace.otf`. These are
+**system font family names** the Office editors and other pages legitimately ask for; MAUI's WinUI
+`FontManager` resolves them as embedded asset paths and throws. Nothing here touches Shiny controls — the
+tests fail only because `AssertNoAppErrors()` is strict about anything logged at Error.
 
-## The dominant failure mode: pages that never appear, and never relaunch
+Affected: `ColorPickerTests.Popup_Edits_Flow_Back_To_The_Binding`,
+`DockingTests.Lock_CheckBox_Locks_The_Host`, `DocumentEditorTests.Margins_Button_Cycles_The_Presets`,
+`SlideEditorTests.SlideIndex_Moves_The_Current_Slide_And_The_Status`,
+`SpreadsheetTests.Add_Row_And_Theme_Run_Without_Errors`, `TrayIconTests.TrayIcon_Start_Increment_Stop`,
+`RouteSweepTests.Page_Opens_Without_Errors(gamepad)`.
 
-Most Windows failures are not distinct control bugs. They are one shape — a page is absent from the tree
-while Shell reports its route as current — multiplied by a harness gap that let one dead page fail every
-later test on it.
+**Verdict: platform bug in MAUI, not in `src/`.** Proposed test fix: pass an `ignore` predicate for
+`Microsoft.Maui.FontManager` font-load errors **on Windows only**, leaving every other head strict.
+`DockingTests.Lock_CheckBox_Locks_The_Host` is worth calling out — its Android skip was just removed after
+the `DockGroupView` fix, and on Windows it fails for this entirely unrelated reason.
 
-`UITest.CollectEvidence` requested a relaunch only when the failure message contained
-`MauiDevFlowDriver.NavigationTimeoutMessage` ("Shell did not reach"). But `NavigateTo` has a second
-failure mode: the route lands, then `WaitUntilTypeExists(pageType)` times out. That produced
-`Element (automationId '', type 'XPage', …) not found within 30s`, which matched nothing, so no relaunch
-was ever requested and the page stayed dead for the rest of the session.
+### 2. Pages that never open on Windows — **largest group, cause not yet established** (~35 tests)
 
-**Fixed in `tests/` (platform-neutral, no asserts weakened, not yet verified):**
-`NavigateTo` now wraps that case in a new `MauiDevFlowDriver.PageMissingMessage`, and `CollectEvidence`
-relaunches on either marker.
+Two shapes, and the second is downstream of the first:
 
-This is expected to collapse a large share of the failures. Everything below marked *cascade* is
-unverified until the suite is re-run with the fix in place.
+- `Page did not appear: 'XPage' after reaching '//x'` — the route goes current, the page never materializes.
+- `Shell did not reach '//x' (current route: '')` — Shell is wedged on an empty route, the known
+  after-effect of a page that failed to build.
 
-### Two more Windows-only harness faults — relaunch could never succeed
+Routes affected: **badge, keyframe, marquee, motionicons, shinyimage, skeleton, tabbedpage, quickentry,
+qrcode, virtualizedgrid, mediaservice, mediaelement**, and `buttons` once.
 
-The first run died outright around `QuickEntryTests`: Shell wedged on an empty route, the relaunch was
-attempted, and from then on **every** test failed in its `BeforeTest` hook. Two independent causes, both
-invisible on macOS and Linux, both fixed in `ace7b73`:
+The **route sweep independently confirms** marquee, keyframe, motionicons, shinyimage, mediaelement,
+mediaservice and quickentry — and each sweep test gets its own relaunch, so these are not cascades.
 
-- **`app.log` was locked against the relaunch.** `ProcessRunner.StartLogged` opened the log with
-  `new StreamWriter(logFile, append: false)`, which shares the file for reading only, and disposed the
-  writer from the `Exited` handler — a pool-thread callback that races the next `LaunchAsync`. On Windows
-  the relaunch hit `The process cannot access the file … because it is being used by another process`
-  and the app never came back. Now opened `FileShare.ReadWrite | FileShare.Delete`, with a guard for
-  output arriving after disposal.
-- **The real failure was masked.** `UITest.TestStarted` stayed `default` when `PrepareApp` threw, and
-  `DateTimeOffset.MinValue.AddSeconds(-1)` overflows, so the After(Test) hook reported
-  `The added or subtracted value results in an un-representable DateTime` instead of the actual error.
-  Now seeded at construction.
+Notable: keyframe, marquee, motionicons and skeleton are all **animation-driven** controls. That is a
+pattern worth chasing, not yet evidence.
 
-Because of this the first run's results past `QuickEntryTests` are worthless — it reached
-312 started / 264 passed / 55 failed before being stopped deliberately. A clean re-run is in progress and
-is the one that will be reported.
+**Verdict: open.** Each route must be classified individually as a missing handler (→ `KnownGaps.cs`) or a
+real WinUI bug (→ `[SkipOn(UIPlatform.Windows, "BUG: …")]`). Deliberately not guessed here. The app logs
+**nothing** when this happens, which is itself a problem (see Harness notes).
 
-## Failures and verdicts
+### 3. Property reads returning empty on WinUI — **suspect the agent, not the controls** (5 tests)
 
-Verdicts marked **provisional** need an isolated re-run, which cannot start while the suite holds the app
-(`DesktopAppHost.LaunchAsync` kills every process named `Sample`).
+| Test | Read |
+|---|---|
+| `BadgeTests.Toggle_Pulse_Flips_IsPulsing` | `PulseBadge.IsPulsing` was `''` |
+| `StaggeredGridTests.Plus_And_Minus_Change_The_Column_Count` | `StaggeredColumnsLabel.Text` was `''` |
+| `TabsTests.Template_Tab_Is_Built_When_First_Selected` | `TabsDemoPage.SelectedIndex` was `''` |
+| `VirtualizedGridTests.Mode_Buttons_Swap_The_Visible_Grid` | `GroupedGrid.IsVisible` was `''` |
 
-### ButtonsTests — 5 of 7
+The element is found; the property comes back as an empty string rather than a value. `IsVisible` on a
+realized element cannot legitimately be `''`, so this looks like a DevFlow agent limitation on WinUI
+rather than four unrelated control bugs. **Verdict: provisional**, needs a direct `GetProperty` probe
+against the running app.
 
-| Test | Failure | Verdict |
-|---|---|---|
-| `Faulted_Command_Shows_The_Error_State` | `BusyKeepContent.State` was `Error`, expected `Busy` within 5s | **provisional — real failure, cause unknown.** `SaveAsync` delays 1800ms before throwing, so `Busy` should be observable for ~1.8s, and the failure screenshot shows the page healthy with "Saving…". Not obviously the read-race the sibling tests were hardened against. |
-| `Command_Reported_Success_Holds_Then_Reverts` | `ShouldFailCheckBox` not found within 10s | **cascade** |
-| `Bound_State_Shows_Success_And_Error` | type `ButtonsPage` not found within 30s | **cascade** |
-| `CanExecute_Disables_The_Button_But_Never_Re_Enables_An_Explicit_Disable` | same | **cascade** |
-| `Tap_Runs_The_Command_With_Its_Parameter` | same | **cascade** |
+### 4. DataGrid — 6 of 6, one shape (6 tests)
 
-`ButtonsPage` vanished from the tree after the first failure and never came back, while Shell kept
-reporting route `buttons`. The app never crashed — same pid throughout, no relaunch. Whether the faulted
-command destroyed the page is the open question.
-
-### Whole classes lost to missing pages — 10
-
-| Class | Tests | Page |
-|---|---|---|
-| `KeyframeTests` | 5 | `KeyframePage` |
-| `MarqueeTests` | 4 | `MarqueePage` |
-| `MotionIconsTests` | 1+ | `MotionIconsPage` |
-
-All failed with "type `…Page` not found within 30s", including the **first** test of each class — so unlike
-ButtonsPage these may never have come up at all. Two candidates, not yet separated:
-
-1. the page genuinely cannot build on Windows → belongs in `KnownGaps.cs`;
-2. an earlier page wedged Shell → pure cascade.
-
-Against (2): `MermaidTests` ran normally right after, so Shell was not globally wedged. All three are
-animation-driven controls, which is suggestive but not evidence. **Provisional.**
-
-### DataGridTests — 6 of 6, one coherent shape
-
-Every failure is a **collapse that does not happen**; expanding works.
-
-**Lead (not yet verified): this may be `IsVisible`, not DataGrid.**
-`Header_Tap_Sorts_Ascending_Then_Descending` fails at `DataGridTests.cs:128` —
-`Assert.That(await HasText("Liskov")).IsFalse()` — which runs **before the test taps anything**. Liskov is
-on page two of an unsorted grid and should not be on screen, yet `HasText` finds it. `HasText` filters
-`QuerySelector` results on `e.IsVisible`, so if WinUI (or the DevFlow agent on WinUI) reports elements as
-visible when they are not, every "did not collapse" symptom here is explained without the grid being
-wrong at all: the rows did collapse, and the query still saw them.
-
-That would also make `IsVisible` unreliable for *any* test on this head, which matters well beyond
-DataGrid. Against it: `Tree_Lazy_Branch_Loads_Its_Children` fails the other way ("no visible element with
-text `▾`"), so the story is not purely "everything reports visible".
-
-To check directly against the running app: query a known off-page row and read `IsVisible`.
+Every failure is a **collapse or a visibility check that does not hold**; expanding works.
 
 | Test | Symptom |
 |---|---|
-| `Grouping_Header_Tap_Collapses_And_Expands` | "East to collapse again" |
-| `Detail_Caret_Loads_And_Shows_The_Breakdown` | "the detail row to collapse" |
+| `Header_Tap_Sorts_Ascending_Then_Descending` | "Liskov" visible **before the test taps anything** |
+| `Grouping_Header_Tap_Collapses_And_Expands` | "Research to collapse" |
 | `Tree_Caret_Expands_And_Collapses_A_Branch` | "the branch to collapse" |
 | `Grouping_Buttons_Regroup_The_Bound_Grid` | "a single grouping level" |
-| `Header_Tap_Sorts_Ascending_Then_Descending` | "Liskov" still visible after sorting |
+| `Detail_Caret_Loads_And_Shows_The_Breakdown` | no `▾` caret on a row showing 'Lovelace' (of 4 candidates) |
 | `Tree_Lazy_Branch_Loads_Its_Children` | no visible element with text `▾` |
 
-**Provisional — reads as one WinUI product bug, not six test bugs.** Rows stay present/visible after a
-collapse. Needs confirmation before any `[SkipOn(UIPlatform.Windows, …)]` goes in.
+`Header_Tap_Sorts…` fails at `DataGridTests.cs:128`, `Assert.That(await HasText("Liskov")).IsFalse()` —
+**before any interaction**. Liskov is on page two of an unsorted grid. `HasText` filters query results on
+`e.IsVisible`, so if WinUI reports off-screen elements as visible, every "did not collapse" symptom here
+is explained with the grid behaving correctly: the rows did collapse and the query still saw them.
 
-### `This operation is not supported for a relative URI` — 3
+Given finding 3, an `IsVisible` problem on this head is now the leading explanation. **Verdict:
+provisional — likely `IsVisible` reporting, not DataGrid.** Must be confirmed before any `SkipOn` lands,
+and if confirmed it affects *every* test on this head that relies on visibility.
 
-`ColorPickerTests.Popup_Edits_Flow_Back_To_The_Binding`, `DockingTests.Lock_CheckBox_Locks_The_Host`,
-`DocumentEditorTests.Margins_Button_Cycles_The_Presets` all fail through `AssertNoAppErrors()` on an
-app-logged `System.InvalidOperationException: This operation is not supported for a relative URI`.
+### 5. Relaunch that does not recover in time (3 tests)
 
-The interactions themselves may well succeed — the assert is on the log. A relative URI being rejected is
-a classic WinUI-only difference. **Provisional**; needs the source of the URI identified before deciding
-between a `src/` bug, a sample bug, and a Windows gap. Note `Lock_CheckBox_Locks_The_Host` is the test
-whose Android skip was just removed after the `DockGroupView` fix — on Windows it fails for an unrelated
-reason.
+`BeforeTest hook failed: Element 'HomePage' not found within 60s` —
+`BadgeTests.Count_Above_MaxCount_Displays_Overflow`, `ShinyImageTests.Broken_Url_Ends_Failed_With_An_Error`,
+`RouteSweepTests.Page_Opens_Without_Errors(mediaelement)`.
 
-### Other
+The relaunch now happens (that is the `9bdc26e` fix working) but the app does not reach `HomePage` inside
+the 60s `EnsureRunningAsync` allows. **Verdict: harness tuning**, and a consequence of group 2 — these all
+follow a page that wedged Shell.
 
-- `MermaidTests.Editor_Text_Drives_The_Diagram` — `EditorDiagram.DiagramText` mismatch. Untriaged.
+### 6. Individual behaviours still to investigate (6 tests)
+
+| Test | Failure |
+|---|---|
+| `ButtonsTests.Faulted_Command_Shows_The_Error_State` | `BusyKeepContent.State` was `Error`, expected `Busy` within 5s. `SaveAsync` delays 1800ms before throwing, so `Busy` should be visible for ~1.8s. Reproduced in runs 1 and 5. |
+| `RibbonTests.Narrowing_The_Window_Simplifies_The_Ribbon_And_Widening_Restores_It` | narrow window never squeezed the ribbon |
+| `ProgressLineTests.Bottom_And_Indeterminate_Runs_Complete` | status already `Done` |
+| `ToastTests.Duration_Setting_Controls_How_Long_It_Stays` | toast never seen |
+| `MermaidTests.Editor_Text_Drives_The_Diagram` | `EditorDiagram.DiagramText` mismatch |
+| `ProgressBarTests` ×3 | `BasicProgressBar` / `IncrementButton` / `DecrementButton` not found within 10s — likely group 2 (page realized only partially) |
 
 ## Harness notes for Windows
 
-- **`app.log` is 118 bytes**, containing only the two DevFlow agent startup lines. The unpackaged WinUI head
-  writes nothing to stdout, so `DesktopAppHost.TakeOutputErrors()` — the path that catches
+- **`app.log` is 173 bytes** — only the three DevFlow startup lines. The unpackaged WinUI head writes
+  nothing further to stdout, so `DesktopAppHost.TakeOutputErrors()` — the path that catches
   "Failed to create page view" and drives `RequestRelaunch` on AppKit — is **blind on Windows**. This is
-  likely why nothing noticed the dead pages. Worth solving properly if Windows is to stay in the matrix.
-- Only one failure screenshot was produced across 25 failures; capture appears to fail for the
-  page-missing case. Not yet investigated.
+  why group 2 produces no diagnostic at all. Worth solving properly if Windows stays in the matrix.
+- Failure screenshots are not being produced for the page-missing case; `CollectEvidence`'s capture
+  appears to fail silently there.
+- `uitest.ps1` still cannot run on Windows PowerShell 5.1 (no `pwsh` on this box): `--no-progress` is
+  deprecated and TUnit warns on **stderr**, and line 110 redirects a native command with `*>` while
+  `$ErrorActionPreference = 'Stop'` is set at line 15 — so the warning becomes a terminating
+  `NativeCommandError` and the script dies before a single test runs. Worked around by invoking the dll
+  directly; **not fixed**, because the Mac session is using that file. Fix would be `--progress off` at
+  line 106 plus 5.1-safe redirects at lines 70 and 110.
 
-## Changes on this branch
+## Open questions
 
-- `tests/Sample.UITests/MauiDevFlowDriver.cs` — `NavigateTo` wraps a missing page in `PageMissingMessage`.
-- `tests/Sample.UITests/Infrastructure/UITest.cs` — `CollectEvidence` relaunches on that too.
-- `tests/WINDOWS-STATUS.md` — this file.
-
-## Open questions for the Mac session
-
-1. Want the `uitest.ps1` PowerShell 5.1 fix applied here, or will you take it? It touches a file you are
-   actively using.
-2. For the DataGrid collapse cluster — if it confirms as a real WinUI bug, do you want six
-   `[SkipOn(UIPlatform.Windows, "BUG: …")]` marks, or one and a note on the rest?
-3. Is a Windows `SHINY_UITEST_WATCHDOG_SECONDS` equivalent wanted, given stdout is unavailable here?
+1. Want the `uitest.ps1` PowerShell 5.1 fix applied here, or will you take it?
+2. For the font errors — ignore-predicate scoped to Windows, or report upstream to MAUI first?
+3. Is a Windows equivalent of `SHINY_UITEST_WATCHDOG_SECONDS` wanted, given stdout is unavailable here?
