@@ -8,7 +8,7 @@ namespace Shiny;
 public static class MediaMauiAppBuilderExtensions
 {
     /// <summary>
-    /// Register the Shiny <see cref="MediaElement"/> handler and the platform player backend. Call
+    /// Register the Shiny <see cref="MediaElement"/> and <see cref="VideoText"/> handlers and the platform player backend. Call
     /// alongside <c>UseShinyControls()</c> in your MAUI program.
     /// </summary>
     /// <remarks>
@@ -22,6 +22,9 @@ public static class MediaMauiAppBuilderExtensions
         builder.ConfigureMauiHandlers(handlers =>
         {
             handlers.AddHandler<MediaSurface, MediaSurfaceHandler>();
+#if ANDROID || IOS || MACCATALYST || MACOS
+            handlers.AddHandler<VideoTextSurface, VideoTextHandler>();
+#endif
         });
 
 #if IOS || MACCATALYST || MACOS

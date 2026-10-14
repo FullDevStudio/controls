@@ -289,6 +289,9 @@
     <FlyoutItem Title="Media Element">
         <ShellContent ContentTemplate="{DataTemplate mediaelement:MediaElementPage}" Route="mediaelement" />
     </FlyoutItem>
+    <FlyoutItem Title="Video Text">
+        <ShellContent ContentTemplate="{DataTemplate mediaelement:VideoTextPage}" Route="videotext" />
+    </FlyoutItem>
     <FlyoutItem Title="Shiny Image">
         <ShellContent ContentTemplate="{DataTemplate images:ImagesPage}" Route="shinyimage" />
     </FlyoutItem>

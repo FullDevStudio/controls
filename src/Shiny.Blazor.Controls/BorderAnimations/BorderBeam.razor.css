@@ -1,0 +1,74 @@
+/*
+    The card. Its padding defaults to the border width so content clears the ring; an inline padding
+    from the caller replaces it. Isolation keeps the ring's z-index local to the card.
+*/
+.shiny-border-beam {
+    position: relative;
+    box-sizing: border-box;
+    isolation: isolate;
+    overflow: hidden;
+    padding: var(--shiny-border-width, 1px);
+    border-radius: var(--shiny-border-radius, 12px);
+}
+
+/* Overlay: only the ring, over the nearest positioned ancestor. */
+.shiny-border-beam--overlay {
+    position: absolute;
+    inset: 0;
+    /* Above the host card's own ring, whose track would otherwise cover this effect. */
+    z-index: 2;
+    padding: 0;
+    overflow: visible;
+    pointer-events: none;
+}
+
+/*
+    The ring covers the whole card and is masked down to its outer --shiny-border-width: the padding
+    pins the content box inside the border, and excluding the content box from the full box leaves just
+    the band. Its background is the static track; the beam rides over it.
+*/
+.shiny-border-beam__ring {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    box-sizing: border-box;
+    padding: var(--shiny-border-width, 1px);
+    border-radius: inherit;
+    pointer-events: none;
+    background: var(--shiny-border-track, var(--shiny-color-outline-variant, #c4c6d0));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+}
+
+/*
+    The beam: a square whose gradient runs head (from) to tail (transparent) along the direction of
+    travel - offset-rotate: auto turns it to face the way it is going, corners included.
+*/
+.shiny-border-beam__beam {
+    position: absolute;
+    width: var(--shiny-border-beam-size, 50px);
+    aspect-ratio: 1;
+    background: linear-gradient(to left, var(--shiny-border-beam-from, #ffaa40), var(--shiny-border-beam-to, #9c40ff), transparent);
+    offset-path: rect(0 auto auto 0 round var(--shiny-border-radius, 12px));
+    offset-distance: var(--shiny-border-beam-start, 0%);
+    animation: shiny-border-beam var(--shiny-border-beam-duration, 6s) linear infinite;
+    /* Negative: Magic UI's delay is a head start into the lap, never a gap with no beam. */
+    animation-delay: calc(var(--shiny-border-beam-delay, 0s) * -1);
+}
+
+@keyframes shiny-border-beam {
+    from { offset-distance: var(--shiny-border-beam-start, 0%); }
+    to { offset-distance: var(--shiny-border-beam-end, 100%); }
+}
+
+.shiny-border-beam--paused .shiny-border-beam__beam {
+    animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shiny-border-beam--respect-motion .shiny-border-beam__beam {
+        animation-play-state: paused;
+    }
+}

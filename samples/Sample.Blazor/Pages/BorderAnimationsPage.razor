@@ -1,0 +1,67 @@
+@page "/border-animations"
+@using Shiny.Blazor.Controls
+
+<PageTitle>Border Animations</PageTitle>
+
+<h1>Border Animations</h1>
+
+<p>
+    Animated card outlines in the style of Magic UI's border beam and shine border. Both are pure CSS: a
+    ring laid over the content and masked down to the border.
+</p>
+
+<section class="demo-section">
+    <h2>Border Beam</h2>
+    <p>A short beam of light travelling around the border.</p>
+
+    <BorderBeam CornerRadius="16" Style="@CardStyle">
+        <h3 style="margin:0 0 4px">Login</h3>
+        <p style="margin:0 0 12px; opacity:.7">Enter your credentials to access your account.</p>
+        <button>Sign in</button>
+    </BorderBeam>
+</section>
+
+<section class="demo-section">
+    <h2>Two beams</h2>
+    <p><code>Overlay="true"</code> renders just the ring over a positioned parent - here a second, reversed beam over the card.</p>
+
+    <BorderBeam CornerRadius="16" BorderWidth="2" Size="80" Duration="TimeSpan.FromSeconds(8)" Style="@CardStyle">
+        Gradients run both ways round. Clicks go straight through the overlay.
+        <BorderBeam Overlay="true" CornerRadius="16" BorderWidth="2" Size="80" Duration="TimeSpan.FromSeconds(8)"
+                    Reverse="true" InitialOffset="50" ColorFrom="#40c4ff" ColorTo="#22c55e" TrackColor="transparent" />
+    </BorderBeam>
+</section>
+
+<section class="demo-section">
+    <h2>Shine Border</h2>
+    <p>A multi-colour glow drifting across the border and back.</p>
+
+    <ShineBorder CornerRadius="16" BorderWidth="2" Duration="TimeSpan.FromSeconds(8)"
+                 ShineColors="@(["#A07CFE", "#FE8FB5", "#FFBE7B"])" Style="@CardStyle">
+        <h3 style="margin:0 0 4px">Pro plan</h3>
+        <p style="margin:0; opacity:.7">Everything in Free, plus unlimited projects.</p>
+    </ShineBorder>
+
+    <div style="display:flex; justify-content:center; margin-top:16px">
+        <ShineBorder CornerRadius="28" BorderWidth="3" ShineColors="@(["#22d3ee"])" TrackColor="transparent"
+                     Style="padding:10px 16px">
+            Single colour, pill shaped
+        </ShineBorder>
+    </div>
+</section>
+
+<section class="demo-section">
+    <h2>Running</h2>
+    <label><input type="checkbox" @bind="running" /> Animate</label>
+
+    <div style="display:flex; gap:12px; justify-content:center; margin-top:8px">
+        <BorderBeam IsRunning="running" CornerRadius="999" BorderWidth="2" Style="padding:8px 18px">Beam</BorderBeam>
+        <ShineBorder IsRunning="running" CornerRadius="999" BorderWidth="2" Style="padding:8px 18px">Shine</ShineBorder>
+    </div>
+</section>
+
+@code {
+    const string CardStyle = "max-width:420px; padding:20px; background:var(--shiny-color-surface, #fff);";
+
+    bool running = true;
+}

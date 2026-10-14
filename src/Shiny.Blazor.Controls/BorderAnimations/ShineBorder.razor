@@ -1,0 +1,13 @@
+@namespace Shiny.Blazor.Controls
+@inherits AnimatedBorder
+
+@*
+    Magic UI's construction: a radial gradient three times the size of the card slides corner to corner
+    and back, on a ring masked down to the border. Declared in markup so CSS isolation stamps its scope
+    attribute on every element.
+*@
+
+<div class="shiny-shine-border @this.StateClasses @Class" style="@this.RootStyle">
+    @ChildContent
+    <div class="shiny-shine-border__ring" aria-hidden="true"></div>
+</div>

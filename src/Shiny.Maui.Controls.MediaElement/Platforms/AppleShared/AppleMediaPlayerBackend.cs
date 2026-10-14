@@ -143,7 +143,10 @@ class AppleMediaPlayerBackend : IMediaPlayerBackend
         this.ApplyGravity();
 
 #if IOS || MACCATALYST
-        this.SetupPip(this.output.PlayerLayer);
+        if (this.output.SupportsPictureInPicture)
+            this.SetupPip(this.output.PlayerLayer);
+        else
+            this.TeardownPip();
 #endif
     }
 

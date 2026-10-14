@@ -1,0 +1,15 @@
+@namespace Shiny.Blazor.Controls
+@inherits AnimatedBorder
+
+@*
+    Magic UI's construction: a square with a gradient across it rides an offset-path around the box
+    while the ring it sits in is masked down to the border, so only the slice of the square crossing the
+    border shows. Declared in markup so CSS isolation stamps its scope attribute on every element.
+*@
+
+<div class="shiny-border-beam @this.StateClasses @Class" style="@this.RootStyle">
+    @ChildContent
+    <div class="shiny-border-beam__ring" aria-hidden="true">
+        <div class="shiny-border-beam__beam"></div>
+    </div>
+</div>

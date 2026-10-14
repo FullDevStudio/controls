@@ -1,0 +1,26 @@
+/*
+   Everything outside the glyphs is transparent, so there is no background here on purpose: whatever is
+   behind the control shows between the letters. The 200px default height is overridable from Style.
+*/
+.shiny-video-text {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 200px;
+    overflow: hidden;
+    line-height: 0;
+    -webkit-mask-size: 100% 100%;
+    mask-size: 100% 100%;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+}
+
+.shiny-video-text-video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    pointer-events: none;
+}

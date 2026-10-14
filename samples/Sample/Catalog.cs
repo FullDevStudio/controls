@@ -171,6 +171,7 @@ public static class Catalog
             new("musiclibrary", "Bottom Tabs", "▤", "Tabbed media browser over the shell\u0027s bottom tabs"),
             new("camera", "Camera", "◉", "Preview, capture and pluggable frame analysis"),
             new("mediaelement", "Media Element", "▶", "Audio and video with a themed transport bar"),
+            new("videotext", "Video Text", "Ⓣ", "A looping video playing inside the letters"),
             new("documentsession", "Scanned Documents", "▧", "AI document scanning and extraction"),
             new("shinyimage", "Shiny Image", "▥", "Placeholder, download progress and error artwork"),
             new("imageviewer", "Image Viewer", "▣", "Pinch, pan and double-tap zoom"),
@@ -199,7 +200,8 @@ public static class Catalog
         [
             new("markdownview", "Markdown Viewer", "↓", "Markdig-powered renderer"),
             new("markdowneditor", "Markdown Editor", "✍", "Toolbar editor with live preview"),
-            new("marquee", "Marquee", "⇆", "Endless scrolling content - horizontal, vertical or any angle")
+            new("marquee", "Marquee", "⇆", "Endless scrolling content - horizontal, vertical or any angle"),
+            new("borderanimations", "Border Animations", "▢", "Border beam and shine border - animated card outlines")
         ]),
 
         new("Diagrams", "#FBBF24",

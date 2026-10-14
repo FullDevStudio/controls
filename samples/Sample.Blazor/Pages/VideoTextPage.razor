@@ -1,0 +1,55 @@
+@page "/videotext"
+@using Shiny.Blazor.Controls.Media
+
+<PageTitle>Video Text</PageTitle>
+
+<h1>Video Text</h1>
+
+<div class="demo-section">
+    <p>
+        A looping video that only plays inside the letters, behind the same API as the MAUI
+        <code>VideoText</code>. There is no transport bar, and sound is off unless you turn it on. Around the
+        glyphs the control is transparent, so the gradient behind it shows through.
+    </p>
+
+    <div style="max-width:720px;border-radius:12px;background:linear-gradient(135deg,#0f172a,#1e1b4b);">
+        <VideoText Source="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"
+                   Text="@text"
+                   FontSize="@fontSize"
+                   FontStyle="@(italic ? "italic" : null)"
+                   IsMuted="@muted"
+                   Style="height:220px;" />
+    </div>
+</div>
+
+<div class="demo-section">
+    <h3>Two lines at a fixed size</h3>
+    <VideoText Source="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"
+               Text="@("IN\nBLOOM")"
+               FontSize="72"
+               Style="max-width:720px;height:200px;" />
+</div>
+
+<div class="demo-section">
+    <h3>Options</h3>
+    <p><label>Text <input @bind="text" @bind:event="oninput" /></label></p>
+    <p>
+        <label>
+            Font size: @(fontSize == 0 ? "auto-fit" : $"{fontSize:0}px")
+            <input type="range" min="0" max="160" @bind="fontSize" @bind:event="oninput" />
+        </label>
+    </p>
+    <p><label><input type="checkbox" @bind="muted" /> Muted</label></p>
+    <p><label><input type="checkbox" @bind="italic" /> Italic</label></p>
+    <p style="font-size:13px;opacity:.7;">
+        Browsers only allow sound after you have interacted with the page — until then the loop keeps
+        playing silently. The mask can only use fonts installed on your system, not web fonts.
+    </p>
+</div>
+
+@code {
+    string text = "BLOOM";
+    double fontSize;
+    bool muted = true;
+    bool italic;
+}

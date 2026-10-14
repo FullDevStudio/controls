@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<shiny:ShinyContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:shiny="http://shiny.net/maui/controls"
+             xmlns:media="http://shiny.net/maui/media"
+             x:Class="Sample.Features.Media.VideoTextPage"
+             Title="Video Text">
+
+    <shiny:ShinyContentPage.PageContent>
+        <ScrollView>
+            <VerticalStackLayout Padding="16" Spacing="14">
+
+                <Label Text="VideoText"
+                       FontSize="22"
+                       FontAttributes="Bold" />
+                <Label Text="A looping video that only plays inside the letters. There is no transport bar, and sound is off unless you turn it on. Around the glyphs the control is transparent, so the gradient behind it shows through."
+                       FontSize="13"
+                       TextColor="Gray" />
+
+                <!-- a gradient backdrop proves the space between the letters is really transparent -->
+                <Border StrokeThickness="0" StrokeShape="RoundRectangle 12" HeightRequest="220">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#0F172A" Offset="0" />
+                            <GradientStop Color="#1E1B4B" Offset="1" />
+                        </LinearGradientBrush>
+                    </Border.Background>
+
+                    <media:VideoText x:Name="Video"
+                                     AutomationId="VideoText"
+                                     Source="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"
+                                     Text="BLOOM"
+                                     FallbackTextColor="White" />
+                </Border>
+
+                <Label Text="Two lines at a fixed size" FontAttributes="Bold" />
+                <media:VideoText Source="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"
+                                 Text="IN&#10;BLOOM"
+                                 FontSize="72"
+                                 HeightRequest="200" />
+
+                <!-- ── options ─────────────────────────────────────────────────────────── -->
+                <Label Text="Text" FontAttributes="Bold" />
+                <Entry Text="{Binding Source={x:Reference Video}, Path=Text}" AutomationId="VideoTextEntry" />
+
+                <Label Text="{Binding Source={x:Reference SizeSlider}, Path=Value, StringFormat='Font size: {0:0} (0 = auto-fit)'}" />
+                <Slider x:Name="SizeSlider"
+                        Minimum="0"
+                        Maximum="160"
+                        Value="{Binding Source={x:Reference Video}, Path=FontSize}" />
+
+                <HorizontalStackLayout Spacing="8">
+                    <Switch IsToggled="{Binding Source={x:Reference Video}, Path=IsMuted}" AutomationId="VideoTextMuted" />
+                    <Label Text="Muted" VerticalOptions="Center" />
+                </HorizontalStackLayout>
+
+                <HorizontalStackLayout Spacing="8">
+                    <Switch x:Name="ItalicSwitch" Toggled="OnItalicToggled" />
+                    <Label Text="Italic" VerticalOptions="Center" />
+                </HorizontalStackLayout>
+            </VerticalStackLayout>
+        </ScrollView>
+    </shiny:ShinyContentPage.PageContent>
+</shiny:ShinyContentPage>

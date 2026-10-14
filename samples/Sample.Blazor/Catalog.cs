@@ -130,6 +130,7 @@ public static class Catalog
         [
             new("camera", "Camera", "◉", "Preview, capture and pluggable frame analysis"),
             new("mediaelement", "Media Element", "▶", "Audio and video with a themed transport bar"),
+            new("videotext", "Video Text", "Ⓣ", "A looping video playing inside the letters"),
             new("shinyimage", "Shiny Image", "🖼", "Placeholder, download progress and error artwork"),
             new("imageviewer", "Image Viewer", "▣", "Pinch, pan and double-tap zoom"),
             new("zoompan", "Zoom Pan View", "⤢", "Pinch, pan and wheel zoom over any content"),
@@ -155,7 +156,8 @@ public static class Catalog
             new("markdown", "Markdown", "↓", "Markdig-powered renderer"),
             new("markdown-editor", "Markdown Editor", "✍", "Toolbar editor with live preview"),
             new("mermaid", "Mermaid", "⬓", "Flowcharts and diagrams, with an interactive editor"),
-            new("marquee", "Marquee", "⇆", "Endless scrolling content - horizontal, vertical or any angle")
+            new("marquee", "Marquee", "⇆", "Endless scrolling content - horizontal, vertical or any angle"),
+            new("border-animations", "Border Animations", "▢", "Border beam and shine border - animated card outlines")
         ]),
 
         new("Barcodes", "#A78BFA",

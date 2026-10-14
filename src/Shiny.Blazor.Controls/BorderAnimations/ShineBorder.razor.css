@@ -1,0 +1,62 @@
+/*
+    The card. Its padding defaults to the border width so content clears the ring; an inline padding
+    from the caller replaces it. Isolation keeps the ring's z-index local to the card.
+*/
+.shiny-shine-border {
+    position: relative;
+    box-sizing: border-box;
+    isolation: isolate;
+    overflow: hidden;
+    padding: var(--shiny-border-width, 1px);
+    border-radius: var(--shiny-border-radius, 12px);
+}
+
+/* Overlay: only the ring, over the nearest positioned ancestor. */
+.shiny-shine-border--overlay {
+    position: absolute;
+    inset: 0;
+    /* Above the host card's own ring, whose track would otherwise cover this effect. */
+    z-index: 2;
+    padding: 0;
+    overflow: visible;
+    pointer-events: none;
+}
+
+/*
+    The ring covers the whole card and is masked down to its outer --shiny-border-width. The track is
+    its background colour; the shine is a radial gradient three times the card's size drifting over it.
+*/
+.shiny-shine-border__ring {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    box-sizing: border-box;
+    padding: var(--shiny-border-width, 1px);
+    border-radius: inherit;
+    pointer-events: none;
+    background-color: var(--shiny-border-track, var(--shiny-color-outline-variant, #c4c6d0));
+    background-image: var(--shiny-shine-border-gradient);
+    background-size: 300% 300%;
+    will-change: background-position;
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    animation: shiny-shine-border var(--shiny-shine-border-duration, 14s) linear infinite;
+}
+
+@keyframes shiny-shine-border {
+    0% { background-position: 0% 0%; }
+    50% { background-position: 100% 100%; }
+    100% { background-position: 0% 0%; }
+}
+
+.shiny-shine-border--paused .shiny-shine-border__ring {
+    animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shiny-shine-border--respect-motion .shiny-shine-border__ring {
+        animation-play-state: paused;
+    }
+}

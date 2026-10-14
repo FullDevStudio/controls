@@ -30,6 +30,7 @@ class AndroidMediaPlayerBackend : IMediaPlayerBackend
     readonly AndroidPlayerListener listener;
 
     PlayerView? output;
+    Android.Views.TextureView? textureOutput;
     MediaSession? session;
     MediaAspect aspect = MediaAspect.AspectFit;
     MediaMetadata? metadata;
@@ -107,6 +108,22 @@ class AndroidMediaPlayerBackend : IMediaPlayerBackend
     {
         if (this.output is not null)
             this.output.Player = null;
+
+        if (this.textureOutput is not null)
+        {
+            this.player.ClearVideoTextureView(this.textureOutput);
+            this.textureOutput = null;
+        }
+
+        // VideoText renders through a bare TextureView: PlayerView defaults to a SurfaceView, which punches
+        // a hole through the window and so can never be masked by the view drawing over it.
+        if (nativeView is IVideoTextureOutput texture)
+        {
+            this.output = null;
+            this.textureOutput = texture.TextureView;
+            this.player.SetVideoTextureView(this.textureOutput);
+            return;
+        }
 
         this.output = nativeView as PlayerView;
 
@@ -489,6 +506,12 @@ class AndroidMediaPlayerBackend : IMediaPlayerBackend
         {
             this.output.Player = null;
             this.output = null;
+        }
+
+        if (this.textureOutput is not null)
+        {
+            this.player.ClearVideoTextureView(this.textureOutput);
+            this.textureOutput = null;
         }
 
         this.player.Release();

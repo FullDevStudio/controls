@@ -60,6 +60,7 @@
                   xmlns:progressbar="clr-namespace:Sample.Features.ProgressBar"
                   xmlns:progressline="clr-namespace:Sample.Features.ProgressLine"
                   xmlns:marquee="clr-namespace:Sample.Features.Marquee"
+                  xmlns:borderanimations="clr-namespace:Sample.Features.BorderAnimations"
                   xmlns:confetti="clr-namespace:Sample.Features.Confetti"
                   xmlns:rangepickers="clr-namespace:Sample.Features.RangePickers"
                   xmlns:slider="clr-namespace:Sample.Features.Slider"
@@ -966,6 +967,14 @@
         <ShellContent ContentTemplate="{DataTemplate marquee:MarqueePage}" Route="marquee" />
     </FlyoutItem>
 
+    <FlyoutItem Title="Border Animations">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x25A2;" Size="20"
+                             Color="{AppThemeBinding Light=#7C3AED, Dark=#A78BFA}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate borderanimations:BorderAnimationsPage}" Route="borderanimations" />
+    </FlyoutItem>
+
     <FlyoutItem Title="Skeleton">
         <FlyoutItem.FlyoutIcon>
             <FontImageSource Glyph="&#x2630;" Size="20"
@@ -1026,6 +1035,14 @@
                              Color="{AppThemeBinding Light=#9333EA, Dark=#C084FC}" />
         </FlyoutItem.FlyoutIcon>
         <ShellContent ContentTemplate="{DataTemplate mediaelement:MediaElementPage}" Route="mediaelement" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Video Text">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x24C9;" Size="20"
+                             Color="{AppThemeBinding Light=#9333EA, Dark=#C084FC}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate mediaelement:VideoTextPage}" Route="videotext" />
     </FlyoutItem>
 
     <FlyoutItem Title="Media Service">
