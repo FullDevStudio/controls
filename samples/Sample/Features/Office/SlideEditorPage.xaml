@@ -8,13 +8,13 @@
     <Grid RowDefinitions="Auto,*" Padding="12" RowSpacing="8">
 
         <HorizontalStackLayout Grid.Row="0" Spacing="8">
-            <Button Text="Toolbar" Clicked="OnToggleToolbar" />
-            <Button Text="Theme" Clicked="OnToggleTheme" />
-            <Label x:Name="StatusLabel" VerticalOptions="Center" FontSize="12" Opacity="0.7" />
+            <Button Text="Toolbar" AutomationId="SlideEditorToolbarToggle" Clicked="OnToggleToolbar" />
+            <Button Text="Theme" AutomationId="SlideEditorTheme" Clicked="OnToggleTheme" />
+            <Label x:Name="StatusLabel" AutomationId="SlideEditorStatus" VerticalOptions="Center" FontSize="12" Opacity="0.7" />
         </HorizontalStackLayout>
 
         <Border Grid.Row="1" StrokeThickness="1">
-            <office:SlideEditorView x:Name="Editor" />
+            <office:SlideEditorView x:Name="Editor" AutomationId="SlideEditorView" />
         </Border>
     </Grid>
 </ContentPage>

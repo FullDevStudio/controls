@@ -21,6 +21,7 @@
 
             <Picker Grid.Column="1"
                     x:Name="ThemePicker"
+                    AutomationId="ThemesPicker"
                     Title="Select a theme"
                     SelectedIndexChanged="OnThemePickerSelectedIndexChanged"
                     VerticalOptions="Center">
@@ -36,6 +37,7 @@
         <diagram:MermaidDiagramControl
             Grid.Row="1"
             x:Name="DiagramControl"
+            AutomationId="ThemesDiagram"
             DiagramText="graph TD&#10;    A[Client] --&gt; B[Load Balancer]&#10;    B --&gt; C[Server 1]&#10;    B --&gt; D[Server 2]&#10;    C --&gt; E[Database]&#10;    D --&gt; E"
             HorizontalOptions="Fill"
             VerticalOptions="Fill" />

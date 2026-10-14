@@ -95,7 +95,7 @@
                     <Button Text="Clear" Clicked="OnClearBadge" AutomationId="ClearBadge" />
                 </HorizontalStackLayout>
 
-                <Label Text="{Binding Status}" FontSize="13" TextColor="Gray" Margin="0,4,0,80" />
+                <Label Text="{Binding Status}" AutomationId="TabsStatus" FontSize="13" TextColor="Gray" Margin="0,4,0,80" />
             </VerticalStackLayout>
         </ScrollView>
     </shiny:ShinyTabItem>

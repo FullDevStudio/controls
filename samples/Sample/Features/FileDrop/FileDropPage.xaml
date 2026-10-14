@@ -22,7 +22,7 @@
                         StrokeThickness="1"
                         Padding="14"
                         StrokeShape="RoundRectangle 10">
-                    <Label Text="{Binding UnsupportedMessage}" TextColor="#78350F" />
+                    <Label Text="{Binding UnsupportedMessage}" TextColor="#78350F" AutomationId="FileDropUnsupported" />
                 </Border>
 
                 <Border IsVisible="{Binding IsSupported}"
@@ -50,7 +50,7 @@
                         <Label Text="Images only (changes the live filter)" VerticalTextAlignment="Center" />
                     </HorizontalStackLayout>
 
-                    <Button Text="Clear" Command="{Binding ClearCommand}" HorizontalOptions="Start" />
+                    <Button Text="Clear" Command="{Binding ClearCommand}" HorizontalOptions="Start" AutomationId="FileDropClearButton" />
                 </VerticalStackLayout>
 
                 <Border IsVisible="{Binding IsSupported}"

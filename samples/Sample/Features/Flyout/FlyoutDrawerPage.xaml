@@ -17,7 +17,8 @@
     -->
     <shiny:ShinyFlyout.StartTemplate>
         <DataTemplate>
-            <shiny:FlyoutPanel State="Hidden"
+            <shiny:FlyoutPanel AutomationId="DrawerPanel"
+                               State="Hidden"
                                CollapsedState="Hidden"
                                Presentation="Overlay"
                                ExpandedWidth="280"
@@ -42,7 +43,7 @@
             <Label Text="A classic drawer: hidden until you open it, floating over the content with a scrim, dismissed by tapping outside. Swipe in from the leading edge to drag it open."
                    Opacity="0.75" />
 
-            <Button Text="Open the drawer" Clicked="OnToggle" HorizontalOptions="Start" />
+            <Button Text="Open the drawer" Clicked="OnToggle" AutomationId="DrawerToggle" HorizontalOptions="Start" />
 
             <BoxView HeightRequest="1" Color="#33808080" />
 

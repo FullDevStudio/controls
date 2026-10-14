@@ -21,7 +21,7 @@
                 HorizontalTextAlignment="Center"
                 TextColor="Gray" />
 
-            <Label
+            <Label AutomationId="WeatherStatus"
                 Text="{Binding StatusMessage}"
                 FontSize="16"
                 HorizontalTextAlignment="Center"
@@ -29,11 +29,11 @@
 
             <BoxView HeightRequest="1" Color="LightGray" Margin="0,10" />
 
-            <Button
+            <Button AutomationId="WeatherOpenButton"
                 Text="Open Weather"
                 Command="{Binding OpenSheetCommand}" />
 
-            <Button
+            <Button AutomationId="WeatherCloseButton"
                 Text="Close Weather"
                 Command="{Binding CloseSheetCommand}" />
         </VerticalStackLayout>
@@ -42,7 +42,7 @@
 
   <shiny:ShinyContentPage.Panels>
     <!-- Top: Weather Widget -->
-    <shiny:FloatingPanel IsOpen="{Binding IsSheetOpen}"
+    <shiny:FloatingPanel IsOpen="{Binding IsSheetOpen}" AutomationId="WeatherPanel"
                   Position="Top"
                   HasBackdrop="True"
                   CloseOnBackdropTap="True"
@@ -64,7 +64,7 @@
                                FontSize="15"
                                FontAttributes="Bold"
                                TextColor="White" />
-                        <Label Text="San Francisco - Tap for details"
+                        <Label Text="San Francisco - Tap for details" AutomationId="WeatherHeaderTitle"
                                FontSize="11"
                                TextColor="#BFDBFE" />
                     </VerticalStackLayout>
@@ -279,7 +279,7 @@
                 </Border>
             </Grid>
 
-            <Button Text="Close Weather"
+            <Button Text="Close Weather" AutomationId="WeatherClosePanelButton"
                     BackgroundColor="#3B82F6"
                     TextColor="White"
                     Command="{Binding CloseSheetCommand}"

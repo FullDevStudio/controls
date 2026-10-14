@@ -22,7 +22,7 @@
                     StrokeThickness="1"
                     Padding="14"
                     StrokeShape="RoundRectangle 10">
-                <Label Text="{Binding UnsupportedMessage}" TextColor="#78350F" />
+                <Label Text="{Binding UnsupportedMessage}" TextColor="#78350F" AutomationId="TrayUnsupportedLabel" />
             </Border>
 
             <!-- Status -->
@@ -33,7 +33,7 @@
                     StrokeShape="RoundRectangle 10">
                 <VerticalStackLayout Spacing="6">
                     <Label Text="Status" FontAttributes="Bold" FontSize="14" />
-                    <Label Text="{Binding Status}" />
+                    <Label Text="{Binding Status}" AutomationId="TrayStatusLabel" />
                 </VerticalStackLayout>
             </Border>
 
@@ -42,10 +42,12 @@
                   ColumnDefinitions="*,*" ColumnSpacing="10" RowSpacing="10">
                 <Button Grid.Column="0"
                         Text="Start tray icon"
+                        AutomationId="TrayStartButton"
                         Command="{Binding StartCommand}"
                         IsEnabled="{Binding IsNotRunning}" />
                 <Button Grid.Column="1"
                         Text="Stop &amp; dispose"
+                        AutomationId="TrayStopButton"
                         Command="{Binding StopCommand}"
                         IsEnabled="{Binding IsRunning}" />
             </Grid>
@@ -89,9 +91,10 @@
                     StrokeShape="RoundRectangle 10">
                 <VerticalStackLayout Spacing="12">
                     <Label Text="Live updates" FontAttributes="Bold" FontSize="14" />
-                    <Label Text="{Binding Counter, StringFormat='Counter: {0} (also updates tooltip)'}" />
+                    <Label Text="{Binding Counter, StringFormat='Counter: {0} (also updates tooltip)'}" AutomationId="TrayCounterLabel" />
                     <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
                         <Button Grid.Column="0" Text="Increment"
+                                AutomationId="TrayIncrementButton"
                                 Command="{Binding IncrementCommand}"
                                 IsEnabled="{Binding IsRunning}" />
                         <Button Grid.Column="1" Text="Rebuild menu"

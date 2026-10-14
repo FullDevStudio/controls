@@ -18,7 +18,7 @@
 
             <Border Stroke="#E5E7EB" StrokeThickness="1" Padding="16"
                     StrokeShape="RoundRectangle 12">
-                <shiny:SkeletonView IsBusy="{Binding IsBusy}" ItemCount="4">
+                <shiny:SkeletonView AutomationId="ArticleSkeleton" IsBusy="{Binding IsBusy}" ItemCount="4">
                     <shiny:SkeletonView.Content>
                         <VerticalStackLayout Spacing="8">
                             <Label Text="Loaded Article" FontSize="16" FontAttributes="Bold" />
@@ -38,7 +38,7 @@
                     StrokeShape="RoundRectangle 12">
                 <!-- BaseColor feeds the shimmer highlight, so template shapes should use the same
                      fill (and follow the theme) or the sweep will not match them. -->
-                <shiny:SkeletonView IsBusy="{Binding IsCardBusy}"
+                <shiny:SkeletonView AutomationId="CardSkeleton" IsBusy="{Binding IsCardBusy}"
                                     BaseColor="{AppThemeBinding Light=#E1E1E6, Dark=#242B32}">
                     <shiny:SkeletonView.SkeletonTemplate>
                         <DataTemplate>

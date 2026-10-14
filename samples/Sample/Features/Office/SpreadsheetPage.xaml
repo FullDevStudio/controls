@@ -8,9 +8,9 @@
     <Grid RowDefinitions="Auto,*,Auto" Padding="12" RowSpacing="8">
 
         <HorizontalStackLayout Grid.Row="0" Spacing="8">
-            <Button Text="Add row" Clicked="OnAddRow" />
-            <Button Text="Theme" Clicked="OnToggleTheme" />
-            <Button Text="Shell on/off" Clicked="OnToggleShell" />
+            <Button Text="Add row" AutomationId="SpreadsheetAddRow" Clicked="OnAddRow" />
+            <Button Text="Theme" AutomationId="SpreadsheetTheme" Clicked="OnToggleTheme" />
+            <Button Text="Shell on/off" AutomationId="SpreadsheetShellToggle" Clicked="OnToggleShell" />
         </HorizontalStackLayout>
 
         <!--
@@ -21,6 +21,7 @@
         -->
         <Border Grid.Row="1" StrokeThickness="1">
             <office:SpreadsheetView x:Name="Sheet"
+                                    AutomationId="SpreadsheetView"
                                     DocumentName="Budget"
                                     UserName="Allan Ritchie"
                                     FileRequested="OnFileRequested"
@@ -29,6 +30,7 @@
 
         <Label Grid.Row="2"
                x:Name="LastFile"
+               AutomationId="SpreadsheetLastFile"
                FontSize="12"
                Opacity="0.7"
                Text="File ▸ Save, Save As, Export (xlsx, CSV, PDF) and Print write into the app's cache folder here; the path shows on this line." />

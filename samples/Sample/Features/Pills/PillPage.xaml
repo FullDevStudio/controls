@@ -30,7 +30,7 @@
                    FontAttributes="Bold" />
 
             <FlexLayout Wrap="Wrap" JustifyContent="Start" AlignItems="Center">
-                <sc:PillView Text="Purple" PillColor="#7C3AED" Margin="4" />
+                <sc:PillView AutomationId="PurplePill" Text="Purple" PillColor="#7C3AED" Margin="4" />
                 <sc:PillView Text="Teal" PillColor="#0D9488" Margin="4" />
                 <sc:PillView Text="Pink" PillColor="#EC4899" Margin="4" />
                 <sc:PillView Text="Dark" PillColor="#1F2937" Margin="4" />
@@ -64,10 +64,12 @@
                    FontSize="24"
                    FontAttributes="Bold" />
 
-            <Entry Placeholder="Type pill text..."
+            <Entry AutomationId="PillTextEntry"
+                   Placeholder="Type pill text..."
                    Text="{Binding CustomPillText}" />
 
-            <sc:PillView Text="{Binding CustomPillText}"
+            <sc:PillView AutomationId="BoundPill"
+                         Text="{Binding CustomPillText}"
                          Type="Info"
                          FontSize="14" />
 

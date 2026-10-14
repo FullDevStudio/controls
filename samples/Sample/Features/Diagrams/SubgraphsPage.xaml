@@ -19,6 +19,7 @@
         </VerticalStackLayout>
 
         <diagram:MermaidDiagramControl
+            AutomationId="SubgraphsDiagram"
             Grid.Row="1"
             DiagramText="graph TD&#10;    subgraph Frontend&#10;        A[Web App] --&gt; B[Mobile App]&#10;    end&#10;    subgraph Backend&#10;        C[API] --&gt; D[Database]&#10;    end&#10;    A --&gt; C&#10;    B --&gt; C"
             HorizontalOptions="Fill"

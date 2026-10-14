@@ -16,7 +16,7 @@
                              VerticalOptions="Center">
 
             <!-- Basic frosted glass card -->
-            <shiny:FrostedGlassView CornerRadius="16"
+            <shiny:FrostedGlassView AutomationId="GlassCard" CornerRadius="16"
                                     BlurRadius="20"
                                     TintColor="#80FFFFFF"
                                     TintOpacity="0.6">
@@ -32,7 +32,7 @@
             </shiny:FrostedGlassView>
 
             <!-- Dark frosted glass -->
-            <shiny:FrostedGlassView CornerRadius="12"
+            <shiny:FrostedGlassView AutomationId="DarkGlassCard" CornerRadius="12"
                                     BlurRadius="30"
                                     TintColor="#80000000"
                                     TintOpacity="0.5">

@@ -11,10 +11,10 @@
         <!-- options -->
         <ScrollView Orientation="Horizontal" Padding="12,8">
             <HorizontalStackLayout Spacing="14">
-                <Picker x:Name="PresetPicker" Title="Layout" WidthRequest="120" SelectedIndexChanged="OnPresetChanged" />
-                <Picker x:Name="FacePicker" Title="Labels" WidthRequest="140" SelectedIndexChanged="OnFaceChanged" />
+                <Picker x:Name="PresetPicker" AutomationId="GamepadPresetPicker" Title="Layout" WidthRequest="120" SelectedIndexChanged="OnPresetChanged" />
+                <Picker x:Name="FacePicker" AutomationId="GamepadFacePicker" Title="Labels" WidthRequest="140" SelectedIndexChanged="OnFaceChanged" />
                 <HorizontalStackLayout Spacing="4">
-                    <Switch x:Name="InlineSwitch" Toggled="OnInlineToggled" />
+                    <Switch x:Name="InlineSwitch" AutomationId="GamepadInlineSwitch" Toggled="OnInlineToggled" />
                     <Label Text="Inline" VerticalOptions="Center" />
                 </HorizontalStackLayout>
                 <HorizontalStackLayout Spacing="4">
@@ -26,7 +26,7 @@
                     <Label Text="Turbo A" VerticalOptions="Center" />
                 </HorizontalStackLayout>
                 <HorizontalStackLayout Spacing="4">
-                    <Switch x:Name="FadeSwitch" Toggled="OnFadeToggled" />
+                    <Switch x:Name="FadeSwitch" AutomationId="GamepadFadeSwitch" Toggled="OnFadeToggled" />
                     <Label Text="Idle fade" VerticalOptions="Center" />
                 </HorizontalStackLayout>
                 <HorizontalStackLayout Spacing="4">
@@ -39,7 +39,7 @@
                     <Label Text="D-pad haptics" VerticalOptions="Center" />
                 </HorizontalStackLayout>
                 <HorizontalStackLayout Spacing="4">
-                    <Switch x:Name="EditSwitch" Toggled="OnEditToggled" />
+                    <Switch x:Name="EditSwitch" AutomationId="GamepadEditSwitch" Toggled="OnEditToggled" />
                     <Label Text="Edit layout" VerticalOptions="Center" />
                 </HorizontalStackLayout>
             </HorizontalStackLayout>
@@ -53,13 +53,13 @@
                     <TapGestureRecognizer Tapped="OnFieldTapped" />
                 </AbsoluteLayout.GestureRecognizers>
                 <Ellipse x:Name="Player" Fill="#38BDF8" WidthRequest="28" HeightRequest="28" />
-                <Label x:Name="Hud" TextColor="#CBD5E1" FontSize="12" FontFamily="Courier"
+                <Label x:Name="Hud" AutomationId="GamepadHud" TextColor="#CBD5E1" FontSize="12" FontFamily="Courier"
                        AbsoluteLayout.LayoutBounds="0.5,0,AutoSize,AutoSize"
                        AbsoluteLayout.LayoutFlags="PositionProportional"
                        Margin="0,8,0,0" HorizontalTextAlignment="Center" />
             </AbsoluteLayout>
 
-            <shiny:GamepadView x:Name="Pad"
+            <shiny:GamepadView x:Name="Pad" AutomationId="GamepadView"
                                Preset="Standard"
                                HideWhenControllerConnected="True"
                                IdleDelay="0:0:2"

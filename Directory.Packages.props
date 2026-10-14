@@ -59,6 +59,7 @@
         <PackageVersion Include="Microsoft.Maui.DevFlow.Driver" Version="0.1.0-preview.12.26479.1"/>
         <PackageVersion Include="Shouldly" Version="4.3.0"/>
         <PackageVersion Include="TUnit" Version="1.64.6"/>
+        <PackageVersion Include="Microsoft.Playwright" Version="1.62.0"/>
         <PackageVersion Include="xunit" Version="2.9.3"/>
         <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5"/>
     </ItemGroup>

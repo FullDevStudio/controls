@@ -18,6 +18,7 @@
                 <Label Text="Pulse — Scale + BackgroundColor, alternating" FontSize="12" TextColor="Gray" />
 
                 <Border x:Name="PulseBox"
+                        AutomationId="PulseBox"
                         WidthRequest="120"
                         HeightRequest="120"
                         HorizontalOptions="Start"
@@ -50,6 +51,7 @@
                 <Label Text="Slide in — cubic-bezier() parsed from a string" FontSize="12" TextColor="Gray" />
 
                 <Border x:Name="SlideBox"
+                        AutomationId="SlideBox"
                         BackgroundColor="#10B981"
                         WidthRequest="160"
                         HeightRequest="60"
@@ -128,15 +130,16 @@
                 <Label Text="Drawn scene — same timeline model, rendered to a canvas" FontSize="12" TextColor="Gray" />
 
                 <kf:KeyframeView x:Name="SceneView"
+                                 AutomationId="KeyframeScene"
                                  HeightRequest="200"
                                  Progress="{Binding Source={x:Reference Scrubber}, Path=Value, Mode=TwoWay}" />
 
-                <Slider x:Name="Scrubber" Minimum="0" Maximum="1" />
+                <Slider x:Name="Scrubber" AutomationId="KeyframeScrubber" Minimum="0" Maximum="1" />
 
                 <HorizontalStackLayout Spacing="12">
-                    <Button Text="Play" Clicked="OnPlay" />
-                    <Button Text="Pause" Clicked="OnPause" />
-                    <Button Text="Reverse" Clicked="OnReverse" />
+                    <Button AutomationId="KeyframePlayButton" Text="Play" Clicked="OnPlay" />
+                    <Button AutomationId="KeyframePauseButton" Text="Pause" Clicked="OnPause" />
+                    <Button AutomationId="KeyframeReverseButton" Text="Reverse" Clicked="OnReverse" />
                 </HorizontalStackLayout>
             </VerticalStackLayout>
 

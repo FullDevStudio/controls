@@ -5,9 +5,11 @@
              xmlns:local="clr-namespace:Sample.Features.Scheduler"
              x:Class="Sample.Features.Scheduler.CalendarListPage"
              x:DataType="local:CalendarListViewModel"
-             Title="Event List">
+             Title="Event List"
+             AutomationId="CalendarListPage">
 
     <shiny:SchedulerCalendarListView
+        AutomationId="SchedulerCalendarList"
         Provider="{Binding Provider}"
         SelectedDate="{Binding SelectedDate}"
         DefaultEventColor="CornflowerBlue" />

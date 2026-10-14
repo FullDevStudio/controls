@@ -35,10 +35,10 @@
                               Gap="8"
                               BackgroundColor="#1A0284C7"
                               AutomationId="YogaPlayground">
-                <BoxView Color="#0284C7" shiny:YogaLayout.NodeWidth="60" shiny:YogaLayout.NodeHeight="60" />
-                <BoxView Color="#7C3AED" shiny:YogaLayout.NodeWidth="90" shiny:YogaLayout.NodeHeight="40" />
+                <BoxView Color="#0284C7" shiny:YogaLayout.NodeWidth="60" shiny:YogaLayout.NodeHeight="60" AutomationId="YogaBoxA" />
+                <BoxView Color="#7C3AED" shiny:YogaLayout.NodeWidth="90" shiny:YogaLayout.NodeHeight="40" AutomationId="YogaBoxB" />
                 <BoxView Color="#059669" shiny:YogaLayout.NodeWidth="40" shiny:YogaLayout.NodeHeight="80" />
-                <BoxView Color="#DC2626" shiny:YogaLayout.NodeWidth="70" shiny:YogaLayout.NodeHeight="50" />
+                <BoxView Color="#DC2626" shiny:YogaLayout.NodeWidth="70" shiny:YogaLayout.NodeHeight="50" AutomationId="YogaBoxD" />
             </shiny:YogaLayout>
 
             <!-- ============================================================ -->
@@ -50,19 +50,19 @@
                 <Label Text="Profile" TextColor="#93C5FD" />
             </shiny:YogaLayout>
             <!-- Nothing grows here: an auto start margin takes the free space and pushes Done to the end. -->
-            <shiny:YogaLayout FlexDirection="Row" AlignItems="Center" Gap="8" Padding="12,8" BackgroundColor="#0F172A">
+            <shiny:YogaLayout FlexDirection="Row" AlignItems="Center" Gap="8" Padding="12,8" BackgroundColor="#0F172A" AutomationId="YogaDoneBar">
                 <Label Text="Back" TextColor="#93C5FD" />
-                <Label Text="Done" TextColor="#93C5FD" shiny:YogaLayout.AutoMargins="Start" />
+                <Label Text="Done" TextColor="#93C5FD" shiny:YogaLayout.AutoMargins="Start" AutomationId="YogaDone" />
             </shiny:YogaLayout>
 
             <!-- ============================================================ -->
             <Label Text="Card: aspect ratio and an absolute badge" FontAttributes="Bold" />
             <shiny:YogaLayout FlexDirection="Row" Gap="12">
-                <shiny:YogaLayout shiny:YogaLayout.FlexGrow="1" shiny:YogaLayout.FlexBasis="0" BackgroundColor="#F1F5F9">
+                <shiny:YogaLayout shiny:YogaLayout.FlexGrow="1" shiny:YogaLayout.FlexBasis="0" BackgroundColor="#F1F5F9" AutomationId="YogaCard">
                     <!-- Width comes from the column's stretch; AspectRatio derives the height. -->
-                    <BoxView Color="#7C3AED" shiny:YogaLayout.AspectRatio="1.5" />
+                    <BoxView Color="#7C3AED" shiny:YogaLayout.AspectRatio="1.5" AutomationId="YogaCardImage" />
                     <Label Text="Aurora" Margin="8" FontAttributes="Bold" />
-                    <Border BackgroundColor="#DC2626" StrokeThickness="0" Padding="8,2"
+                    <Border BackgroundColor="#DC2626" StrokeThickness="0" Padding="8,2" AutomationId="YogaBadge"
                             StrokeShape="RoundRectangle 10"
                             shiny:YogaLayout.PositionType="Absolute"
                             shiny:YogaLayout.Top="8"

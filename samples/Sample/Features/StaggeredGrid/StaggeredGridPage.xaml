@@ -17,20 +17,22 @@
                    FontAttributes="Bold" />
 
             <Label Text="{Binding StatusMessage}"
+                   AutomationId="StaggeredStatusLabel"
                    FontSize="13"
                    TextColor="Gray" />
 
             <HorizontalStackLayout Spacing="12" VerticalOptions="Center">
                 <Label Text="Columns:" VerticalTextAlignment="Center" />
-                <Button Text="-" Command="{Binding DecrementColumnsCommand}" WidthRequest="40" />
-                <Label Text="{Binding ColumnCount}" VerticalTextAlignment="Center" FontAttributes="Bold" />
-                <Button Text="+" Command="{Binding IncrementColumnsCommand}" WidthRequest="40" />
-                <Button Text="Shuffle" Command="{Binding ShuffleCommand}" />
+                <Button Text="-" Command="{Binding DecrementColumnsCommand}" WidthRequest="40" AutomationId="StaggeredMinus" />
+                <Label Text="{Binding ColumnCount}" VerticalTextAlignment="Center" FontAttributes="Bold" AutomationId="StaggeredColumnsLabel" />
+                <Button Text="+" Command="{Binding IncrementColumnsCommand}" WidthRequest="40" AutomationId="StaggeredPlus" />
+                <Button Text="Shuffle" Command="{Binding ShuffleCommand}" AutomationId="StaggeredShuffle" />
             </HorizontalStackLayout>
         </VerticalStackLayout>
 
         <!-- Pinterest grid — the control handles its own scrolling, do NOT wrap in ScrollView -->
         <shiny:StaggeredGrid Grid.Row="1"
+                             AutomationId="PinGrid"
                              Margin="12,0,12,0"
                              ItemsSource="{Binding Items}"
                              ColumnCount="{Binding ColumnCount}"

@@ -20,6 +20,7 @@
         <Project Path="samples/Sample.MacOS/Sample.MacOS.csproj" />
         <Project Path="samples/Sample.Linux/Sample.Linux.csproj" />
         <Project Path="tests/Sample.UITests/Sample.UITests.csproj" />
+        <Project Path="tests/Sample.Blazor.UITests/Sample.Blazor.UITests.csproj" />
     </Folder>
     <Project Path="src/Shiny.Maui.Controls.SpeechAddins/Shiny.Maui.Controls.SpeechAddins.csproj" />
     <Project Path="src/Shiny.Controls.MotionIcons.Shared/Shiny.Controls.MotionIcons.Shared.csproj" />

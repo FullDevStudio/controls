@@ -63,7 +63,7 @@
             <Label Text="Setting Text to an empty string hides the badge. Increment to see scale-in animation." />
 
             <HorizontalStackLayout Spacing="12">
-                <shiny:BadgeView Text="{Binding MailCount}" MaxCount="99">
+                <shiny:BadgeView AutomationId="MailBadge" Text="{Binding MailCount}" MaxCount="99">
                     <Border Stroke="#7C3AED" StrokeThickness="2" Padding="14,10"
                             StrokeShape="RoundRectangle 10"
                             BackgroundColor="#F5F3FF">
@@ -71,15 +71,15 @@
                     </Border>
                 </shiny:BadgeView>
 
-                <Button Text="+" Command="{Binding IncrementCommand}" WidthRequest="44" />
-                <Button Text="Clear" Command="{Binding ClearCommand}" />
+                <Button AutomationId="IncrementMailButton" Text="+" Command="{Binding IncrementCommand}" WidthRequest="44" />
+                <Button AutomationId="ClearMailButton" Text="Clear" Command="{Binding ClearCommand}" />
             </HorizontalStackLayout>
 
             <!-- MaxCount overflow -->
             <Label Text="MaxCount Overflow" FontSize="18" FontAttributes="Bold" />
             <Label Text="Numeric values above MaxCount are displayed as '{MaxCount}+'." />
 
-            <shiny:BadgeView Text="{Binding CartCount}" MaxCount="99"
+            <shiny:BadgeView AutomationId="CartBadge" Text="{Binding CartCount}" MaxCount="99"
                              BadgeColor="#059669"
                              HorizontalOptions="Start">
                 <Border Stroke="#E5E7EB" StrokeThickness="1" Padding="14,10"
@@ -93,7 +93,7 @@
             <Label Text="A simple notification dot — set IsDot to true. Useful for 'has unread' states." />
 
             <HorizontalStackLayout Spacing="20">
-                <shiny:BadgeView IsDot="{Binding HasNew}"
+                <shiny:BadgeView AutomationId="DotBadge" IsDot="{Binding HasNew}"
                                  BadgeColor="#3B82F6"
                                  OffsetX="2" OffsetY="2">
                     <Border Stroke="#E5E7EB" StrokeThickness="1" Padding="12"
@@ -105,7 +105,7 @@
                     </Border>
                 </shiny:BadgeView>
 
-                <Button Text="Toggle dot" Command="{Binding ToggleDotCommand}" />
+                <Button AutomationId="ToggleDotButton" Text="Toggle dot" Command="{Binding ToggleDotCommand}" />
             </HorizontalStackLayout>
 
             <!-- Pulsing -->
@@ -113,7 +113,7 @@
             <Label Text="Set IsPulsing to gently call attention to the badge." />
 
             <HorizontalStackLayout Spacing="20">
-                <shiny:BadgeView Text="NEW"
+                <shiny:BadgeView AutomationId="PulseBadge" Text="NEW"
                                  IsPulsing="{Binding IsPulsing}"
                                  BadgeColor="#F59E0B"
                                  FontSize="9"
@@ -124,7 +124,7 @@
                     </Border>
                 </shiny:BadgeView>
 
-                <Button Text="Toggle pulse" Command="{Binding TogglePulseCommand}" />
+                <Button AutomationId="TogglePulseButton" Text="Toggle pulse" Command="{Binding TogglePulseCommand}" />
             </HorizontalStackLayout>
 
             <!-- Custom colors -->

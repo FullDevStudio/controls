@@ -9,12 +9,14 @@
              AutomationId="TreeDataGridPage">
 
     <Grid RowDefinitions="Auto,*" Padding="16" RowSpacing="8">
-        <Label Grid.Row="0" Text="{Binding StatusMessage}" FontSize="13" TextColor="Gray" />
+        <Label Grid.Row="0" Text="{Binding StatusMessage}" FontSize="13" TextColor="Gray"
+               AutomationId="TreeStatus" />
 
         <!-- TreeDataGrid is DataGrid with a name that says what it is: hand it a ChildrenSelector
              (and a ChildrenLoader for levels that need fetching) and the first column grows an
              indent and a caret. Sorting and filtering apply per level, so children stay put. -->
         <shiny:TreeDataGrid Grid.Row="1"
+                            AutomationId="AccountsGrid"
                             ItemsSource="{Binding Accounts}"
                             ChildrenSelector="{Binding ChildrenSelector}"
                             ChildrenLoader="{Binding ChildrenLoader}"

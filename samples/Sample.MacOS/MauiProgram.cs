@@ -36,7 +36,11 @@ public static class MauiProgram
                     o.Placement = QuickEntryPlacement.TopCenter;
                     o.ScreenGlow = ScreenGlowTrigger.WhileBusy;
                 }))
-            .UseShinyShell(x => x.AddGeneratedMaps())
+            .UseShinyShell(x => x
+                .AddGeneratedMaps()
+                // the standalone header-peek page shares MinimizedSheetViewModel; its [ShellMap] only covers MinimizedSheetPage
+                .Add<Sample.Features.FloatingPanel.MinimizedSheetStandalonePage, Sample.Features.FloatingPanel.MinimizedSheetViewModel>(registerRoute: false)
+            )
             .UseTrayIcon()
             .UseFileDrop()
             .UseDesktopQuickEntry()

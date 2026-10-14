@@ -22,11 +22,13 @@
                        TextColor="Gray" />
 
                 <Label Text="{Binding LastViewerEvent, StringFormat='Last viewer event: {0}'}"
+                       AutomationId="ViewerEventLabel"
                        FontSize="14"
                        HorizontalTextAlignment="Center"
                        TextColor="Gray" />
 
                 <shiny:ImageViewer Source="dotnet_bot.png"
+                                   AutomationId="LocalImageViewer"
                                    IsOpen="{Binding IsViewerOpen}"
                                    HeightRequest="200"
                                    Aspect="AspectFit"
@@ -45,6 +47,7 @@
                     <shiny:ImageViewer.FooterTemplate>
                         <DataTemplate x:DataType="local:ImageViewerViewModel">
                             <Button Text="Close"
+                                    AutomationId="ViewerFooterCloseButton"
                                     Command="{Binding CloseViewerCommand}"
                                     TextColor="White"
                                     BackgroundColor="{x:Static Colors.DimGray}"
@@ -81,6 +84,7 @@
                        Margin="0,12,0,0" />
 
                 <shiny:ImageViewer Uri="https://example.com/does-not-exist.png"
+                                   AutomationId="BrokenImageViewer"
                                    ErrorImage="dotnet_bot.png"
                                    HeightRequest="140"
                                    Aspect="AspectFit" />

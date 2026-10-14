@@ -8,8 +8,8 @@
 
     <Grid RowDefinitions="Auto,*">
         <HorizontalStackLayout Spacing="10" Padding="16">
-            <Button Text="Add Item" Command="{Binding AddCommand}" />
-            <Button Text="Remove Item" Command="{Binding RemoveCommand}" />
+            <Button Text="Add Item" Command="{Binding AddCommand}" AutomationId="DynamicAddButton" />
+            <Button Text="Remove Item" Command="{Binding RemoveCommand}" AutomationId="DynamicRemoveButton" />
         </HorizontalStackLayout>
 
         <tv:TableView Grid.Row="1">

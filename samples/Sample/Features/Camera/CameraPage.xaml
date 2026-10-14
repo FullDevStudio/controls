@@ -15,6 +15,7 @@
                  OnDetected handlers stay wired across swaps. The BoxesSwitch toggles the active analyzer's
                  ShowBoundingBox; the ScanAreaSwitch sets a center-band ScanWindow on the barcode analyzer. -->
             <cam:CameraView x:Name="Camera"
+                            AutomationId="CameraPreview"
                             Facing="Back"
                             ScaleMode="AspectFill"
                             IsPinchToZoomEnabled="True" />
@@ -38,6 +39,7 @@
 
             <!-- status / errors -->
             <Label x:Name="StatusLabel"
+                   AutomationId="CameraStatus"
                    Margin="16"
                    VerticalOptions="Start"
                    HorizontalOptions="Center"
@@ -83,8 +85,8 @@
                 <Button Text="Scan" Clicked="OnScanClicked" />
 
                 <Grid ColumnDefinitions="*,*,*,*,*" ColumnSpacing="6">
-                    <Button Grid.Column="0" Text="Options" Clicked="OnOptionsClicked" />
-                    <Button Grid.Column="1" Text="Flip" Clicked="OnFlipClicked" />
+                    <Button Grid.Column="0" Text="Options" Clicked="OnOptionsClicked" AutomationId="CameraOptionsButton" />
+                    <Button Grid.Column="1" Text="Flip" Clicked="OnFlipClicked" AutomationId="CameraFlipButton" />
                     <Button Grid.Column="2" Text="Photo" Clicked="OnCaptureClicked" />
                     <Button Grid.Column="3" x:Name="RecordButton" Text="Record" Clicked="OnRecordClicked" />
                     <Button Grid.Column="4" Text="Torch" Clicked="OnTorchClicked" />
@@ -96,6 +98,7 @@
     <shiny:ShinyContentPage.Panels>
         <!-- bottom-sheet of all the detector + camera options -->
         <shiny:FloatingPanel x:Name="OptionsPanel"
+                             AutomationId="CameraOptionsPanel"
                              IsOpen="False"
                              HasBackdrop="True"
                              CloseOnBackdropTap="True"

@@ -32,7 +32,7 @@
                                   ColdColor="#10B981"
                                   HotColor="#F59E0B"
                                   ValueFormat="0.#" />
-            <Label Text="{Binding Intensity, StringFormat='Intensity: {0:0.#}'}" />
+            <Label AutomationId="IntensityLabel" Text="{Binding Intensity, StringFormat='Intensity: {0:0.#}'}" />
 
             <!-- Large Track & Thumb -->
             <Label Text="Large Track &amp; Thumb" FontSize="18" FontAttributes="Bold" />
@@ -122,7 +122,7 @@
                     <shiny:SliderMark Value="50" Text="Max" Color="#DC2626" />
                 </shiny:Slider.Marks>
             </shiny:Slider>
-            <Label Text="{Binding Pressure, StringFormat='Pressure: {0:0} psi'}" />
+            <Label AutomationId="PressureLabel" Text="{Binding Pressure, StringFormat='Pressure: {0:0} psi'}" />
 
             <!-- DragCompletedCommand: react once, when the thumb is let go -->
             <Label Text="Commit on Release (DragCompleted)" FontSize="18" FontAttributes="Bold" />
@@ -131,7 +131,7 @@
                                   Minimum="0"
                                   Maximum="100"
                                   DragCompletedCommand="{Binding CommitSetpointCommand}" />
-            <Label Text="{Binding Setpoint, StringFormat='Live: {0:0}'}" />
+            <Label AutomationId="SetpointLiveLabel" Text="{Binding Setpoint, StringFormat='Live: {0:0}'}" />
             <Label AutomationId="SetpointCommitted" Text="{Binding CommittedSetpoint}" />
 
             <!-- Bound Marks: the stops come from the view model -->
@@ -145,8 +145,8 @@
                                   MarksSource="{Binding Bookmarks}"
                                   ValueFormat="0" />
             <HorizontalStackLayout Spacing="8">
-                <Button Text="Bookmark here" Command="{Binding AddBookmarkCommand}" />
-                <Button Text="Clear" Command="{Binding ClearBookmarksCommand}" />
+                <Button AutomationId="AddBookmarkButton" Text="Bookmark here" Command="{Binding AddBookmarkCommand}" />
+                <Button AutomationId="ClearBookmarksButton" Text="Clear" Command="{Binding ClearBookmarksCommand}" />
             </HorizontalStackLayout>
 
             <!-- Custom Thumb: the value rides in it -->
@@ -223,7 +223,7 @@
                     </shiny:Slider.Marks>
                 </shiny:Slider>
             </HorizontalStackLayout>
-            <Label Text="{Binding Bass, StringFormat='Bass: {0:0}'}" />
+            <Label AutomationId="BassLabel" Text="{Binding Bass, StringFormat='Bass: {0:0}'}" />
             <Label Text="{Binding Treble, StringFormat='Treble: {0:0}'}" />
 
         </VerticalStackLayout>

@@ -28,6 +28,7 @@
                    Margin="0,0,0,4" />
             <diagram:MermaidDiagramControl
                 Grid.Row="1"
+                AutomationId="DirectionsTDDiagram"
                 DiagramText="graph TD&#10;    A[Alpha] --&gt; B[Beta]&#10;    B --&gt; C[Gamma]&#10;    A --&gt; C"
                 AllowPanning="False"
                 AllowZooming="False"
@@ -45,6 +46,7 @@
                    Margin="0,0,0,4" />
             <diagram:MermaidDiagramControl
                 Grid.Row="1"
+                AutomationId="DirectionsLRDiagram"
                 DiagramText="graph LR&#10;    A[Alpha] --&gt; B[Beta]&#10;    B --&gt; C[Gamma]&#10;    A --&gt; C"
                 AllowPanning="False"
                 AllowZooming="False"
@@ -62,6 +64,7 @@
                    Margin="0,0,0,4" />
             <diagram:MermaidDiagramControl
                 Grid.Row="1"
+                AutomationId="DirectionsBTDiagram"
                 DiagramText="graph BT&#10;    A[Alpha] --&gt; B[Beta]&#10;    B --&gt; C[Gamma]&#10;    A --&gt; C"
                 AllowPanning="False"
                 AllowZooming="False"
@@ -79,6 +82,7 @@
                    Margin="0,0,0,4" />
             <diagram:MermaidDiagramControl
                 Grid.Row="1"
+                AutomationId="DirectionsRLDiagram"
                 DiagramText="graph RL&#10;    A[Alpha] --&gt; B[Beta]&#10;    B --&gt; C[Gamma]&#10;    A --&gt; C"
                 AllowPanning="False"
                 AllowZooming="False"

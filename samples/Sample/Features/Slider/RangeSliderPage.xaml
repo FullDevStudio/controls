@@ -24,7 +24,7 @@
                                ValueFormat="C0" />
             <Label AutomationId="PriceLabel"
                    Text="{Binding PriceLower, StringFormat='{0:C0} — '}" />
-            <Label Text="{Binding PriceUpper, StringFormat='… {0:C0}'}" />
+            <Label AutomationId="PriceUpperLabel" Text="{Binding PriceUpper, StringFormat='… {0:C0}'}" />
 
             <!-- DragCompletedCommand: search once, when a thumb is let go -->
             <Label Text="Search on Release (DragCompleted)" FontSize="18" FontAttributes="Bold" />
@@ -103,8 +103,8 @@
                     </DataTemplate>
                 </shiny:RangeSlider.UpperThumbTemplate>
             </shiny:RangeSlider>
-            <Label Text="{Binding ShiftStart, StringFormat='Shift: {0:00}:00 –'}" />
-            <Label Text="{Binding ShiftEnd, StringFormat='{0:00}:00'}" />
+            <Label AutomationId="ShiftStartLabel" Text="{Binding ShiftStart, StringFormat='Shift: {0:00}:00 –'}" />
+            <Label AutomationId="ShiftEndLabel" Text="{Binding ShiftEnd, StringFormat='{0:00}:00'}" />
 
             <!-- No tooltip -->
             <Label Text="Age Range (no tooltip)" FontSize="18" FontAttributes="Bold" />

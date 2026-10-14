@@ -58,7 +58,7 @@
                     <shiny:StateViewState Name="Error">
                         <VerticalStackLayout Spacing="6" VerticalOptions="Center">
                             <Label Text="Something went wrong" FontAttributes="Bold" HorizontalOptions="Center" />
-                            <Button Text="Try again" Command="{Binding LoadCommand}" HorizontalOptions="Center" />
+                            <Button Text="Try again" AutomationId="StateTryAgainButton" Command="{Binding LoadCommand}" HorizontalOptions="Center" />
                         </VerticalStackLayout>
                     </shiny:StateViewState>
                 </shiny:StateView>

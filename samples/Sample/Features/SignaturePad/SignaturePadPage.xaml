@@ -21,7 +21,7 @@
                    HorizontalTextAlignment="Center"
                    TextColor="Gray" />
 
-            <Label Text="{Binding StatusMessage}"
+            <Label AutomationId="SignatureStatusLabel" Text="{Binding StatusMessage}"
                    FontSize="16"
                    HorizontalTextAlignment="Center"
                    TextColor="Gray" />
@@ -31,7 +31,7 @@
             <Button AutomationId="CaptureSignatureButton" Text="Capture Signature"
                     Command="{Binding OpenSignatureCommand}" />
 
-            <Button Text="Clear Signature"
+            <Button AutomationId="ClearSignatureButton" Text="Clear Signature"
                     BackgroundColor="#EF4444"
                     TextColor="White"
                     Command="{Binding ClearSignatureCommand}"
@@ -51,7 +51,7 @@
   </shiny:ShinyContentPage.PageContent>
 
   <shiny:ShinyContentPage.Panels>
-    <shiny:SignaturePad IsOpen="{Binding IsSignatureOpen}"
+    <shiny:SignaturePad AutomationId="SignaturePanel" IsOpen="{Binding IsSignatureOpen}"
                         StrokeColor="Black"
                         SignatureBackgroundColor="#F8F8F8"
                         StrokeWidth="3"

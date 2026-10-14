@@ -21,13 +21,13 @@
 
             <!-- Button -->
             <Label Text="Button" FontAttributes="Bold" />
-            <Button Text="Tap Me" />
+            <Button Text="Tap Me" AutomationId="FeedbackButton" />
 
             <BoxView HeightRequest="1" Color="LightGray" />
 
             <!-- Entry -->
             <Label Text="Entry" FontAttributes="Bold" />
-            <Entry Placeholder="Type something..." />
+            <Entry Placeholder="Type something..." AutomationId="FeedbackEntry" />
 
             <BoxView HeightRequest="1" Color="LightGray" />
 
@@ -40,19 +40,19 @@
 
             <!-- Slider -->
             <Label Text="Slider" FontAttributes="Bold" />
-            <Slider Minimum="0" Maximum="100" Value="50" />
+            <Slider Minimum="0" Maximum="100" Value="50" AutomationId="FeedbackSlider" />
 
             <BoxView HeightRequest="1" Color="LightGray" />
 
             <!-- Switch -->
             <Label Text="Switch" FontAttributes="Bold" />
-            <Switch IsToggled="False" />
+            <Switch IsToggled="False" AutomationId="FeedbackSwitch" />
 
             <BoxView HeightRequest="1" Color="LightGray" />
 
             <!-- CheckBox -->
             <Label Text="CheckBox" FontAttributes="Bold" />
-            <CheckBox IsChecked="False" />
+            <CheckBox IsChecked="False" AutomationId="FeedbackCheckBox" />
 
             <BoxView HeightRequest="1" Color="LightGray" />
 
@@ -60,7 +60,7 @@
             <Label Text="RadioButton" FontAttributes="Bold" />
             <HorizontalStackLayout Spacing="12">
                 <RadioButton Content="Option A" GroupName="demo" />
-                <RadioButton Content="Option B" GroupName="demo" />
+                <RadioButton Content="Option B" GroupName="demo" AutomationId="FeedbackRadioB" />
                 <RadioButton Content="Option C" GroupName="demo" />
             </HorizontalStackLayout>
 
@@ -80,7 +80,7 @@
 
             <!-- Picker -->
             <Label Text="Picker" FontAttributes="Bold" />
-            <Picker Title="Select an item">
+            <Picker Title="Select an item" AutomationId="FeedbackPicker">
                 <Picker.ItemsSource>
                     <x:Array Type="{x:Type x:String}">
                         <x:String>Alpha</x:String>
@@ -102,7 +102,7 @@
             <!-- Stepper -->
             <Label Text="Stepper" FontAttributes="Bold" />
             <HorizontalStackLayout Spacing="12">
-                <Stepper Minimum="0" Maximum="10" Increment="1" />
+                <Stepper Minimum="0" Maximum="10" Increment="1" AutomationId="FeedbackStepper" />
                 <Label Text="Tap +/- to trigger feedback"
                        VerticalOptions="Center"
                        FontSize="12"

@@ -25,9 +25,9 @@
                    FontSize="12" />
 
             <shiny:ButtonGroup AutomationId="ActionGroup">
-                <shiny:ShinyButton Text="Archive" Appearance="Outlined"
+                <shiny:ShinyButton AutomationId="ArchiveButton" Text="Archive" Appearance="Outlined"
                                    Command="{Binding NoteCommand}" CommandParameter="Archive" />
-                <shiny:ShinyButton Text="Report" Appearance="Outlined"
+                <shiny:ShinyButton AutomationId="ReportButton" Text="Report" Appearance="Outlined"
                                    Command="{Binding NoteCommand}" CommandParameter="Report" />
                 <shiny:ShinyButton Text="Snooze" Appearance="Outlined"
                                    Command="{Binding NoteCommand}" CommandParameter="Snooze" />
@@ -41,9 +41,9 @@
             <shiny:ButtonGroup SelectionMode="Single"
                                SelectedIndex="{Binding RangeIndex}"
                                AutomationId="RangeGroup">
-                <shiny:ShinyButton Text="Day" />
-                <shiny:ShinyButton Text="Week" />
-                <shiny:ShinyButton Text="Month" />
+                <shiny:ShinyButton AutomationId="RangeDay" Text="Day" />
+                <shiny:ShinyButton AutomationId="RangeWeek" Text="Week" />
+                <shiny:ShinyButton AutomationId="RangeMonth" Text="Month" />
             </shiny:ButtonGroup>
 
             <Label Text="{Binding RangeSummary}" FontSize="12" AutomationId="RangeSummary" />
@@ -56,9 +56,9 @@
             <shiny:ButtonGroup SelectionMode="Multiple"
                                SelectionChanged="OnFormatSelectionChanged"
                                AutomationId="FormatGroup">
-                <shiny:ShinyButton Text="B" FontAttributes="Bold" />
-                <shiny:ShinyButton Text="I" FontAttributes="Italic" />
-                <shiny:ShinyButton Text="U" />
+                <shiny:ShinyButton AutomationId="FormatBold" Text="B" FontAttributes="Bold" />
+                <shiny:ShinyButton AutomationId="FormatItalic" Text="I" FontAttributes="Italic" />
+                <shiny:ShinyButton AutomationId="FormatUnderline" Text="U" />
             </shiny:ButtonGroup>
 
             <Label Text="{Binding FormatSummary}" FontSize="12" AutomationId="FormatSummary" />
@@ -84,10 +84,10 @@
 
             <shiny:ButtonGroup>
                 <shiny:ButtonGroupText Text="USD" />
-                <shiny:ShinyButton Text="−" Appearance="Outlined"
+                <shiny:ShinyButton AutomationId="AmountDecrease" Text="−" Appearance="Outlined"
                                    SemanticProperties.Description="Decrease"
                                    Command="{Binding AdjustCommand}" CommandParameter="-1" />
-                <shiny:ShinyButton Text="+" Appearance="Outlined"
+                <shiny:ShinyButton AutomationId="AmountIncrease" Text="+" Appearance="Outlined"
                                    SemanticProperties.Description="Increase"
                                    Command="{Binding AdjustCommand}" CommandParameter="1" />
             </shiny:ButtonGroup>

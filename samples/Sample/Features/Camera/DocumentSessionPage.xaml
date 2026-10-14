@@ -7,7 +7,7 @@
              AutomationId="DocumentSessionPage">
 
     <ContentPage.ToolbarItems>
-        <ToolbarItem Text="Clear" Clicked="OnClearClicked" />
+        <ToolbarItem Text="Clear" Clicked="OnClearClicked" AutomationId="ClearDocumentsButton" />
     </ContentPage.ToolbarItems>
 
     <CollectionView ItemsSource="{Binding Documents}"
@@ -15,6 +15,7 @@
         <CollectionView.EmptyView>
             <VerticalStackLayout Padding="32" Spacing="8" VerticalOptions="Center">
                 <Label Text="No documents scanned yet"
+                       AutomationId="NoDocumentsLabel"
                        FontSize="18"
                        FontAttributes="Bold"
                        HorizontalTextAlignment="Center" />

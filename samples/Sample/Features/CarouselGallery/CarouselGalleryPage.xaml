@@ -16,16 +16,19 @@
                    FontAttributes="Bold" />
 
             <Label Text="{Binding StatusMessage}"
+                   AutomationId="CarouselStatusLabel"
                    FontSize="14"
                    TextColor="Gray" />
 
             <HorizontalStackLayout Spacing="12">
-                <Button Text="Toggle Snap" Command="{Binding ToggleSnapCommand}" />
+                <Button Text="Toggle Snap" Command="{Binding ToggleSnapCommand}" AutomationId="ToggleSnapButton" />
                 <Label Text="{Binding SnapLabel}"
+                       AutomationId="SnapLabel"
                        VerticalTextAlignment="Center"
                        FontAttributes="Bold" />
-                <Button Text="Toggle Scale" Command="{Binding ToggleScaleCommand}" />
+                <Button Text="Toggle Scale" Command="{Binding ToggleScaleCommand}" AutomationId="ToggleScaleButton" />
                 <Label Text="{Binding ScaleLabel}"
+                       AutomationId="ScaleLabel"
                        VerticalTextAlignment="Center"
                        FontAttributes="Bold" />
             </HorizontalStackLayout>
@@ -39,6 +42,7 @@
                    TextColor="Gray" />
 
             <shiny:CarouselGallery ItemsSource="{Binding BasicItems}"
+                                   AutomationId="BasicCarousel"
                                    ItemWidth="280"
                                    ItemHeight="160"
                                    ItemSpacing="16"
@@ -73,6 +77,7 @@
             </shiny:CarouselGallery>
 
             <Label Text="{Binding CurrentPosition, StringFormat='Position: {0}'}"
+                   AutomationId="CarouselPositionLabel"
                    HorizontalTextAlignment="Center"
                    FontSize="14"
                    TextColor="Gray" />
@@ -83,6 +88,7 @@
             <Label Text="With Scale Effect" FontAttributes="Bold" FontSize="18" />
 
             <shiny:CarouselGallery ItemsSource="{Binding BasicItems}"
+                                   AutomationId="ScaleCarousel"
                                    ItemWidth="240"
                                    ItemHeight="140"
                                    ItemSpacing="12"

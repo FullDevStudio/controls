@@ -19,6 +19,7 @@
         </VerticalStackLayout>
 
         <diagram:MermaidDiagramControl
+            AutomationId="FlowchartDiagram"
             Grid.Row="1"
             DiagramText="graph TD&#10;    A[Start] --&gt; B{Decision}&#10;    B --&gt;|Yes| C[Do Something]&#10;    B --&gt;|No| D[Do Other]&#10;    C --&gt; E[End]&#10;    D --&gt; E"
             HorizontalOptions="Fill"

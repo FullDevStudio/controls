@@ -5,11 +5,13 @@
              xmlns:local="clr-namespace:Sample.Features.Scheduler"
              x:Class="Sample.Features.Scheduler.AgendaCalendarPickerPage"
              x:DataType="local:AgendaCalendarPickerViewModel"
-             Title="Calendar Picker">
+             Title="Calendar Picker"
+             AutomationId="AgendaCalendarPickerPage">
 
     <Grid RowDefinitions="Auto,*">
         <HorizontalStackLayout HorizontalOptions="End" Spacing="8" Margin="8">
             <Button Text="{Binding DaysToggleText}"
+                    AutomationId="PickerDaysButton"
                     Command="{Binding ToggleDaysCommand}"
                     BackgroundColor="DodgerBlue"
                     TextColor="White"
@@ -18,6 +20,7 @@
         </HorizontalStackLayout>
 
         <shiny:SchedulerAgendaView Grid.Row="1"
+            AutomationId="PickerAgendaView"
             Provider="{Binding Provider}"
             SelectedDate="{Binding SelectedDate}"
             DaysToShow="{Binding DaysToShow}"

@@ -9,6 +9,7 @@
              AutomationId="CalendarPage">
 
     <shiny:SchedulerCalendarView
+        AutomationId="SchedulerCalendar"
         Provider="{Binding Provider}"
         SelectedDate="{Binding SelectedDate}"
         DisplayMonth="{Binding DisplayMonth}"

@@ -8,7 +8,8 @@
     x:DataType="local:ChatTemplateViewModel"
     Title="Chat Templates">
 
-    <shiny:ChatView Provider="{Binding Provider}"
+    <shiny:ChatView AutomationId="TemplateChatView"
+                    Provider="{Binding Provider}"
                     SessionId="{Binding SessionId}">
         <!-- ChatView builds its own composer; supply one only to reshape it. -->
         <shiny:ChatView.InputBar>

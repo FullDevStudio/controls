@@ -20,7 +20,7 @@
                    HorizontalTextAlignment="Center"
                    TextColor="Gray" />
 
-            <Label Text="{Binding StatusMessage}"
+            <Label Text="{Binding StatusMessage}" AutomationId="DualStatus"
                    FontSize="16"
                    HorizontalTextAlignment="Center"
                    TextColor="Gray" />
@@ -28,28 +28,28 @@
             <BoxView HeightRequest="1" Color="LightGray" Margin="0,10" />
 
             <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
-                <Button Text="Open Top"
+                <Button Text="Open Top" AutomationId="DualOpenTop"
                         Command="{Binding OpenTopCommand}" />
                 <Button Grid.Column="1"
-                        Text="Close Top"
+                        Text="Close Top" AutomationId="DualCloseTop"
                         Command="{Binding CloseTopCommand}" />
             </Grid>
 
             <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
-                <Button Text="Open Bottom"
+                <Button Text="Open Bottom" AutomationId="DualOpenBottom"
                         Command="{Binding OpenBottomCommand}" />
                 <Button Grid.Column="1"
-                        Text="Close Bottom"
+                        Text="Close Bottom" AutomationId="DualCloseBottom"
                         Command="{Binding CloseBottomCommand}" />
             </Grid>
 
             <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
-                <Button Text="Open Both"
+                <Button Text="Open Both" AutomationId="DualOpenBoth"
                         BackgroundColor="#6C63FF"
                         TextColor="White"
                         Command="{Binding OpenBothCommand}" />
                 <Button Grid.Column="1"
-                        Text="Close Both"
+                        Text="Close Both" AutomationId="DualCloseBoth"
                         BackgroundColor="#EF4444"
                         TextColor="White"
                         Command="{Binding CloseBothCommand}" />
@@ -60,7 +60,7 @@
 
   <shiny:ShinyContentPage.Panels>
     <!-- Top Panel: Notifications -->
-    <shiny:FloatingPanel IsOpen="{Binding IsTopOpen}"
+    <shiny:FloatingPanel IsOpen="{Binding IsTopOpen}" AutomationId="DualTopPanel"
                          Position="Top"
                          HasBackdrop="False"
                          HandleColor="#94A3B8"
@@ -125,7 +125,7 @@
                 </VerticalStackLayout>
             </Border>
 
-            <Button Text="Mark All Read"
+            <Button Text="Mark All Read" AutomationId="DualMarkAllRead"
                     BackgroundColor="#F59E0B"
                     TextColor="White"
                     Command="{Binding CloseTopCommand}"
@@ -134,7 +134,7 @@
     </shiny:FloatingPanel>
 
     <!-- Bottom Panel: Now Playing -->
-    <shiny:FloatingPanel IsOpen="{Binding IsBottomOpen}"
+    <shiny:FloatingPanel IsOpen="{Binding IsBottomOpen}" AutomationId="DualBottomPanel"
                          Position="Bottom"
                          HasBackdrop="False"
                          HandleColor="#94A3B8"

@@ -8,15 +8,16 @@
     <Grid RowDefinitions="Auto,Auto,*" Padding="12" RowSpacing="8">
 
         <HorizontalStackLayout Grid.Row="0" Spacing="8">
-            <Button Text="◀ Back" Clicked="OnBack" />
-            <Button Text="Forward ▶" Clicked="OnForward" />
-            <Button Text="All active" Clicked="OnToggleAllActive" />
-            <Button Text="Side" Clicked="OnToggleSide" />
+            <Button Text="◀ Back" Clicked="OnBack" AutomationId="TimelineBack" />
+            <Button Text="Forward ▶" Clicked="OnForward" AutomationId="TimelineForward" />
+            <Button Text="All active" Clicked="OnToggleAllActive" AutomationId="TimelineAllActive" />
+            <Button Text="Side" Clicked="OnToggleSide" AutomationId="TimelineSide" />
         </HorizontalStackLayout>
 
-        <Label x:Name="StatusLabel" Grid.Row="1" FontSize="12" Opacity="0.7" />
+        <Label x:Name="StatusLabel" AutomationId="TimelineStatus" Grid.Row="1" FontSize="12" Opacity="0.7" />
 
         <shiny:TimelineView x:Name="Timeline"
+                            AutomationId="Timeline"
                             Grid.Row="2"
                             ActiveIndex="2"
                             NodeTapped="OnNodeTapped">

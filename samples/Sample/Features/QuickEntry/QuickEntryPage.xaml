@@ -82,7 +82,7 @@
                         <Entry Grid.Column="0" Text="{Binding HotKey}" Placeholder="Ctrl+Alt+Space" AutomationId="HotKeyEntry" />
                         <Button Grid.Column="1" Text="Register" Command="{Binding RegisterHotKeyCommand}" IsEnabled="{Binding HotKeysAvailable}" AutomationId="RegisterHotKey" />
                     </Grid>
-                    <Label Text="{Binding HotKeyStatus}" FontSize="12" />
+                    <Label Text="{Binding HotKeyStatus}" FontSize="12" AutomationId="HotKeyStatus" />
                 </VerticalStackLayout>
             </Border>
 

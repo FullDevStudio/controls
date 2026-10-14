@@ -14,20 +14,22 @@
             <Label Text="Content"
                    FontAttributes="Bold"
                    FontSize="14" />
-            <Entry Text="{Binding Value}"
+            <Entry AutomationId="QRValueEntry"
+                   Text="{Binding Value}"
                    Placeholder="Type any text or URL" />
 
             <Label Text="Error Correction"
                    FontAttributes="Bold"
                    FontSize="14" />
-            <Picker ItemsSource="{Binding ErrorCorrectionLevels}"
+            <Picker AutomationId="QRErrorPicker"
+                    ItemsSource="{Binding ErrorCorrectionLevels}"
                     SelectedItem="{Binding ErrorCorrection}" />
 
             <Label Text="Size"
                    FontAttributes="Bold"
                    FontSize="14" />
-            <Slider Minimum="150" Maximum="500" Value="{Binding Size}" />
-            <Label Text="{Binding Size, StringFormat='{0:F0} px'}" />
+            <Slider AutomationId="QRSizeSlider" Minimum="150" Maximum="500" Value="{Binding Size}" />
+            <Label AutomationId="QRSizeLabel" Text="{Binding Size, StringFormat='{0:F0} px'}" />
 
             <Border Stroke="{AppThemeBinding Light=#E5E7EB, Dark=#374151}"
                     StrokeThickness="1"
@@ -36,7 +38,8 @@
                 <Border.StrokeShape>
                     <RoundRectangle CornerRadius="12" />
                 </Border.StrokeShape>
-                <bc:QRCodeView Value="{Binding Value}"
+                <bc:QRCodeView AutomationId="QRCodeView"
+                               Value="{Binding Value}"
                                Size="{Binding Size}"
                                ErrorCorrection="{Binding ErrorCorrection}"
                                WidthRequest="{Binding Size}"

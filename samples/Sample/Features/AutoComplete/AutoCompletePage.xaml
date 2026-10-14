@@ -37,6 +37,7 @@
                            FontSize="11" TextColor="#94A3B8" />
 
                     <shiny:AutoCompleteEntry
+                        AutomationId="FruitAuto"
                         Placeholder="Type a fruit..."
                         PlaceholderColor="#94A3B8"
                         ItemsSource="{Binding Fruits}"
@@ -49,7 +50,7 @@
                         Threshold="1"
                         DebounceInterval="100" />
 
-                    <Label Text="{Binding SelectedFruit, StringFormat='Selected: {0}'}"
+                    <Label AutomationId="FruitSelected" Text="{Binding SelectedFruit, StringFormat='Selected: {0}'}"
                            FontSize="12" TextColor="#64748B" />
                 </VerticalStackLayout>
             </Border>
@@ -67,6 +68,7 @@
                            FontSize="11" TextColor="#94A3B8" />
 
                     <shiny:AutoCompleteEntry
+                        AutomationId="LanguageAuto"
                         Placeholder="Search languages..."
                         PlaceholderColor="#94A3B8"
                         ItemsSource="{Binding Languages}"
@@ -80,7 +82,7 @@
                         Threshold="1"
                         DebounceInterval="100" />
 
-                    <Label Text="{Binding SelectedLanguageInfo}"
+                    <Label AutomationId="LanguageSelected" Text="{Binding SelectedLanguageInfo}"
                            FontSize="12" TextColor="#64748B" />
                 </VerticalStackLayout>
             </Border>
@@ -149,6 +151,7 @@
                            FontSize="11" TextColor="#94A3B8" />
 
                     <shiny:AutoCompleteEntry
+                        AutomationId="CityAuto"
                         Placeholder="Search cities (min 2 chars)..."
                         PlaceholderColor="#94A3B8"
                         SearchCommand="{Binding SearchCitiesCommand}"
@@ -164,7 +167,7 @@
                         Threshold="2"
                         DebounceInterval="300" />
 
-                    <Label Text="{Binding SelectedCityInfo}"
+                    <Label AutomationId="CitySelected" Text="{Binding SelectedCityInfo}"
                            FontSize="12" TextColor="#64748B" />
                 </VerticalStackLayout>
             </Border>

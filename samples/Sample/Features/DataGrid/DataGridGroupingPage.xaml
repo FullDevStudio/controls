@@ -16,14 +16,16 @@
                TextColor="Gray" />
 
         <HorizontalStackLayout Grid.Row="1" Spacing="8">
-            <Button Text="Department" Command="{Binding GroupByDepartmentCommand}" FontSize="12" Padding="10,4" />
-            <Button Text="Dept + Region" Command="{Binding GroupByDepartmentAndRegionCommand}" FontSize="12" Padding="10,4" />
-            <Button Text="Ungroup" Command="{Binding UngroupCommand}" FontSize="12" Padding="10,4" />
+            <Button Text="Department" AutomationId="GroupByDepartmentButton" Command="{Binding GroupByDepartmentCommand}" FontSize="12" Padding="10,4" />
+            <Button Text="Dept + Region" AutomationId="GroupByDepartmentRegionButton" Command="{Binding GroupByDepartmentAndRegionCommand}" FontSize="12" Padding="10,4" />
+            <Button Text="Ungroup" AutomationId="UngroupButton" Command="{Binding UngroupCommand}" FontSize="12" Padding="10,4" />
             <Button Text="{Binding Placement, StringFormat='Summaries: {0}'}"
+                    AutomationId="SummaryPlacementButton"
                     Command="{Binding TogglePlacementCommand}" FontSize="12" Padding="10,4" />
         </HorizontalStackLayout>
 
         <shiny:DataGrid Grid.Row="2"
+                        AutomationId="SalesGrid"
                         ItemsSource="{Binding Sales}"
                         GroupBy="{Binding GroupColumns}"
                         GroupSummaryPlacement="{Binding Placement}"
@@ -70,6 +72,7 @@
                TextColor="Gray" />
 
         <shiny:DataGrid Grid.Row="4"
+                        AutomationId="RegionGrid"
                         ItemsSource="{Binding Sales}"
                         Groupable="True"
                         GroupsInitiallyExpanded="False"

@@ -8,6 +8,7 @@
              Title="Image Editor">
 
     <shiny:ImageEditor Source="{Binding ImageSource}"
+                       AutomationId="PhotoEditor"
                        CurrentToolMode="{Binding CurrentToolMode}"
                        CanUndo="{Binding CanUndo}"
                        CanRedo="{Binding CanRedo}"

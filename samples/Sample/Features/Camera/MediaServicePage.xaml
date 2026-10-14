@@ -18,7 +18,7 @@
                 <Button Text="Gallery (read)" Margin="0,0,8,8" Command="{Binding RequestGalleryReadCommand}" />
                 <Button Text="Gallery (write)" Margin="0,0,8,8" Command="{Binding RequestGalleryWriteCommand}" />
                 <Button Text="Open Settings" Margin="0,0,8,8" Command="{Binding OpenSettingsCommand}" />
-                <Button Text="List Cameras" Margin="0,0,8,8" Command="{Binding ListCamerasCommand}" />
+                <Button Text="List Cameras" Margin="0,0,8,8" Command="{Binding ListCamerasCommand}" AutomationId="ListCamerasButton" />
             </FlexLayout>
 
             <Label Text="Capture (modal CameraView)" FontAttributes="Bold" FontSize="16" />
@@ -65,7 +65,7 @@
 
             <Grid ColumnDefinitions="*,Auto">
                 <Label Text="Log" FontAttributes="Bold" FontSize="16" VerticalOptions="Center" />
-                <Button Grid.Column="1" Text="Clear" Command="{Binding ClearLogCommand}" />
+                <Button Grid.Column="1" Text="Clear" Command="{Binding ClearLogCommand}" AutomationId="ClearLogButton" />
             </Grid>
 
             <CollectionView ItemsSource="{Binding Log}">

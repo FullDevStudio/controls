@@ -3,11 +3,13 @@
                        xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
                        xmlns:shiny="http://shiny.net/maui/controls"
                        x:Class="Sample.Features.Flyout.FlyoutDemoPage"
-                       Title="Flyout">
+                       Title="Flyout"
+                       AutomationId="FlyoutDemoPage">
 
     <!-- Start: a navigation panel that collapses to an icon rail -->
     <shiny:ShinyFlyoutPage.Start>
         <shiny:FlyoutPanel x:Name="Nav"
+                           AutomationId="FlyoutStartPanel"
                            State="Collapsed"
                            CollapsedState="Collapsed"
                            Presentation="Auto"
@@ -59,6 +61,7 @@
     <!-- End: an inspector that floats over the content -->
     <shiny:ShinyFlyoutPage.End>
         <shiny:FlyoutPanel x:Name="Inspector"
+                           AutomationId="FlyoutInspector"
                            State="Hidden"
                            CollapsedState="Hidden"
                            Presentation="Overlay"
@@ -83,22 +86,22 @@
             <Label Text="A start panel that collapses to a rail, and an end panel that floats over the content. Resize the window (or rotate) to watch Auto switch between pushing and floating."
                    Opacity="0.75" />
 
-            <Label x:Name="Status" FontSize="14" FontAttributes="Bold" />
+            <Label x:Name="Status" AutomationId="FlyoutStatus" FontSize="14" FontAttributes="Bold" />
 
             <BoxView HeightRequest="1" Color="#33808080" />
 
             <Label Text="Start panel" FontAttributes="Bold" />
             <HorizontalStackLayout Spacing="8">
-                <Button Text="Hidden" Clicked="OnStartHidden" />
-                <Button Text="Rail" Clicked="OnStartCollapsed" />
-                <Button Text="Expanded" Clicked="OnStartExpanded" />
+                <Button Text="Hidden" Clicked="OnStartHidden" AutomationId="FlyoutStartHidden" />
+                <Button Text="Rail" Clicked="OnStartCollapsed" AutomationId="FlyoutStartRail" />
+                <Button Text="Expanded" Clicked="OnStartExpanded" AutomationId="FlyoutStartExpanded" />
             </HorizontalStackLayout>
 
             <Label Text="Presentation" FontAttributes="Bold" />
             <HorizontalStackLayout Spacing="8">
-                <Button Text="Overlay" Clicked="OnOverlay" />
-                <Button Text="Push" Clicked="OnPush" />
-                <Button Text="Auto" Clicked="OnAuto" />
+                <Button Text="Overlay" Clicked="OnOverlay" AutomationId="FlyoutPresentationOverlay" />
+                <Button Text="Push" Clicked="OnPush" AutomationId="FlyoutPresentationPush" />
+                <Button Text="Auto" Clicked="OnAuto" AutomationId="FlyoutPresentationAuto" />
             </HorizontalStackLayout>
 
             <Label Text="End panel" FontAttributes="Bold" />
@@ -108,7 +111,7 @@
                 <Button Text="Resize" Clicked="OnPushResize" AutomationId="PushResize" />
             </HorizontalStackLayout>
 
-            <Button Text="Toggle inspector" Clicked="OnToggleEnd" HorizontalOptions="Start" />
+            <Button Text="Toggle inspector" Clicked="OnToggleEnd" AutomationId="FlyoutToggleInspector" HorizontalOptions="Start" />
 
             <BoxView HeightRequest="1" Color="#33808080" />
 

@@ -18,6 +18,7 @@
                    Opacity="0.7" />
 
             <shiny:MediaPickerButton x:Name="Picker"
+                                     AutomationId="PhotoPicker"
                                      Photos="{Binding Photos}"
                                      AllowGallery="{Binding AllowGallery}"
                                      AllowCamera="{Binding AllowCamera}"
@@ -29,13 +30,16 @@
                                      PermissionDeniedText="Photo access was denied — enable it in Settings." />
 
             <Label Text="{Binding Photos.Count, StringFormat='Photos added: {0}'}"
+                   AutomationId="PhotoCountLabel"
                    FontAttributes="Bold" />
 
             <!-- Lets the populated state be demoed without photo-library access -->
             <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                 <Button Text="Load Sample Photos" FontSize="13"
+                        AutomationId="LoadSamplePhotosButton"
                         Command="{Binding LoadSamplePhotosCommand}" />
                 <Button Grid.Column="1" Text="Clear" FontSize="13"
+                        AutomationId="ClearPhotosButton"
                         Command="{Binding ClearPhotosCommand}" />
             </Grid>
 
@@ -59,14 +63,14 @@
             </Grid>
             <Grid ColumnDefinitions="*,Auto">
                 <Label Text="PNG output (off = JPEG)" VerticalOptions="Center" />
-                <Switch Grid.Column="1" IsToggled="{Binding UsePng}" />
+                <Switch Grid.Column="1" IsToggled="{Binding UsePng}" AutomationId="PngSwitch" />
             </Grid>
 
-            <Label Text="{Binding MaxPhotos, StringFormat='Max photos: {0}'}" />
-            <Stepper Minimum="1" Maximum="10" Increment="1" Value="{Binding MaxPhotos}" />
+            <Label Text="{Binding MaxPhotos, StringFormat='Max photos: {0}'}" AutomationId="MaxPhotosLabel" />
+            <Stepper Minimum="1" Maximum="10" Increment="1" Value="{Binding MaxPhotos}" AutomationId="MaxPhotosStepper" />
 
-            <Label Text="{Binding CompressionQualityPercent, StringFormat='Compression quality: {0}%'}" />
-            <Slider Minimum="10" Maximum="100" Value="{Binding CompressionQuality}" />
+            <Label Text="{Binding CompressionQualityPercent, StringFormat='Compression quality: {0}%'}" AutomationId="QualityLabel" />
+            <Slider Minimum="10" Maximum="100" Value="{Binding CompressionQuality}" AutomationId="QualitySlider" />
 
         </VerticalStackLayout>
     </ScrollView>

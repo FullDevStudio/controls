@@ -15,7 +15,7 @@
                    FontSize="22"
                    FontAttributes="Bold" />
 
-            <Label Text="{Binding StatusMessage}" FontSize="14" />
+            <Label AutomationId="ButtonsStatusLabel" Text="{Binding StatusMessage}" FontSize="14" />
 
             <BoxView HeightRequest="1" Color="LightGray" />
 
@@ -25,7 +25,7 @@
                    FontSize="12" />
 
             <FlexLayout Wrap="Wrap" JustifyContent="Start" AlignItems="Center">
-                <shiny:ShinyButton Text="Filled" Appearance="Filled" Type="Primary"
+                <shiny:ShinyButton AutomationId="FilledButton" Text="Filled" Appearance="Filled" Type="Primary"
                                    Command="{Binding NoteCommand}" CommandParameter="Filled"
                                    Margin="0,0,8,8" />
                 <shiny:ShinyButton Text="Tonal" Appearance="Tonal" Type="Primary"
@@ -124,7 +124,7 @@
                                HorizontalOptions="Start" />
 
             <HorizontalStackLayout Spacing="8">
-                <CheckBox IsChecked="{Binding ShouldFail}" />
+                <CheckBox AutomationId="ShouldFailCheckBox" IsChecked="{Binding ShouldFail}" />
                 <Label Text="Make the save fail (shows the Error state)" VerticalOptions="Center" />
             </HorizontalStackLayout>
 
@@ -167,7 +167,7 @@
                                Command="{Binding GuardedCommand}"
                                HorizontalOptions="Start" />
 
-            <shiny:ShinyButton Text="Explicitly disabled"
+            <shiny:ShinyButton AutomationId="ExplicitlyDisabledButton" Text="Explicitly disabled"
                                IsEnabled="False"
                                Command="{Binding GuardedCommand}"
                                Appearance="Outlined"

@@ -16,7 +16,7 @@
 
             <!-- Wrapping: no reference needed, and the wrapper does not disturb the layout. -->
             <Label Text="1. Wrapping a control" FontAttributes="Bold" />
-            <shiny:Tooltip Text="Applies the change without closing the sheet."
+            <shiny:Tooltip Text="Applies the change without closing the sheet." AutomationId="ApplyTooltip"
                            Placement="Top"
                            Trigger="LongPress"
                            AutoDismissDelay="3000"
@@ -27,10 +27,10 @@
             <!-- Every side, so the auto-flip near a screen edge is visible. -->
             <Label Text="2. Placement" FontAttributes="Bold" />
             <HorizontalStackLayout Spacing="10">
-                <shiny:Tooltip Text="Above" Placement="Top" Trigger="Tap">
+                <shiny:Tooltip Text="Above" Placement="Top" Trigger="Tap" AutomationId="TopTooltip">
                     <Button Text="Top" AutomationId="TooltipTop" />
                 </shiny:Tooltip>
-                <shiny:Tooltip Text="Below" Placement="Bottom" Trigger="Tap">
+                <shiny:Tooltip Text="Below" Placement="Bottom" Trigger="Tap" AutomationId="BottomTooltip">
                     <Button Text="Bottom" AutomationId="TooltipBottom" />
                 </shiny:Tooltip>
                 <shiny:Tooltip Text="To the left" Placement="Left" Trigger="Tap">
@@ -68,7 +68,7 @@
 
             <!-- Styling -->
             <Label Text="5. Styled" FontAttributes="Bold" />
-            <shiny:Tooltip Title="Heads up"
+            <shiny:Tooltip Title="Heads up" AutomationId="StyledTooltip"
                            Text="A tooltip takes the theme's inverse surface by default; give it a colour and it takes that instead."
                            Placement="Top"
                            Trigger="Tap"

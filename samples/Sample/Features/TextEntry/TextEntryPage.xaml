@@ -91,7 +91,7 @@
             <Label Text="With Clear Button" FontSize="18" FontAttributes="Bold" />
             <shiny:TextEntry AutomationId="SearchEntry" Placeholder="Search"
                              Text="{Binding SearchText, Mode=TwoWay}">
-                <shiny:ClearButtonTool />
+                <shiny:ClearButtonTool AutomationId="SearchClear" />
             </shiny:TextEntry>
 
             <!-- Password -->
@@ -104,14 +104,14 @@
 
             <!-- Character Count -->
             <Label Text="Character Count" FontSize="18" FontAttributes="Bold" />
-            <shiny:TextEntry Placeholder="Bio (max 100)"
+            <shiny:TextEntry AutomationId="BioEntry" Placeholder="Bio (max 100)"
                              Text="{Binding Bio, Mode=TwoWay}"
                              MaxLength="100"
                              ShowCharacterCount="True" />
 
             <!-- Validation Error -->
             <Label Text="Validation" FontSize="18" FontAttributes="Bold" />
-            <shiny:TextEntry Placeholder="Email"
+            <shiny:TextEntry AutomationId="EmailEntry" Placeholder="Email"
                              Text="{Binding Email, Mode=TwoWay}"
                              Keyboard="Email"
                              HasError="{Binding HasEmailError}"
@@ -133,7 +133,7 @@
 
             <!-- Read Only -->
             <Label Text="Read Only" FontSize="18" FontAttributes="Bold" />
-            <shiny:TextEntry Placeholder="Read only"
+            <shiny:TextEntry AutomationId="ReadOnlyEntry" Placeholder="Read only"
                              Text="This field is read only"
                              IsReadOnly="True"
                              BorderColor="#E5E7EB"
@@ -156,12 +156,12 @@
 
             <!-- Masked Input -->
             <Label Text="Masked Input" FontSize="18" FontAttributes="Bold" />
-            <shiny:TextEntry Placeholder="Phone Number"
+            <shiny:TextEntry AutomationId="MaskedPhoneEntry" Placeholder="Phone Number"
                              Mask="(###) ###-####"
                              Text="{Binding MaskedPhone, Mode=TwoWay}"
                              HintText="(555) 123-4567" />
 
-            <shiny:TextEntry Placeholder="Credit Card"
+            <shiny:TextEntry AutomationId="MaskedCardEntry" Placeholder="Credit Card"
                              Mask="#### #### #### ####"
                              Text="{Binding MaskedCard, Mode=TwoWay}"
                              HintText="1234 5678 9012 3456" />
@@ -172,13 +172,13 @@
 
             <!-- Stepper Tool -->
             <Label Text="Stepper Tool" FontSize="18" FontAttributes="Bold" />
-            <shiny:TextEntry Placeholder="Quantity"
+            <shiny:TextEntry AutomationId="QuantityEntry" Placeholder="Quantity"
                              Text="{Binding Quantity, Mode=TwoWay}"
                              Keyboard="Numeric">
                 <shiny:TextEntry.LeftTools>
-                    <shiny:TextEntryStepperTool Step="-1" />
+                    <shiny:TextEntryStepperTool AutomationId="QuantityDecrement" Step="-1" />
                 </shiny:TextEntry.LeftTools>
-                <shiny:TextEntryStepperTool Step="1" />
+                <shiny:TextEntryStepperTool AutomationId="QuantityIncrement" Step="1" />
             </shiny:TextEntry>
 
             <shiny:TextEntry Placeholder="Score"

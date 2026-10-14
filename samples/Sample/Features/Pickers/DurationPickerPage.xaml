@@ -5,7 +5,8 @@
              xmlns:shiny="http://shiny.net/maui/controls"
              x:Class="Sample.Features.Pickers.DurationPickerPage"
              x:DataType="local:DurationPickerViewModel"
-             Title="Duration Picker">
+             Title="Duration Picker"
+             AutomationId="DurationPickerPage">
   <shiny:ShinyContentPage.PageContent>
     <ScrollView>
         <VerticalStackLayout Padding="20" Spacing="20">
@@ -20,17 +21,17 @@
             <BoxView HeightRequest="1" Color="LightGray" />
 
             <Label Text="Basic Duration" FontSize="16" FontAttributes="Bold" />
-            <shiny:DurationPicker Duration="{Binding SelectedDuration, Mode=TwoWay}"
+            <shiny:DurationPicker AutomationId="BasicDuration" Duration="{Binding SelectedDuration, Mode=TwoWay}"
                                        Placeholder="Choose duration" />
 
-            <Label Text="{Binding SelectedDuration, StringFormat='Selected: {0}'}"
+            <Label AutomationId="BasicDurationLabel" Text="{Binding SelectedDuration, StringFormat='Selected: {0}'}"
                    FontSize="14"
                    TextColor="Gray" />
 
             <BoxView HeightRequest="1" Color="LightGray" />
 
             <Label Text="Constrained (15 min - 8 hours)" FontSize="16" FontAttributes="Bold" />
-            <shiny:DurationPicker Duration="{Binding ConstrainedDuration, Mode=TwoWay}"
+            <shiny:DurationPicker AutomationId="ConstrainedDuration" Duration="{Binding ConstrainedDuration, Mode=TwoWay}"
                                        MinDuration="0:15:00"
                                        MaxDuration="8:00:00"
                                        Placeholder="Select duration" />
@@ -38,7 +39,7 @@
             <BoxView HeightRequest="1" Color="LightGray" />
 
             <Label Text="1 Minute Intervals" FontSize="16" FontAttributes="Bold" />
-            <shiny:DurationPicker Duration="{Binding PreciseDuration, Mode=TwoWay}"
+            <shiny:DurationPicker AutomationId="PreciseDuration" Duration="{Binding PreciseDuration, Mode=TwoWay}"
                                        MinuteInterval="1"
                                        MaxDuration="2:00:00"
                                        Placeholder="Precise duration" />

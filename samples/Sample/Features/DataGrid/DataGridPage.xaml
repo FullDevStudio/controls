@@ -9,7 +9,8 @@
              AutomationId="DataGridPage">
 
     <Grid RowDefinitions="Auto,Auto,*" Padding="16" RowSpacing="8">
-        <Label Grid.Row="0" Text="{Binding StatusMessage}" FontSize="13" TextColor="Gray" />
+        <Label Grid.Row="0" Text="{Binding StatusMessage}" FontSize="13" TextColor="Gray"
+               AutomationId="DataGridStatus" />
 
         <HorizontalStackLayout Grid.Row="1" Spacing="8" VerticalOptions="Center">
             <Label Text="Freeze first column" FontSize="13" VerticalOptions="Center" />
@@ -20,6 +21,7 @@
         <!-- HorizontalScroll puts the header, rows and footer in one sideways scroller, which is
              what makes freezing meaningful: the pinned columns stay put while the rest slides. -->
         <shiny:DataGrid Grid.Row="2"
+                        AutomationId="PeopleGrid"
                         ItemsSource="{Binding People}"
                         SelectionMode="Single"
                         SelectedItem="{Binding SelectedItem, Mode=TwoWay}"

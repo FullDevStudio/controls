@@ -8,6 +8,6 @@
              Title="Markdown Viewer"
              AutomationId="MarkdownViewPage">
 
-    <md:MarkdownView Markdown="{Binding Markdown}" Padding="16" />
+    <md:MarkdownView Markdown="{Binding Markdown}" Padding="16" AutomationId="SampleMarkdownView" />
 
 </ContentPage>

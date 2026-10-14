@@ -13,14 +13,14 @@
             <!-- the encoded value is shown under each barcode so you can compare it against a scan -->
 
             <Label Text="Code 128" FontAttributes="Bold" />
-            <bc:BarcodeView Value="SHINY-CONTROLS-123456"
+            <bc:BarcodeView AutomationId="Code128Barcode" Value="SHINY-CONTROLS-123456"
                             Format="Code128"
                             PixelWidth="500" PixelHeight="150"
                             HeightRequest="120" />
             <Label Text="SHINY-CONTROLS-123456" FontSize="12" TextColor="Gray" />
 
             <Label Text="EAN-13" FontAttributes="Bold" />
-            <bc:BarcodeView Value="5901234123457"
+            <bc:BarcodeView AutomationId="Ean13Barcode" Value="5901234123457"
                             Format="Ean13"
                             PixelWidth="500" PixelHeight="160"
                             HeightRequest="120" />
@@ -48,7 +48,7 @@
             <Label Text="https://github.com/shinyorg/controls" FontSize="12" TextColor="Gray" />
 
             <Label Text="Aztec" FontAttributes="Bold" />
-            <bc:BarcodeView Value="Shiny Aztec Demo"
+            <bc:BarcodeView AutomationId="AztecBarcode" Value="Shiny Aztec Demo"
                             Format="Aztec"
                             PixelWidth="250" PixelHeight="250"
                             HeightRequest="200" WidthRequest="200"

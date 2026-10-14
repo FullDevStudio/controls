@@ -43,7 +43,7 @@
 
     <shiny:ShinyContentPage.Panels>
         <!-- Custom Overlay -->
-        <shiny:Overlay IsShown="{Binding IsCustomOverlayShown}"
+        <shiny:Overlay IsShown="{Binding IsCustomOverlayShown}" AutomationId="CustomOverlay"
                        BlurRadius="10">
             <shiny:Overlay.OverlayContentTemplate>
                 <DataTemplate>
@@ -57,7 +57,7 @@
                                TextColor="White"
                                FontSize="14"
                                HorizontalTextAlignment="Center" />
-                        <Button Text="Dismiss"
+                        <Button Text="Dismiss" AutomationId="DismissOverlayButton"
                                 TextColor="White"
                                 BackgroundColor="#6D28D9"
                                 Command="{Binding DismissCustomOverlayCommand}" />
@@ -67,7 +67,7 @@
         </shiny:Overlay>
 
         <!-- Loading Overlay -->
-        <shiny:LoadingOverlay IsShown="{Binding IsLoadingShown}"
+        <shiny:LoadingOverlay IsShown="{Binding IsLoadingShown}" AutomationId="LoadingOverlay"
                               IsIndeterminate="{Binding IsIndeterminate}"
                               Progress="{Binding Progress}"
                               Message="{Binding LoadingMessage}" />

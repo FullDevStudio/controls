@@ -14,7 +14,7 @@
                    FontSize="22"
                    FontAttributes="Bold" />
 
-            <Label Text="{Binding StatusMessage}"
+            <Label Text="{Binding StatusMessage}" AutomationId="ToastStatus"
                    FontSize="13"
                    TextColor="Gray" />
 
@@ -24,14 +24,14 @@
             <BoxView HeightRequest="1" Color="LightGray" />
             <Label Text="Configuration" FontAttributes="Bold" FontSize="16" />
 
-            <Entry Text="{Binding ToastText}"
+            <Entry Text="{Binding ToastText}" AutomationId="ToastTextEntry"
                    Placeholder="Toast message text" />
 
             <Grid ColumnDefinitions="*,*" ColumnSpacing="12" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="8">
 
                 <!-- Position -->
                 <Label Text="Position" VerticalOptions="Center" />
-                <Picker Grid.Column="1"
+                <Picker Grid.Column="1" AutomationId="ToastPositionPicker"
                         ItemsSource="{Binding Positions}"
                         SelectedItem="{Binding SelectedPosition}" />
 
@@ -63,7 +63,7 @@
             <Grid ColumnDefinitions="*,*" ColumnSpacing="12" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8">
                 <Label Text="Duration (seconds)" VerticalOptions="Center" />
                 <HorizontalStackLayout Grid.Column="1" Spacing="8">
-                    <Stepper Minimum="0" Maximum="30" Increment="1"
+                    <Stepper Minimum="0" Maximum="30" Increment="1" AutomationId="ToastDurationStepper"
                              Value="{Binding DurationSeconds}" />
                     <Label Text="{Binding DurationSeconds, StringFormat='{0}s'}"
                            VerticalOptions="Center" FontSize="13" />
@@ -96,7 +96,7 @@
 
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="4">
                 <Label Text="Dismiss on Tap" VerticalOptions="Center" />
-                <Switch Grid.Column="1" IsToggled="{Binding DismissOnTap}" />
+                <Switch Grid.Column="1" IsToggled="{Binding DismissOnTap}" AutomationId="ToastDismissOnTapSwitch" />
 
                 <Label Grid.Row="1" Text="Show Progress Bar" VerticalOptions="Center" />
                 <Switch Grid.Row="1" Grid.Column="1" IsToggled="{Binding ShowProgressBar}" />
@@ -119,9 +119,9 @@
             <BoxView HeightRequest="1" Color="LightGray" />
             <Label Text="Manual Dismiss" FontAttributes="Bold" FontSize="16" />
             <HorizontalStackLayout Spacing="12">
-                <Button Text="Show Persistent Toast"
+                <Button Text="Show Persistent Toast" AutomationId="PersistentToastButton"
                         Command="{Binding SpinnerToastCommand}" />
-                <Button Text="Dismiss"
+                <Button Text="Dismiss" AutomationId="DismissToastButton"
                         Command="{Binding DismissManualCommand}"
                         BackgroundColor="#DC2626"
                         TextColor="White" />
@@ -143,17 +143,17 @@
                         BackgroundColor="#166534"
                         TextColor="White"
                         Margin="0,0,8,8" />
-                <Button Text="Warning"
+                <Button Text="Warning" AutomationId="WarningToastButton"
                         Command="{Binding WarningToastCommand}"
                         BackgroundColor="#854D0E"
                         TextColor="White"
                         Margin="0,0,8,8" />
-                <Button Text="Danger"
+                <Button Text="Danger" AutomationId="DangerToastButton"
                         Command="{Binding DangerToastCommand}"
                         BackgroundColor="#9A3412"
                         TextColor="White"
                         Margin="0,0,8,8" />
-                <Button Text="Critical"
+                <Button Text="Critical" AutomationId="CriticalToastButton"
                         Command="{Binding CriticalToastCommand}"
                         BackgroundColor="#991B1B"
                         TextColor="White"
@@ -165,7 +165,7 @@
             <!-- ============================================================ -->
             <BoxView HeightRequest="1" Color="LightGray" />
             <Label Text="Custom Styling" FontAttributes="Bold" FontSize="16" />
-            <Button Text="Custom Colors &amp; Border"
+            <Button Text="Custom Colors &amp; Border" AutomationId="StyledToastButton"
                     Command="{Binding StyledToastCommand}" />
 
             <!-- Bottom padding for safe area -->

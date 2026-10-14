@@ -19,6 +19,7 @@
 
                 <!-- ── the player ─────────────────────────────────────────────────────── -->
                 <media:MediaElement x:Name="Player"
+                                    AutomationId="VideoPlayer"
                                     Source="https://media.w3.org/2010/05/sintel/trailer.mp4"
                                     HeightRequest="220"
                                     Aspect="AspectFit"
@@ -97,6 +98,7 @@
                             Command="{Binding Source={x:Reference Player}, Path=SeekCommand}"
                             CommandParameter="00:01:30" />
                     <Button Text="Mute"
+                            AutomationId="MuteButton"
                             Margin="0,0,8,8"
                             Command="{Binding Source={x:Reference Player}, Path=MuteCommand}" />
                     <Button Text="Full screen"
@@ -117,6 +119,7 @@
                       RowSpacing="2">
                     <Label Text="Transport bar" VerticalOptions="Center" />
                     <Switch Grid.Column="1"
+                            AutomationId="TransportBarSwitch"
                             IsToggled="{Binding Source={x:Reference Player}, Path=ShowTransportBar, Mode=TwoWay}" />
 
                     <Label Grid.Row="1" Text="Play / pause button" VerticalOptions="Center" />
@@ -125,6 +128,7 @@
 
                     <Label Grid.Row="2" Text="Seek bar" VerticalOptions="Center" />
                     <Switch Grid.Row="2" Grid.Column="1"
+                            AutomationId="SeekBarSwitch"
                             IsToggled="{Binding Source={x:Reference Player}, Path=ShowSeekBar, Mode=TwoWay}" />
 
                     <Label Grid.Row="3" Text="Volume control" VerticalOptions="Center" />
@@ -150,6 +154,7 @@
                 <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="2">
                     <Label Text="Loop" VerticalOptions="Center" />
                     <Switch Grid.Column="1"
+                            AutomationId="LoopSwitch"
                             IsToggled="{Binding Source={x:Reference Player}, Path=IsLooping, Mode=TwoWay}" />
 
                     <Label Grid.Row="1" Text="Keep screen on" VerticalOptions="Center" />
@@ -158,7 +163,7 @@
                 </Grid>
 
                 <Label Text="Aspect" FontSize="13" />
-                <Picker x:Name="AspectPicker" SelectedIndexChanged="OnAspectChanged">
+                <Picker x:Name="AspectPicker" SelectedIndexChanged="OnAspectChanged" AutomationId="AspectPicker">
                     <Picker.ItemsSource>
                         <x:Array Type="{x:Type x:String}">
                             <x:String>AspectFit</x:String>
@@ -169,7 +174,7 @@
                 </Picker>
 
                 <Label Text="Speed" FontSize="13" />
-                <Picker x:Name="RatePicker" SelectedIndexChanged="OnRateChanged">
+                <Picker x:Name="RatePicker" SelectedIndexChanged="OnRateChanged" AutomationId="RatePicker">
                     <Picker.ItemsSource>
                         <x:Array Type="{x:Type x:String}">
                             <x:String>0.5x</x:String>

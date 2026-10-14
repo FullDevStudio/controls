@@ -18,28 +18,31 @@
                    FontAttributes="Bold" />
 
             <Label Text="{Binding StatusMessage}"
+                   AutomationId="VGridStatusLabel"
                    FontSize="13"
                    TextColor="Gray" />
 
             <HorizontalStackLayout Spacing="12" VerticalOptions="Center">
                 <Label Text="Columns:" VerticalTextAlignment="Center" />
-                <Button Text="-" Command="{Binding DecrementColumnsCommand}" WidthRequest="40" />
-                <Label Text="{Binding ColumnCount}" VerticalTextAlignment="Center" FontAttributes="Bold" />
-                <Button Text="+" Command="{Binding IncrementColumnsCommand}" WidthRequest="40" />
+                <Button Text="-" Command="{Binding DecrementColumnsCommand}" WidthRequest="40" AutomationId="VGridMinus" />
+                <Label Text="{Binding ColumnCount}" VerticalTextAlignment="Center" FontAttributes="Bold" AutomationId="VGridColumnsLabel" />
+                <Button Text="+" Command="{Binding IncrementColumnsCommand}" WidthRequest="40" AutomationId="VGridPlus" />
             </HorizontalStackLayout>
 
             <HorizontalStackLayout Spacing="8">
-                <Button Text="Flat (240)" Command="{Binding ShowFlatCommand}" />
-                <Button Text="Grouped" Command="{Binding ShowGroupedCommand}" />
-                <Button Text="Load More" Command="{Binding ShowLoadMoreCommand}" />
+                <Button Text="Flat (240)" Command="{Binding ShowFlatCommand}" AutomationId="VGridFlatButton" />
+                <Button Text="Grouped" Command="{Binding ShowGroupedCommand}" AutomationId="VGridGroupedButton" />
+                <Button Text="Load More" Command="{Binding ShowLoadMoreCommand}" AutomationId="VGridLoadMoreButton" />
             </HorizontalStackLayout>
 
             <HorizontalStackLayout Spacing="8"
+                                   AutomationId="VGridModeRow"
                                    IsVisible="{Binding IsLoadMoreVisible}">
                 <Label Text="Mode:" VerticalTextAlignment="Center" />
-                <Button Text="Button" Command="{Binding UseButtonModeCommand}" />
-                <Button Text="Threshold" Command="{Binding UseThresholdModeCommand}" />
+                <Button Text="Button" Command="{Binding UseButtonModeCommand}" AutomationId="VGridButtonMode" />
+                <Button Text="Threshold" Command="{Binding UseThresholdModeCommand}" AutomationId="VGridThresholdMode" />
                 <Label Text="{Binding LoadMoreModeLabel}"
+                       AutomationId="VGridModeLabel"
                        VerticalTextAlignment="Center"
                        FontSize="12"
                        TextColor="Gray" />
@@ -52,6 +55,7 @@
 
             <!-- Flat grid -->
             <shiny:VirtualizedGrid ItemsSource="{Binding FlatItems}"
+                                   AutomationId="FlatGrid"
                                    ColumnCount="{Binding ColumnCount}"
                                    ItemSpacing="8"
                                    CellPadding="4"
@@ -92,6 +96,7 @@
 
             <!-- Grouped grid -->
             <shiny:VirtualizedGrid ItemsSource="{Binding GroupedSource}"
+                                   AutomationId="GroupedGrid"
                                    ColumnCount="{Binding ColumnCount}"
                                    ItemSpacing="8"
                                    CellPadding="4"
@@ -140,6 +145,7 @@
 
             <!-- Load More grid -->
             <shiny:VirtualizedGrid ItemsSource="{Binding LoadMoreItems}"
+                                   AutomationId="LoadMoreGrid"
                                    ColumnCount="{Binding ColumnCount}"
                                    ItemSpacing="8"
                                    CellPadding="4"

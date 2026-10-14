@@ -28,7 +28,7 @@
                             StrokeThickness="1"
                             Stroke="LightGray"
                             StrokeShape="{RoundRectangle CornerRadius=8}">
-                        <Label Text="{Binding ColorDisplay}"
+                        <Label AutomationId="ColorDisplay" Text="{Binding ColorDisplay}"
                                TextColor="White"
                                FontSize="12"
                                FontAttributes="Bold"
@@ -39,7 +39,7 @@
 
                 <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
                     <Label Text="Show Opacity" VerticalOptions="Center" />
-                    <Switch IsToggled="{Binding ShowOpacity}" />
+                    <Switch AutomationId="ShowOpacitySwitch" IsToggled="{Binding ShowOpacity}" />
                 </HorizontalStackLayout>
 
             </VerticalStackLayout>

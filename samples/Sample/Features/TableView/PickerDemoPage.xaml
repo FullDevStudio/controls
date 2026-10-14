@@ -10,6 +10,7 @@
         <tv:TableRoot>
             <tv:TableSection Title="Text Picker">
                 <tv:TextPickerCell Title="Favorite Color"
+                                    AutomationId="FavoriteColorCell"
                                     ItemsSource="{Binding Colors}"
                                     SelectedIndex="{Binding SelectedColorIndex, Mode=TwoWay}" />
             </tv:TableSection>
@@ -43,6 +44,7 @@
                                         MinDuration="0:15:00"
                                         MaxDuration="4:00:00" />
                 <tv:NumberPickerCell Title="Repeat Count"
+                                      AutomationId="RepeatCountCell"
                                       Number="{Binding RepeatCount, Mode=TwoWay}"
                                       Min="1" Max="10" Unit="times" />
             </tv:TableSection>

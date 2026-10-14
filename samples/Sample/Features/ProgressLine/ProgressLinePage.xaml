@@ -23,13 +23,13 @@
     <ScrollView Padding="16">
         <VerticalStackLayout Spacing="20">
 
-            <Label Text="{Binding Status}" FontSize="16" FontAttributes="Bold" />
+            <Label AutomationId="ProgressLineStatus" Text="{Binding Status}" FontSize="16" FontAttributes="Bold" />
 
             <!-- Declarative, bound -->
             <Label Text="Bound to a value" FontSize="18" FontAttributes="Bold" />
             <Label Text="The orange line across the top of this page is bound to the value below."
                    FontSize="13" />
-            <Label Text="{Binding BoundValue, StringFormat='{0:0}%'}" FontSize="13" />
+            <Label AutomationId="BoundValueLabel" Text="{Binding BoundValue, StringFormat='{0:0}%'}" FontSize="13" />
             <HorizontalStackLayout Spacing="12">
                 <Button Text="-15" AutomationId="DecrementButton" Command="{Binding DecrementCommand}" />
                 <Button Text="+15" AutomationId="IncrementButton" Command="{Binding IncrementCommand}" />

@@ -131,7 +131,7 @@
 
             <!-- Cache controls -->
             <Label Text="Cache" FontSize="18" FontAttributes="Bold" />
-            <Label Text="{Binding CacheSize, StringFormat='Disk cache: {0}'}" />
+            <Label Text="{Binding CacheSize, StringFormat='Disk cache: {0}'}" AutomationId="CacheSizeLabel" />
             <HorizontalStackLayout Spacing="12">
                 <Button AutomationId="RefreshCacheButton" Text="Refresh size" Command="{Binding RefreshCacheSizeCommand}" />
                 <Button AutomationId="ClearCacheButton" Text="Clear cache" Command="{Binding ClearCacheCommand}" />

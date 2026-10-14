@@ -47,16 +47,16 @@
                                        ColumnSpacing="8"
                                        RowSpacing="8"
                                        AutomationId="FlexPlayground">
-                    <Border BackgroundColor="#0284C7" Padding="12,8" StrokeThickness="0">
+                    <Border BackgroundColor="#0284C7" Padding="12,8" StrokeThickness="0" AutomationId="FlexItemOne">
                         <Label Text="One" TextColor="White" />
                     </Border>
-                    <Border BackgroundColor="#7C3AED" Padding="12,8" StrokeThickness="0">
+                    <Border BackgroundColor="#7C3AED" Padding="12,8" StrokeThickness="0" AutomationId="FlexItemTwo">
                         <Label Text="Two, a little longer" TextColor="White" />
                     </Border>
                     <Border BackgroundColor="#059669" Padding="12,8" StrokeThickness="0" shiny:ShinyFlexLayout.Grow="1">
                         <Label Text="Grow = 1" TextColor="White" />
                     </Border>
-                    <Border BackgroundColor="#DC2626" Padding="12,8" StrokeThickness="0" shiny:ShinyFlexLayout.Order="-1">
+                    <Border BackgroundColor="#DC2626" Padding="12,8" StrokeThickness="0" shiny:ShinyFlexLayout.Order="-1" AutomationId="FlexItemOrdered">
                         <Label Text="Order = -1" TextColor="White" />
                     </Border>
                     <Border BackgroundColor="#D97706" Padding="12,24" StrokeThickness="0">

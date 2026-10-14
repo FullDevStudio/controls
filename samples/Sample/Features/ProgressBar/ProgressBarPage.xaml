@@ -20,7 +20,8 @@
 
             <!-- With Text -->
             <Label Text="With Text" FontSize="18" FontAttributes="Bold" />
-            <shiny:ProgressBar Value="{Binding BasicValue}"
+            <shiny:ProgressBar AutomationId="TextProgressBar"
+                               Value="{Binding BasicValue}"
                                TrackHeight="20"
                                CornerRadius="10"
                                ShowText="True"
@@ -104,7 +105,8 @@
 
             <!-- Indeterminate -->
             <Label Text="Indeterminate" FontSize="18" FontAttributes="Bold" />
-            <shiny:ProgressBar IsIndeterminate="True"
+            <shiny:ProgressBar AutomationId="IndeterminateProgressBar"
+                               IsIndeterminate="True"
                                TrackHeight="8"
                                CornerRadius="4"
                                UseGradient="True"

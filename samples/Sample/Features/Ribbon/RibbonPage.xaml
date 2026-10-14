@@ -53,7 +53,7 @@
                     </shiny:RibbonSplitButton>
 
                     <shiny:RibbonButton Text="Cut" Size="Small" Icon="{local:Glyph &#x2702;}"
-                                        Command="{Binding RunCommand}" CommandParameter="Cut" />
+                                        Command="{Binding RunCommand}" CommandParameter="Cut" AutomationId="RibbonCut" />
                     <shiny:RibbonButton Text="Copy" Size="Small" Icon="{local:Glyph &#x29C9;}"
                                         Command="{Binding RunCommand}" CommandParameter="Copy" />
                     <shiny:RibbonButton Text="Format painter" Size="Small" Icon="{local:Glyph &#x1F58C;}"
@@ -68,7 +68,7 @@
                     <shiny:RibbonToggleButton Text="Bold" Size="Small" IsChecked="{Binding Bold}"
                                               Icon="{local:Glyph B}" AutomationId="RibbonBold" />
                     <shiny:RibbonToggleButton Text="Italic" Size="Small" IsChecked="{Binding Italic}"
-                                              Icon="{local:Glyph I}" />
+                                              Icon="{local:Glyph I}" AutomationId="RibbonItalic" />
                     <shiny:RibbonToggleButton Text="Underline" Size="Small" IsChecked="{Binding Underline}"
                                               Icon="{local:Glyph U}" />
 
@@ -101,7 +101,7 @@
                     <shiny:RibbonToggleButton Text="Left" Size="Small" Icon="{local:Glyph &#x2261;}"
                                               IsChecked="{Binding AlignLeft}" />
                     <shiny:RibbonToggleButton Text="Centre" Size="Small" Icon="{local:Glyph &#x2263;}"
-                                              IsChecked="{Binding AlignCenter}" />
+                                              IsChecked="{Binding AlignCenter}" AutomationId="RibbonAlignCenter" />
                     <shiny:RibbonToggleButton Text="Right" Size="Small" Icon="{local:Glyph &#x2261;}"
                                               IsChecked="{Binding AlignRight}" />
                     <shiny:RibbonButton Text="Bullets" Icon="{local:Glyph &#x2022;}"
@@ -124,7 +124,7 @@
                 </shiny:RibbonGroup>
             </shiny:RibbonTab>
 
-            <shiny:RibbonTab Title="Insert" Key="insert">
+            <shiny:RibbonTab Title="Insert" Key="insert" AutomationId="RibbonTabInsert">
                 <shiny:RibbonGroup Title="Tables" Priority="10">
                     <shiny:RibbonButton Text="Table" Icon="{local:Glyph &#x25A6;}"
                                         Command="{Binding RunCommand}" CommandParameter="Insert table" />
@@ -132,7 +132,7 @@
 
                 <shiny:RibbonGroup Title="Illustrations" Priority="10">
                     <shiny:RibbonButton Text="Picture" Icon="{local:Glyph &#x1F5BC;}"
-                                        Command="{Binding InsertPicture}" />
+                                        Command="{Binding InsertPicture}" AutomationId="RibbonInsertPicture" />
                     <shiny:RibbonButton Text="Shapes" Icon="{local:Glyph &#x25B3;}"
                                         Command="{Binding RunCommand}" CommandParameter="Insert shape" />
                     <shiny:RibbonButton Text="Chart" Icon="{local:Glyph &#x1F4CA;}"
@@ -162,6 +162,7 @@
                 moves onto it when it appears and off it again when it does not.
             -->
             <shiny:RibbonTab Title="Format" Key="picture"
+                             AutomationId="RibbonTabPicture"
                              ContextTitle="Picture Tools"
                              IsVisible="{Binding PictureSelected}">
                 <shiny:RibbonGroup Title="Adjust" Priority="0" CanCollapse="False">
@@ -178,19 +179,19 @@
                    FontSize="12" TextColor="Gray" />
 
             <HorizontalStackLayout Spacing="12">
-                <Button Text="Expanded" FontSize="12" Command="{Binding SetModeCommand}" CommandParameter="Expanded" />
-                <Button Text="Simplified" FontSize="12" Command="{Binding SetModeCommand}" CommandParameter="Simplified" />
-                <Button Text="Collapsed" FontSize="12" Command="{Binding SetModeCommand}" CommandParameter="Collapsed" />
+                <Button Text="Expanded" FontSize="12" Command="{Binding SetModeCommand}" CommandParameter="Expanded" AutomationId="RibbonModeExpanded" />
+                <Button Text="Simplified" FontSize="12" Command="{Binding SetModeCommand}" CommandParameter="Simplified" AutomationId="RibbonModeSimplified" />
+                <Button Text="Collapsed" FontSize="12" Command="{Binding SetModeCommand}" CommandParameter="Collapsed" AutomationId="RibbonModeCollapsed" />
             </HorizontalStackLayout>
 
             <HorizontalStackLayout Spacing="16">
                 <HorizontalStackLayout Spacing="4">
-                    <CheckBox IsChecked="{Binding PictureSelected}" />
+                    <CheckBox IsChecked="{Binding PictureSelected}" AutomationId="RibbonPictureCheck" />
                     <Label Text="Picture selected (contextual tab)" VerticalOptions="Center" FontSize="12" />
                 </HorizontalStackLayout>
 
                 <HorizontalStackLayout Spacing="4">
-                    <CheckBox IsChecked="{Binding AllowGroupCollapse}" />
+                    <CheckBox IsChecked="{Binding AllowGroupCollapse}" AutomationId="RibbonGroupCollapseCheck" />
                     <Label Text="Let groups collapse" VerticalOptions="Center" FontSize="12" />
                 </HorizontalStackLayout>
             </HorizontalStackLayout>
@@ -199,7 +200,7 @@
         <ScrollView Grid.Row="2" Padding="16,0,16,16">
             <VerticalStackLayout Spacing="4">
                 <Label Text="Log" FontAttributes="Bold" FontSize="13" />
-                <Label Text="{Binding Log}" FontSize="12" TextColor="Gray" />
+                <Label Text="{Binding Log}" FontSize="12" TextColor="Gray" AutomationId="RibbonLog" />
             </VerticalStackLayout>
         </ScrollView>
     </Grid>

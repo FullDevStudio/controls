@@ -18,14 +18,16 @@
                        FontSize="22"
                        FontAttributes="Bold" />
 
-                <Label Text="{Binding StatusMessage}"
+                <Label AutomationId="FabStatusLabel"
+                       Text="{Binding StatusMessage}"
                        FontSize="14"
                        TextColor="Gray" />
 
                 <BoxView HeightRequest="1" Color="LightGray" />
 
                 <Label Text="Inline Fab (icon only)" FontAttributes="Bold" />
-                <shiny:Fab Icon="dotnet_bot.png"
+                <shiny:Fab AutomationId="InlineFab"
+                           Icon="dotnet_bot.png"
                            IconSize="32"
                            Size="56"
                            FabBackgroundColor="#2196F3"
@@ -33,7 +35,8 @@
                            HorizontalOptions="Start" />
 
                 <Label Text="Extended Fab (icon + text)" FontAttributes="Bold" />
-                <shiny:Fab Icon="dotnet_bot.png"
+                <shiny:Fab AutomationId="ExtendedFab"
+                           Icon="dotnet_bot.png"
                            Text="Add Item"
                            FabBackgroundColor="#4CAF50"
                            TextColor="White"
@@ -69,15 +72,17 @@
                    Margin="24" />
 
         <!-- Floating Fab menu, bottom-right -->
-        <shiny:FabMenu IsOpen="{Binding IsMenuOpen}"
+        <shiny:FabMenu AutomationId="FabMenu" IsOpen="{Binding IsMenuOpen}"
                        Icon="dotnet_bot.png"
                        FabBackgroundColor="#2196F3"
                        Margin="0,0,24,24">
-            <shiny:FabMenuItem Icon="dotnet_bot.png"
+            <shiny:FabMenuItem AutomationId="FabMenuShare"
+                               Icon="dotnet_bot.png"
                                Text="Share"
                                FabBackgroundColor="#4CAF50"
                                Command="{Binding ShareCommand}" />
-            <shiny:FabMenuItem Icon="dotnet_bot.png"
+            <shiny:FabMenuItem AutomationId="FabMenuEdit"
+                               Icon="dotnet_bot.png"
                                Text="Edit"
                                FabBackgroundColor="#FF9800"
                                Command="{Binding EditCommand}" />

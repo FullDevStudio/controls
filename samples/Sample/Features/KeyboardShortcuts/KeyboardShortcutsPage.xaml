@@ -57,7 +57,7 @@
                         <Switch IsToggled="{Binding CanSave}" />
                         <Label Text="Save enabled — turn off and the key falls through (CanExecute)" VerticalOptions="Center" />
                     </HorizontalStackLayout>
-                    <Label Text="{Binding PaletteText, StringFormat='{0} opens the command palette'}" />
+                    <Label AutomationId="PaletteHintLabel" Text="{Binding PaletteText, StringFormat='{0} opens the command palette'}" />
                     <Label Text="{Binding ChordText, StringFormat='{0} is a two-step chord'}" />
                     <Label Text="? shows every reachable shortcut. Arrow keys nudge the box below; hold one to repeat. Hold Space to talk." />
 
@@ -103,7 +103,7 @@
                     </VerticalStackLayout>
                 </Border>
 
-                <Button Text="Open a modal overlay (M)" Command="{Binding OpenModalCommand}" HorizontalOptions="Start" />
+                <Button AutomationId="OpenModalButton" Text="Open a modal overlay (M)" Command="{Binding OpenModalCommand}" HorizontalOptions="Start" />
 
                 <!-- Event log -->
                 <VerticalStackLayout Spacing="6">
@@ -132,7 +132,7 @@
         </Grid>
 
         <!-- Modal: blocks every page shortcut while it is showing -->
-        <Grid IsVisible="{Binding IsModalOpen}" BackgroundColor="#80000000" shiny:KeyboardShortcuts.IsModal="True">
+        <Grid AutomationId="KeyboardShortcutsModal" IsVisible="{Binding IsModalOpen}" BackgroundColor="#80000000" shiny:KeyboardShortcuts.IsModal="True">
             <shiny:KeyboardShortcuts.Shortcuts>
                 <shiny:KeyboardShortcut Key="Escape" Command="{Binding CloseModalCommand}" Description="Close" Category="Modal" />
                 <shiny:KeyboardShortcut Key="Enter" Command="{Binding ModalActionCommand}" Description="Act" Category="Modal" />

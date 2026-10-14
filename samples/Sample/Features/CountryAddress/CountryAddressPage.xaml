@@ -6,6 +6,7 @@
              x:Class="Sample.Features.CountryAddress.CountryAddressPage"
              x:DataType="local:CountryAddressViewModel"
              Title="Country &amp; Address"
+             AutomationId="CountryAddressPage"
              BackgroundColor="#F5F7FA">
     <ScrollView>
         <VerticalStackLayout Padding="20" Spacing="20">
@@ -43,6 +44,7 @@
                     </HorizontalStackLayout>
 
                     <shiny:CountryPicker
+                        AutomationId="CountryPicker"
                         SelectedCountry="{Binding SelectedCountry}"
                         Placeholder="Search countries..."
                         FontSize="15"
@@ -54,6 +56,7 @@
                     <Border StrokeShape="{RoundRectangle CornerRadius=10}"
                             Stroke="#E0E7FF" StrokeThickness="1"
                             BackgroundColor="#F5F3FF" Padding="14"
+                            AutomationId="CountryDetails"
                             IsVisible="{Binding HasCountry}">
                         <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto"
                               ColumnSpacing="14" RowSpacing="8">
@@ -61,16 +64,16 @@
                             <Label Text="&#x1F3F7;&#xFE0F;" FontSize="14" VerticalTextAlignment="Center" />
                             <HorizontalStackLayout Grid.Column="1" Spacing="6">
                                 <Label Text="{Binding SelectedCountry.FlagEmoji}" FontSize="20" VerticalTextAlignment="Center" />
-                                <Label Text="{Binding SelectedCountry.Name}" FontSize="14" FontAttributes="Bold" TextColor="#1E293B" VerticalTextAlignment="Center" />
+                                <Label AutomationId="CountryName" Text="{Binding SelectedCountry.Name}" FontSize="14" FontAttributes="Bold" TextColor="#1E293B" VerticalTextAlignment="Center" />
                             </HorizontalStackLayout>
 
                             <Label Grid.Row="1" Text="&#x1F4C7;" FontSize="14" VerticalTextAlignment="Center" />
                             <Label Grid.Row="1" Grid.Column="1"
-                                   Text="{Binding CountryCodeDisplay}" FontSize="13" TextColor="#475569" VerticalTextAlignment="Center" />
+                                   AutomationId="CountryCodes" Text="{Binding CountryCodeDisplay}" FontSize="13" TextColor="#475569" VerticalTextAlignment="Center" />
 
                             <Label Grid.Row="2" Text="&#x260E;&#xFE0F;" FontSize="14" VerticalTextAlignment="Center" />
                             <Label Grid.Row="2" Grid.Column="1"
-                                   Text="{Binding SelectedCountry.DialCode}" FontSize="13" TextColor="#475569" VerticalTextAlignment="Center" />
+                                   AutomationId="CountryDialCode" Text="{Binding SelectedCountry.DialCode}" FontSize="13" TextColor="#475569" VerticalTextAlignment="Center" />
                         </Grid>
                     </Border>
                 </VerticalStackLayout>
@@ -96,6 +99,7 @@
                     </HorizontalStackLayout>
 
                     <shiny:AddressEntry
+                        AutomationId="AddressEntry"
                         SelectedAddress="{Binding SelectedAddress}"
                         CountryCodes="{Binding CountryCodeFilter}"
                         Placeholder="Start typing an address..."

@@ -122,7 +122,7 @@ public sealed class InMemoryChatStore
         var users = new[]
         {
             new ChatSessionUserInfo(MeId, "Me", null, null, joined),
-            new ChatSessionUserInfo("alice", "Alice Johnson", "_content/Shiny.Blazor.Controls/shiny_logo.png", "#E3F2FD", joined),
+            new ChatSessionUserInfo("alice", "Alice Johnson", "css/shiny_logo.png", "#E3F2FD", joined),
             new ChatSessionUserInfo("bob", "Bob Smith", null, "#FFF3E0", joined)
         };
 

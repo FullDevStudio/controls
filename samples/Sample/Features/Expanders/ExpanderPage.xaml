@@ -164,13 +164,13 @@
                              ExpandedIndex="{Binding ExpandedIndex}"
                              CornerRadius="14"
                              AutomationId="StaticAccordion">
-                <shiny:Expander HeaderText="Account" HeaderDetail="Name, email, password">
+                <shiny:Expander HeaderText="Account" HeaderDetail="Name, email, password" AutomationId="AccountExpander">
                     <Label Text="Everything about who you are." />
                 </shiny:Expander>
-                <shiny:Expander HeaderText="Billing" HeaderDetail="Cards and invoices">
+                <shiny:Expander HeaderText="Billing" HeaderDetail="Cards and invoices" AutomationId="BillingExpander">
                     <Label Text="Everything about who pays." />
                 </shiny:Expander>
-                <shiny:Expander HeaderText="Notifications" HeaderDetail="Push, email, SMS">
+                <shiny:Expander HeaderText="Notifications" HeaderDetail="Push, email, SMS" AutomationId="NotificationsExpander">
                     <Label Text="Everything about when we bother you." />
                 </shiny:Expander>
             </shiny:Accordion>

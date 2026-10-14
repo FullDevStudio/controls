@@ -11,22 +11,24 @@
         <HorizontalStackLayout Grid.Row="0" Padding="12,8" Spacing="20">
             <HorizontalStackLayout Spacing="6">
                 <Label Text="Pan" VerticalOptions="Center" />
-                <Switch x:Name="PanSwitch" IsToggled="True" Toggled="OnPanToggled" />
+                <Switch x:Name="PanSwitch" AutomationId="EditorPanSwitch" IsToggled="True" Toggled="OnPanToggled" />
             </HorizontalStackLayout>
             <HorizontalStackLayout Spacing="6">
                 <Label Text="Zoom" VerticalOptions="Center" />
-                <Switch x:Name="ZoomSwitch" IsToggled="True" Toggled="OnZoomToggled" />
+                <Switch x:Name="ZoomSwitch" AutomationId="EditorZoomSwitch" IsToggled="True" Toggled="OnZoomToggled" />
             </HorizontalStackLayout>
         </HorizontalStackLayout>
 
         <diagram:MermaidDiagramControl
             Grid.Row="1"
             x:Name="DiagramControl"
+            AutomationId="EditorDiagram"
             HorizontalOptions="Fill"
             VerticalOptions="Fill" />
 
         <Label Grid.Row="2"
                x:Name="ParseErrorLabel"
+               AutomationId="EditorParseError"
                Text=""
                TextColor="Red"
                FontSize="13"
@@ -38,6 +40,7 @@
                 StrokeThickness="1"
                 Margin="12">
             <Editor x:Name="DiagramEditor"
+                    AutomationId="EditorText"
                     Placeholder="Enter mermaid diagram text here..."
                     AutoSize="TextChanges"
                     TextChanged="OnEditorTextChanged"

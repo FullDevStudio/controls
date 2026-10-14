@@ -22,7 +22,7 @@ public sealed class EditorPanel : ContentView, IDockableContent
 
     public EditorPanel()
     {
-        counter = new Label { Text = "Clicks: 0", FontSize = 12 };
+        counter = new Label { Text = "Clicks: 0", FontSize = 12, AutomationId = "DockEditorCounter" };
         activations = new Label { Text = "Activated 0 times", FontSize = 11, TextColor = Colors.Gray };
 
         Content = new VerticalStackLayout
@@ -40,6 +40,7 @@ public sealed class EditorPanel : ContentView, IDockableContent
                 new Button
                 {
                     Text = "Click me",
+                    AutomationId = "DockEditorClickMe",
                     FontSize = 12,
                     HorizontalOptions = LayoutOptions.Start,
                     Command = new Command(() => counter.Text = $"Clicks: {++count}")

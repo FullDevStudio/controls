@@ -16,21 +16,21 @@
                  select-all buttons appear. -->
             <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
             <HorizontalStackLayout Spacing="8">
-                <Button Text="Expand all" Clicked="OnExpandAllClicked" FontSize="12" Padding="10,4" />
-                <Button Text="Collapse all" Clicked="OnCollapseAllClicked" FontSize="12" Padding="10,4" />
-                <Button Text="Refresh Cloud" Clicked="OnRefreshCloudClicked" FontSize="12" Padding="10,4" />
-                <Switch x:Name="MultiSelectSwitch" Toggled="OnMultiSelectToggled" />
+                <Button Text="Expand all" Clicked="OnExpandAllClicked" FontSize="12" Padding="10,4" AutomationId="TreeExpandAllButton" />
+                <Button Text="Collapse all" Clicked="OnCollapseAllClicked" FontSize="12" Padding="10,4" AutomationId="TreeCollapseAllButton" />
+                <Button Text="Refresh Cloud" Clicked="OnRefreshCloudClicked" FontSize="12" Padding="10,4" AutomationId="TreeRefreshCloudButton" />
+                <Switch x:Name="MultiSelectSwitch" Toggled="OnMultiSelectToggled" AutomationId="TreeMultiSelectSwitch" />
                 <Label Text="Multi-select" VerticalTextAlignment="Center" FontSize="12" />
-                <Button x:Name="SelectAllButton" Text="Select all" Clicked="OnSelectAllClicked"
+                <Button x:Name="SelectAllButton" Text="Select all" Clicked="OnSelectAllClicked" AutomationId="TreeSelectAllButton"
                         FontSize="12" Padding="10,4" IsVisible="False" />
-                <Button x:Name="DeselectAllButton" Text="Deselect all" Clicked="OnDeselectAllClicked"
+                <Button x:Name="DeselectAllButton" Text="Deselect all" Clicked="OnDeselectAllClicked" AutomationId="TreeDeselectAllButton"
                         FontSize="12" Padding="10,4" IsVisible="False" />
             </HorizontalStackLayout>
             </ScrollView>
         </VerticalStackLayout>
 
         <!-- Tree -->
-        <shiny:TreeView Grid.Row="1" x:Name="Tree"
+        <shiny:TreeView Grid.Row="1" x:Name="Tree" AutomationId="FileTree"
                         IndentSize="22"
                         ShowGuideLines="True"
                         EnableDragDrop="True"
@@ -54,7 +54,7 @@
         </shiny:TreeView>
 
         <!-- Status -->
-        <Label Grid.Row="2" x:Name="StatusLabel" Padding="12,8" FontSize="11"
+        <Label Grid.Row="2" x:Name="StatusLabel" AutomationId="TreeStatusLabel" Padding="12,8" FontSize="11"
                TextColor="#666" Text="Tap a node, expand the 'Cloud' folder to see lazy loading." />
     </Grid>
 </ContentPage>

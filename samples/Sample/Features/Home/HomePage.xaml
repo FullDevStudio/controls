@@ -9,7 +9,8 @@
              Title="Home"
              AutomationId="HomePage">
 
-    <Grid BackgroundColor="{AppThemeBinding Light=#F5F3FF, Dark=#0F0D1A}">
+    <Grid BackgroundColor="{AppThemeBinding Light=#F5F3FF, Dark=#0F0D1A}"
+          AutomationId="HomeRoot">
         <!-- Gradient background -->
         <BoxView>
             <BoxView.Background>
@@ -168,7 +169,7 @@
                 </Border>
 
                 <!-- Results: one flat, ranked list while a query is in the box -->
-                <VerticalStackLayout Spacing="12" IsVisible="{Binding IsSearching}">
+                <VerticalStackLayout Spacing="12" IsVisible="{Binding IsSearching}" AutomationId="CatalogResults">
                     <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
                         <Border BackgroundColor="#A78BFA"
                                 StrokeThickness="0"
@@ -194,12 +195,14 @@
                                 <RoundRectangle CornerRadius="9" />
                             </Border.StrokeShape>
                             <Label Text="{Binding ResultCount}"
+                                   AutomationId="CatalogResultCount"
                                    FontSize="11"
                                    TextColor="{AppThemeBinding Light=#6B7280, Dark=#9CA3AF}" />
                         </Border>
                     </HorizontalStackLayout>
 
                     <Label Text="{Binding Query, StringFormat='Nothing matches “{0}”.'}"
+                           AutomationId="CatalogNoResults"
                            FontSize="13"
                            IsVisible="{Binding HasNoResults}"
                            TextColor="{AppThemeBinding Light=#6B7280, Dark=#9CA3AF}" />
@@ -267,6 +270,7 @@
                 <VerticalStackLayout Spacing="28"
                                      Margin="0,8,0,0"
                                      IsVisible="{Binding IsBrowsing}"
+                                     AutomationId="CatalogBrowse"
                                      BindableLayout.ItemsSource="{Binding Sections}">
                     <BindableLayout.ItemTemplate>
                         <DataTemplate x:DataType="sample:CatalogSection">

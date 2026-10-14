@@ -33,10 +33,10 @@
                            FontSize="{Binding SelectedFontSize}"
                            AutomationId="font-preview" />
                 </Border>
-                <Label Text="{Binding SelectedFont, StringFormat='Family: {0}'}"
+                <Label AutomationId="font-family-label" Text="{Binding SelectedFont, StringFormat='Family: {0}'}"
                        FontSize="13"
                        TextColor="Gray" />
-                <Label Text="{Binding SelectedFontSize, StringFormat='Size: {0}'}"
+                <Label AutomationId="font-size-label" Text="{Binding SelectedFontSize, StringFormat='Size: {0}'}"
                        FontSize="13"
                        TextColor="Gray" />
 

@@ -176,7 +176,8 @@
             <!-- ============================================================ -->
             <VerticalStackLayout Spacing="12">
                 <Label Text="The whole set" FontSize="16" FontAttributes="Bold" />
-                <Label Text="{Binding GalleryCaption}"
+                <Label AutomationId="GalleryCaption"
+                       Text="{Binding GalleryCaption}"
                        FontSize="12" TextColor="Gray" />
 
                 <SearchBar Placeholder="Filter icons"
