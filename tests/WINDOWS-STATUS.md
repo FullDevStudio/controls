@@ -80,7 +80,51 @@ Affected: `ColorPickerTests.Popup_Edits_Flow_Back_To_The_Binding`,
 `DockingTests.Lock_CheckBox_Locks_The_Host` is worth calling out — its Android skip was just removed after
 the `DockGroupView` fix, and on Windows it fails for this entirely unrelated reason.
 
-### 2. Pages that never open on Windows — **largest group, cause not yet established** (~35 tests)
+### 2. SOLVED — the agent cannot read an animating page on WinUI (23 tests)
+
+**Root cause: the WinUI agent reads the UI by capturing a settled tree. A page that animates
+continuously never settles**, so every query, tree dump and property read returns
+
+```json
+{"error":"The UI kept changing while DevFlow was reading it. Retry the operation after the
+  current UI update completes.","type":"RuntimeError","retryable":false}
+```
+
+`MauiDevFlowDriver.Query` catches every exception and returns an empty list, so this surfaced as
+"element not found" / "page did not appear" with **no diagnostic anywhere** — which is why the app logged
+nothing and no screenshot was produced.
+
+Measured directly against the running app, with the CLI upgraded to preview.12 to match the agent
+(the preview.9 CLI silently fails to navigate at all — worth knowing):
+
+| Route | Page found | UI-busy error |
+|---|---|---|
+| `//autocomplete` (static) | 5/5 | 0 |
+| `//slider` (static) | 5/5 | 0 |
+| `//marquee` | 0/5 | 5/5 |
+| `//motionicons` | 0/5 | 5/5 |
+| `//keyframe` | 0/5 | 5/5 |
+| `//badge` | 0/3 | 3/3 |
+| `//skeleton` | 0/3 | 3/3 |
+
+There is no way around it: `ui tree` fails identically, there is no stability/force option on the agent,
+and `set-property` cannot stop the animation first because it must resolve the element through a query.
+
+**Nothing is wrong with these controls on Windows — they cannot be *observed* there.**
+
+Fixed: `KnownGaps.WinUiAnimationBlocksCapture` covers marquee, motionicons, keyframe, badge and skeleton
+for the route sweep, and the five test classes carry a matching
+`[SkipOn(UIPlatform.Windows, …)]`. Verified: those 23 tests now report **23 skipped, 0 failed**.
+`FindElementAsync` now appends the agent's own response to its timeout message, so the next occurrence of
+this says so instead of claiming the element is missing.
+
+### 2b. The rest of the "page did not appear" group — cascades
+
+shinyimage, tabbedpage, virtualizedgrid, qrcode, quickentry, mediaelement and mediaservice all answer
+**3/3 when probed individually**, so their run-5 failures were knock-on effects (group 5, relaunch not
+recovering) rather than page faults. To be confirmed by the next full run.
+
+### 2c. Original observation (superseded)
 
 Two shapes, and the second is downstream of the first:
 

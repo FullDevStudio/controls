@@ -219,8 +219,12 @@ public class MauiDevFlowDriver : IAsyncDisposable
             await Task.Delay(400);
         }
 
+        // The agent's own refusal is the whole diagnosis when it is one - "the UI kept changing" means a
+        // running animation blocked every capture, not that the element is missing - and it is otherwise
+        // invisible, because every query here is caught and retried.
+        var because = lastException == null ? "" : $" - last agent response: {lastException.Message}";
         throw new TimeoutException(
-            $"Element (automationId '{automationId}', type '{type}', text '{text}', index {index}) not found within {timeoutSeconds}s",
+            $"Element (automationId '{automationId}', type '{type}', text '{text}', index {index}) not found within {timeoutSeconds}s{because}",
             lastException
         );
     }

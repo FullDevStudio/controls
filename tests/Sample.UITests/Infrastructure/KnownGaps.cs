@@ -38,8 +38,30 @@ public static class KnownGaps
     public const string AppKitNoRelayoutOnChange =
         "BUG: AppKit runs no layout pass when an already-realized layout's properties or size change - it only re-lays out on a window resize";
 
+    /// <summary>
+    /// The WinUI agent reads the UI by capturing a settled tree. A page that animates continuously never
+    /// settles, so every query, tree dump and property read comes back
+    /// "The UI kept changing while DevFlow was reading it" — and <see cref="MauiDevFlowDriver.Query"/>
+    /// turns that into an empty result, so it looks exactly like a page that never opened.
+    ///
+    /// Measured against the running app (agent 0.1.0-preview.12, CLI matched): a static page answers
+    /// every time (autocomplete 5/5, slider 5/5); marquee, motionicons, keyframe, badge and skeleton
+    /// answer 0/5 and raise the error 5/5. `ui tree` fails the same way, and `set-property` cannot be
+    /// used to stop the animation first because it has to resolve the element through a query.
+    ///
+    /// Nothing is wrong with these controls on Windows — they cannot be *observed* there.
+    /// </summary>
+    public const string WinUiAnimationBlocksCapture =
+        "DevFlow cannot read the UI on WinUI while the page animates continuously - every capture returns " +
+        "'The UI kept changing while DevFlow was reading it', so the page looks absent";
+
     static readonly Dictionary<(UIPlatform, string), string> pages = new()
     {
+        [(UIPlatform.Windows, "marquee")] = WinUiAnimationBlocksCapture,
+        [(UIPlatform.Windows, "motionicons")] = WinUiAnimationBlocksCapture,
+        [(UIPlatform.Windows, "keyframe")] = WinUiAnimationBlocksCapture,
+        [(UIPlatform.Windows, "badge")] = WinUiAnimationBlocksCapture,
+        [(UIPlatform.Windows, "skeleton")] = WinUiAnimationBlocksCapture,
         [(UIPlatform.MacOS, "floorplan")] = SkiaNoAppKitHandler,
         [(UIPlatform.MacOS, "seatingchart")] = SkiaNoAppKitHandler,
         [(UIPlatform.MacOS, "spreadsheet")] = SkiaNoAppKitHandler,

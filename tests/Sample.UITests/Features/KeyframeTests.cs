@@ -1,6 +1,7 @@
 namespace Sample.UITests.Features;
 
 [SkipOn(UIPlatform.Linux, "keyframe page not in the Linux head")]
+[SkipOn(UIPlatform.Windows, KnownGaps.WinUiAnimationBlocksCapture)]
 public class KeyframeTests : UITest
 {
     Task OpenPage() => Open("keyframe", "KeyframePage");
