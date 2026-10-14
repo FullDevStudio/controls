@@ -29,6 +29,7 @@ public class ExpanderTests : UITest
     // devflow on the macOS head: IsExpanded=True lands, "123 Fake Street" keeps bounds -1 indefinitely,
     // and a `ui resize` of the window lays it out at once (1036x17) - the layout is right, nobody runs it.
     [Test, SkipOn(UIPlatform.MacOS, KnownGaps.AppKitNoRelayoutOnChange)]
+    [SkipOn(UIPlatform.Linux, KnownGaps.LinuxRevealedContentNeverArranged)]
     public async Task Expanding_Lays_Out_The_Content()
     {
         await OpenPage();

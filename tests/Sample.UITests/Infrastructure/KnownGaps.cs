@@ -51,6 +51,17 @@ public static class KnownGaps
     public const string LinuxAutoCompleteGtkWedge =
         "BUG: GTK4 head wedges (UI thread spinning in native gtk_editable_set_text) once the AutoComplete dropdown is used";
 
+    /// <summary>
+    /// GTK4 head (maui-labs preview.13): content that was invisible at first layout is never arranged once
+    /// it becomes visible. After Expander.IsExpanded=True the Expander keeps its header-only bounds (58px)
+    /// and the revealed label stays at Width/Height -1, and unlike AppKit a window resize does not fix it.
+    /// Shiny's Expander only does standard MAUI (contentClip.IsVisible = true, animate HeightRequest
+    /// 0 → measured, then -1). In the backend, GtkViewHandler.MapVisibility only calls SetVisible and
+    /// GtkLayoutPanel skips invisible children, so the likely cause is there - not yet proven upstream.
+    /// </summary>
+    public const string LinuxRevealedContentNeverArranged =
+        "BUG: GTK4 head never arranges content that was invisible at first layout once it becomes visible (Expander body stays unlaid-out)";
+
     static readonly Dictionary<(UIPlatform, string), string> pages = new()
     {
         [(UIPlatform.MacOS, "floorplan")] = SkiaNoAppKitHandler,
