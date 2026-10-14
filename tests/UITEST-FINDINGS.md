@@ -61,6 +61,17 @@ glibc then aborts, with "double free or corruption (!prev)", "free(): chunks in 
 - **AutoComplete wedge:** the UI thread spins at 100% CPU inside native `gtk_editable_set_text`, reached via `EntryHandler.MapText` ← `AutoCompleteEntry.OnItemTapped`. Tests that never tap also wedge a few seconds after the dropdown shows. This is probably separate from the double free, since a finalizer abort can't explain a CPU spin. 5 of 6 tests are skipped (`KnownGaps.LinuxAutoCompleteGtkWedge`); `Typing_Filters` passes.
 - **Screenshots:** `maui devflow ui screenshot` fails on GTK, so failures there save no PNG. The driver's own screenshot call works.
 
+### AutoComplete wedge: root-caused as far as possible (preview.13 and maui-labs main)
+
+- **Still present on main:** a locally built maui-labs main backend wedges AutoComplete 5/5, the same as preview.13.
+- **The loop is in GTK's frame clock, not managed layout:** during the wedge the main thread only runs GDK frame-clock cycles. The single managed frame is the root layout tick (`LayoutHandler.StartRootLayoutTick`). The frame clock (`GDK_PRIORITY_REDRAW`) outranks the dispatcher's idle sources, so every dispatched callback starves.
+- **Instrumentation:** zero layout passes and zero invalidations during the wedge. Idle CPU is 0–4% before the trigger, and frames are normally paced (16 ms).
+- **Trigger:** a text change while the dropdown is open, combined with fast polling. It's timing-dependent: manual repros went from 3/3 early on to 0/6 later.
+- **Unknown:** why the frame clock stops pacing. That needs GTK debug symbols, and debuginfod timed out from the box.
+- **Decision:** keep `LinuxAutoCompleteGtkWedge` and file an upstream issue (draft 3 below) rather than a PR.
+
+**Draft upstream issue 3 (dotnet/maui-labs), not filed: GTK4 main loop starved by the frame clock after an Entry text change with an overlay visible.** Include the evidence above, the perf call stack (frame clock → root layout tick), and the trigger: a Shiny AutoCompleteEntry, or an Entry with a ScrollView overlay, polled quickly through DevFlow.
+
 ### Targeted run (8 classes, before the Linux skips were added)
 
 | Class | Failures | Verdict |

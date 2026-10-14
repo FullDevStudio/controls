@@ -39,17 +39,18 @@ public static class KnownGaps
         "BUG: AppKit runs no layout pass when an already-realized layout's properties or size change - it only re-lays out on a window resize";
 
     /// <summary>
-    /// GTK4 head: the UI thread spins at 100% CPU inside a native GTK call and never returns (the agent
-    /// stops answering; the watchdog kills the app). dotnet-stack, taken twice ~1 min apart during the hang:
-    ///   [native] ← Gtk4.Handlers.EntryHandler.MapText (PlatformView.SetText) ← BindableObject.SetValue
-    ///   ← InputView.set_Text ← AutoCompleteEntry.OnItemTapped ← TapGestureRecognizer.SendTapped
-    ///   ← DevFlow HandleTap ← GtkDispatcher ← Gio.Application.Run
-    /// MapText itself is a plain compare-and-SetText (decompiled), so the loop is inside gtk_editable_set_text.
-    /// Reached from the suggestion tap; tests that never tap also wedge a few seconds after typing once
-    /// the dropdown has shown (5/6 AutoComplete tests; Typing_Filters_Local_Items passes).
+    /// GTK4 head (maui-labs preview.13 and main): once the AutoComplete dropdown is open, a text change plus
+    /// fast polling (the tests' WaitForSuggestions) can leave the main thread doing nothing but GDK frame-clock
+    /// cycles. The only managed frame is the backend's root layout tick (LayoutHandler.StartRootLayoutTick via a
+    /// Gtk tick callback). The frame clock's source (GDK_PRIORITY_REDRAW) outranks the idle sources the MAUI
+    /// dispatcher uses, so every dispatched callback - DevFlow's included - starves; that is the "hang".
+    /// Instrumentation shows no managed layout loop (zero layout passes / invalidations during the wedge), idle
+    /// CPU is 0-4% before the trigger, and frames are normally paced until then. Why the frame clock stops
+    /// pacing is inside GTK and not yet known (needs GTK debug symbols). Not AutoCompleteEntry's logic: a plain
+    /// DevFlow fill with the dropdown open triggers it too.
     /// </summary>
     public const string LinuxAutoCompleteGtkWedge =
-        "BUG: GTK4 head wedges (UI thread spinning in native gtk_editable_set_text) once the AutoComplete dropdown is used";
+        "BUG: GTK4 head - the GDK frame clock starves the MAUI dispatcher once the AutoComplete dropdown is open and the text changes";
 
     /// <summary>
     /// GTK4 head (maui-labs preview.13): content that was invisible at first layout is never arranged once
