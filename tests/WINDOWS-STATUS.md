@@ -172,14 +172,33 @@ Every failure is a **collapse or a visibility check that does not hold**; expand
 | `Detail_Caret_Loads_And_Shows_The_Breakdown` | no `▾` caret on a row showing 'Lovelace' (of 4 candidates) |
 | `Tree_Lazy_Branch_Loads_Its_Children` | no visible element with text `▾` |
 
-`Header_Tap_Sorts…` fails at `DataGridTests.cs:128`, `Assert.That(await HasText("Liskov")).IsFalse()` —
-**before any interaction**. Liskov is on page two of an unsorted grid. `HasText` filters query results on
-`e.IsVisible`, so if WinUI reports off-screen elements as visible, every "did not collapse" symptom here
-is explained with the grid behaving correctly: the rows did collapse and the query still saw them.
+**The `IsVisible` theory is disproved.** Probed directly against the running app on a freshly opened
+grid: `#PeopleGrid Label[Text="Hopper"]` and `"Lovelace"` are present and visible, `"Liskov"` and
+`"Knuth"` are **absent** — exactly what the test asserts. The failure screenshot confirms the grid renders
+page one in source order with the pager on "1-6 of 8". Nothing is wrong with the grid's visibility
+reporting, and nothing is wrong with the control.
 
-Given finding 3, an `IsVisible` problem on this head is now the leading explanation. **Verdict:
-provisional — likely `IsVisible` reporting, not DataGrid.** Must be confirmed before any `SkipOn` lands,
-and if confirmed it affects *every* test on this head that relies on visibility.
+**Two test bugs, both platform-neutral, both confirmed:**
+
+1. **The cleanup only taps once.** `Header_Tap_Sorts_Ascending_Then_Descending`'s `finally` taps the Age
+   header a single time to clear the sort (Ascending → Descending → None). If the test fails part-way,
+   that one tap leaves the grid **sorted**. Shell keeps the page alive, so the next test opens a grid
+   whose first page is not source order and fails an assertion that has nothing to do with its subject —
+   which is where the in-suite `Assert.That(HasText("Liskov")).IsFalse()` failure comes from.
+2. **The second header tap is a no-op.** `DataGrid.OnHeaderTapped` calls `RebuildHeader()`, replacing the
+   header's elements, and `MauiDevFlowDriver.Tap` given an explicit `elementId` **never re-resolves it**
+   (`ResolveId` returns the id as-is and all three retries reuse it). The tap lands on an element that is
+   no longer wired up and silently does nothing. Run solo, the test fails at **line 140**
+   ("descending by age"), not line 128 — line 128 passes on a clean app.
+
+Run solo on a fresh app: 1 test, fails at line 140. Run as a class: 6 fail, the extra ones through (1).
+
+**Not yet fixed.** An attempt to tap-and-verify with a fresh capture, plus a cleanup that taps until
+source order returns, made the class *worse* — 6 failures became 8, because tapping speculatively left the
+grid in a state `Row_Tap_Opens_The_Editor_And_Cancel_Closes_It` and `Edit_And_Save_Commits_To_The_Item`
+did not expect. Reverted. The fix needs to restore state deterministically rather than by tapping until
+something looks right; the grid exposes no public API to clear `sortDefs`, which is what makes this
+awkward.
 
 ### 5. Relaunch that does not recover in time (3 tests)
 
@@ -203,6 +222,14 @@ follow a page that wedged Shell.
 | `ProgressBarTests` ×3 | `BasicProgressBar` / `IncrementButton` / `DecrementButton` not found within 10s — likely group 2 (page realized only partially) |
 
 ## Harness notes for Windows
+
+- **Start the DevFlow broker before running the suite.** With the CLI at preview.12 (matching the agent),
+  `maui devflow list` **hangs indefinitely** when no broker is running — preview.9 returned immediately.
+  `AppHost.DiscoverBrokerPortAsync` shells out to exactly that command, so every poll times out, discovery
+  gives up, and `ResolvePortAsync` falls back to 9223 — where the broker that the hanging CLI just started
+  is listening. The driver then connects to the broker, never finds `HomePage`, and the whole session
+  fails in `InitializeAsync`. `maui devflow broker start` first makes `list` return in 0s. This cost two
+  full runs to spot and is worth building into the harness rather than leaving as tribal knowledge.
 
 - **`app.log` is 173 bytes** — only the three DevFlow startup lines. The unpackaged WinUI head writes
   nothing further to stdout, so `DesktopAppHost.TakeOutputErrors()` — the path that catches
