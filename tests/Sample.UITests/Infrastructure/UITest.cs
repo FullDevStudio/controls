@@ -16,8 +16,13 @@ public abstract class UITest
     protected bool IsMobile => Platform is UIPlatform.iOS or UIPlatform.Android;
     protected bool IsDesktop => !IsMobile;
 
-    /// <summary>When the current test started, for scoping the app's log to it.</summary>
-    protected DateTimeOffset TestStarted { get; private set; }
+    /// <summary>
+    /// When the current test started, for scoping the app's log to it. Seeded at construction because
+    /// <see cref="PrepareApp"/> can throw before it assigns (a relaunch that never comes back): left at
+    /// default, the <c>AddSeconds(-1)</c> below overflows DateTimeOffset.MinValue and the After(Test)
+    /// hook reports that instead of the failure that actually mattered.
+    /// </summary>
+    protected DateTimeOffset TestStarted { get; private set; } = DateTimeOffset.UtcNow;
 
     [Before(Test)]
     public async Task PrepareApp()

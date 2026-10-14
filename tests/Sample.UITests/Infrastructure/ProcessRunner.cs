@@ -93,16 +93,47 @@ public static class ProcessRunner
         IDictionary<string, string>? environment = null)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(logFile)!);
-        var writer = new StreamWriter(logFile, append: false) { AutoFlush = true };
+
+        // A relaunch opens this same path while the previous launch's writer may still be open:
+        // Exited runs on a pool thread, so disposal races the next LaunchAsync. StreamWriter(string)
+        // shares the file for reading only, which makes that an IOException on Windows and fails
+        // every relaunch — the app is never brought back and every later test fails in its
+        // BeforeTest hook. Sharing writes costs nothing here: the old process is already dead.
+        var stream = new FileStream(logFile, FileMode.Create, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete);
+        var writer = new StreamWriter(stream) { AutoFlush = true };
+        var closed = false;
+
+        void Write(string? data)
+        {
+            if (data == null)
+                return;
+
+            // Output can still arrive after Exited disposed the writer.
+            lock (writer)
+            {
+                if (!closed)
+                    writer.WriteLine(data);
+            }
+        }
 
         var process = new Process
         {
             StartInfo = CreateStartInfo(fileName, arguments, null, environment),
             EnableRaisingEvents = true
         };
-        process.OutputDataReceived += (_, e) => { if (e.Data != null) lock (writer) writer.WriteLine(e.Data); };
-        process.ErrorDataReceived += (_, e) => { if (e.Data != null) lock (writer) writer.WriteLine(e.Data); };
-        process.Exited += (_, _) => { lock (writer) writer.Dispose(); };
+        process.OutputDataReceived += (_, e) => Write(e.Data);
+        process.ErrorDataReceived += (_, e) => Write(e.Data);
+        process.Exited += (_, _) =>
+        {
+            lock (writer)
+            {
+                if (closed)
+                    return;
+
+                closed = true;
+                writer.Dispose();
+            }
+        };
 
         process.Start();
         process.BeginOutputReadLine();
