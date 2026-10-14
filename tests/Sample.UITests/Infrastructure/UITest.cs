@@ -70,8 +70,13 @@ public abstract class UITest
         }
 
         // A navigation that never landed usually means Shell is wedged (a page that failed to build
-        // leaves it on an empty route), and every later test would fail the same way.
-        if (context.Execution.Result?.Exception?.ToString().Contains(MauiDevFlowDriver.NavigationTimeoutMessage) == true)
+        // leaves it on an empty route), and every later test would fail the same way. A page that is
+        // gone while its route is current wedges just that page the same way — on Windows one dead
+        // ButtonsPage failed the six tests after it, none of which relaunched.
+        var failure = context.Execution.Result?.Exception?.ToString();
+        if (failure != null
+            && (failure.Contains(MauiDevFlowDriver.NavigationTimeoutMessage)
+                || failure.Contains(MauiDevFlowDriver.PageMissingMessage)))
             App.RequestRelaunch();
 
         try { await Driver.Screenshot(Path.Combine("..", "failures", name + ".png")); } catch { }

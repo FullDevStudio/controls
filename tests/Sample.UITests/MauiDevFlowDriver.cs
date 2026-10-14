@@ -124,8 +124,26 @@ public class MauiDevFlowDriver : IAsyncDisposable
             throw new TimeoutException($"{NavigationTimeoutMessage} '//{target}' within {timeout}s (current route: '{current}')");
 
         if (pageType != null)
-            await WaitUntilTypeExists(pageType, timeout);
+        {
+            try
+            {
+                await WaitUntilTypeExists(pageType, timeout);
+            }
+            catch (TimeoutException ex)
+            {
+                // Shell says it is on the route but the page is not in the tree — the same wedge as a
+                // navigation that never lands, and just as fatal to every later test on this page, so it
+                // has to be recognizable to the relaunch check in UITest.CollectEvidence.
+                throw new TimeoutException($"{PageMissingMessage} '{pageType}' after reaching '//{target}' within {timeout}s", ex);
+            }
+        }
     }
+
+    /// <summary>
+    /// A page that never appeared though its route is current. Paired with <see cref="NavigationTimeoutMessage"/>:
+    /// both mean Shell can no longer show this page, and both need a fresh process before the next test.
+    /// </summary>
+    public const string PageMissingMessage = "Page did not appear:";
 
     /// <summary>
     /// Another DevFlow session (the CLI, a coding agent) holding the app's mutation lease makes a
