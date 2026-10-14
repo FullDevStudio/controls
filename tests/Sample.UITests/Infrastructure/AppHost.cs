@@ -34,6 +34,14 @@ public abstract class AppHost : IAsyncDisposable
     /// <summary>The platform name the DevFlow broker reports for this head's agent.</summary>
     protected abstract string AgentPlatform { get; }
 
+    /// <summary>
+    /// Whether a broker entry's "platform" belongs to this head. Equality with
+    /// <see cref="AgentPlatform"/> by default; a head whose agent reports a different name than the one
+    /// we launch it by overrides this.
+    /// </summary>
+    protected virtual bool MatchesAgentPlatform(string? platform)
+        => String.Equals(platform, AgentPlatform, StringComparison.OrdinalIgnoreCase);
+
     /// <summary>App output, where the head can capture it (desktop heads), for post-mortem on a failure.</summary>
     public string LogFile => Path.Combine(UITestSettings.ResultsDirectory, "app.log");
 
@@ -85,7 +93,7 @@ public abstract class AppHost : IAsyncDisposable
                 if (result.ExitCode == 0 && start >= 0)
                 {
                     var agent = JsonNode.Parse(result.Output[start..])!.AsArray()
-                        .Where(a => String.Equals(a?["platform"]?.GetValue<string>(), AgentPlatform, StringComparison.OrdinalIgnoreCase))
+                        .Where(a => MatchesAgentPlatform(a?["platform"]?.GetValue<string>()))
                         .Where(a => AgentSince == null
                             || !DateTimeOffset.TryParse(a?["connectedAt"]?.GetValue<string>(), out var connected)
                             || connected >= AgentSince)
@@ -592,8 +600,18 @@ public sealed class WindowsAppHost : DesktopAppHost
     const string Tfm = "net10.0-windows10.0.19041.0";
 
     public override string ProjectPath => Path.Combine("samples", "Sample", "Sample.csproj");
-    protected override string AgentPlatform => "Windows";
+    protected override string AgentPlatform => "WinUI";
     protected override string ProcessName => "Sample";
+
+    /// <summary>
+    /// The agent calls this head "WinUI"; the suite calls it "windows". Getting this wrong is silent and
+    /// fatal: no broker entry ever matches, ResolvePortAsync times out and falls back to 9223 - which the
+    /// broker itself answers on - so the driver connects to the broker, finds no HomePage, and every test
+    /// in the session fails in InitializeAsync. "Windows" is accepted too in case the agent is renamed.
+    /// </summary>
+    protected override bool MatchesAgentPlatform(string? platform)
+        => String.Equals(platform, "WinUI", StringComparison.OrdinalIgnoreCase)
+            || String.Equals(platform, "Windows", StringComparison.OrdinalIgnoreCase);
 
     // The sample is unpackaged (WindowsPackageType=None), so the exe runs straight from bin.
     public override Task BuildAsync() => BuildProject(Tfm);

@@ -6,10 +6,33 @@ effort has covered arm64. `maui` CLI `0.1.0-preview.9.26258.5`. Blazor skipped (
 
 **Nothing is committed. No `src/` changes.**
 
+## Headline: the Windows head was never actually runnable
+
+**Five harness bugs, zero confirmed product bugs so far.** Four runs were needed before the suite could
+talk to the app at all. Every verdict taken from runs 1-4 is void, including "ButtonsPage vanished" and
+"Keyframe/Marquee/MotionIcons are dead" — those were observed through a harness that could not relaunch
+the app, could not capture its output, and in runs 2-4 was not connected to it.
+
+The decisive one: **`WindowsAppHost.AgentPlatform` returned `"Windows"` while the DevFlow agent reports
+`"platform": "WinUI"`.** No broker entry ever matched, so `ResolvePortAsync` spent its 120s timeout and
+fell back to the default port 9223 — which **the broker itself** answers on. `WaitForAgent` therefore
+*succeeded* against the broker, `HomePage` was never found, and the whole session died in
+`InitializeAsync`. Taken live from the broker while the app was up and healthy:
+
+```json
+{ "project": "Sample.csproj", "tfm": "net10.0-windows10.0.19041.0",
+  "platform": "WinUI", "appName": "Shiny Controls", "port": 10223 }
+```
+
+Run 1 only worked because 9223 happened to be free and the app's agent landed on it by luck. Once a
+broker was running and holding 9223, every later run was doomed — which made the fixes look like they had
+caused a regression.
+
+After the fix, tests run in ~0.8s each instead of timing out at 16s.
+
 ## Run state
 
-In progress, started 10:53. As of the last sample: **251 started / 226 passed / 25 failed / 0 skipped**
-of ~600. Totals below are provisional and will be restated when the run completes.
+Run 5 in progress (runs 1-4 void, see above). Totals will be restated when it completes.
 
 ## Blockers
 
