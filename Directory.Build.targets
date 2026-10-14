@@ -3,7 +3,7 @@
     <!--
         Apple target frameworks cannot be built on Linux: the iOS, Mac Catalyst and macOS workloads do
         not exist there, so restoring any multi-targeted project (and everything that references one,
-        such as samples/Sample.Linux) failed with NETSDK1178. Keep only the frameworks Linux can build.
+        such as samples/Sample.Linux) failed with NETSDK1178. Keep only the frameworks Linux can build (net10.0, -android, and -windows when forced).
         This is evaluated after each project's own TargetFrameworks, so the projects keep listing what
         they ship, and macOS/Windows are untouched.
 
@@ -14,11 +14,17 @@
     -->
     <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('linux')) And '$(TargetFrameworks)' != ''">
         <_ShinyAllTfms>;$(TargetFrameworks);</_ShinyAllTfms>
-        <_ShinyHasBase>$(_ShinyAllTfms.Contains(';$(BaseTargetFramework);'))</_ShinyHasBase>
-        <_ShinyHasAndroid>$(_ShinyAllTfms.Contains(';$(BaseTargetFramework)-android;'))</_ShinyHasAndroid>
-        <TargetFrameworks Condition="'$(_ShinyHasBase)' == 'true' And '$(_ShinyHasAndroid)' == 'true'">$(BaseTargetFramework);$(BaseTargetFramework)-android</TargetFrameworks>
-        <TargetFrameworks Condition="'$(_ShinyHasBase)' == 'true' And '$(_ShinyHasAndroid)' != 'true'">$(BaseTargetFramework)</TargetFrameworks>
-        <TargetFrameworks Condition="'$(_ShinyHasBase)' != 'true' And '$(_ShinyHasAndroid)' == 'true'">$(BaseTargetFramework)-android</TargetFrameworks>
+        <!-- Each entry appends when the list has something, or starts it when it is empty (the order of
+             each pair matters), so no leading ';' and no property function touches the result. -->
+        <_ShinyLinuxTfms></_ShinyLinuxTfms>
+        <_ShinyLinuxTfms Condition="$(_ShinyAllTfms.Contains(';$(BaseTargetFramework);'))">$(BaseTargetFramework)</_ShinyLinuxTfms>
+        <_ShinyLinuxTfms Condition="$(_ShinyAllTfms.Contains(';$(BaseTargetFramework)-android;')) And '$(_ShinyLinuxTfms)' != ''">$(_ShinyLinuxTfms);$(BaseTargetFramework)-android</_ShinyLinuxTfms>
+        <_ShinyLinuxTfms Condition="$(_ShinyAllTfms.Contains(';$(BaseTargetFramework)-android;')) And '$(_ShinyLinuxTfms)' == ''">$(BaseTargetFramework)-android</_ShinyLinuxTfms>
+        <!-- kept for the documented -p:ForceWindowsTfm=true compile check -->
+        <_ShinyLinuxTfms Condition="$(_ShinyAllTfms.Contains(';$(BaseTargetFramework)-windows10.0.19041.0;')) And '$(_ShinyLinuxTfms)' != ''">$(_ShinyLinuxTfms);$(BaseTargetFramework)-windows10.0.19041.0</_ShinyLinuxTfms>
+        <_ShinyLinuxTfms Condition="$(_ShinyAllTfms.Contains(';$(BaseTargetFramework)-windows10.0.19041.0;')) And '$(_ShinyLinuxTfms)' == ''">$(BaseTargetFramework)-windows10.0.19041.0</_ShinyLinuxTfms>
+        <!-- An Apple-only project keeps its list and fails on Linux, which is correct: it cannot build there. -->
+        <TargetFrameworks Condition="'$(_ShinyLinuxTfms)' != ''">$(_ShinyLinuxTfms)</TargetFrameworks>
     </PropertyGroup>
 
 </Project>
