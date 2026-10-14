@@ -1,5 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
+        <!-- DevFlow's XAML source maps add every .xaml a second time without the item metadata MAUI's
+             XAML source generator needs; on this head the untagged copy wins, nothing is generated,
+             and InitializeComponent / every x:Name field goes missing. -->
+        <DevFlowXamlSourceMapsEnabled>false</DevFlowXamlSourceMapsEnabled>
         <TargetFramework>$(BaseTargetFramework)-macos</TargetFramework>
         <OutputType>Exe</OutputType>
         <UseMaui>true</UseMaui>

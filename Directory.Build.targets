@@ -1,0 +1,14 @@
+<Project>
+
+    <!--
+        Apple target frameworks cannot be built on Linux: the iOS, Mac Catalyst and macOS workloads do
+        not exist there, so restoring any multi-targeted project (and everything that references one,
+        such as samples/Sample.Linux) failed with NETSDK1178. Drop them on Linux only. This is evaluated
+        after each project's own TargetFrameworks, so the projects keep listing what they ship.
+    -->
+    <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('linux')) And '$(TargetFrameworks)' != ''">
+        <TargetFrameworks>$([System.Text.RegularExpressions.Regex]::Replace('$(TargetFrameworks)', '[^;]*-(ios|maccatalyst|macos|tvos)[^;]*;?', ''))</TargetFrameworks>
+        <TargetFrameworks>$(TargetFrameworks.TrimEnd(';'))</TargetFrameworks>
+    </PropertyGroup>
+
+</Project>
