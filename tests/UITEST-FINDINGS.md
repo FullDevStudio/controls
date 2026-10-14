@@ -22,6 +22,8 @@ Nothing is committed yet.
 
 ## MAUI Linux GTK — findings (2026-10-14)
 
+> **Update 2:** the remaining GTK bugs (the Expander revealed-content gap and the AutoComplete frame-clock wedge) are both fixed by the open draft PR **dotnet/maui-labs#637** ("Fix GTK4 desktop layout and native widget lifetimes"). With the #637 head overlaid and the Linux skips removed: Expander, AutoComplete and PasswordStrength pass 20/20 three runs in a row, and 8 other classes give 51 pass / 2 fail (Docking, the same as preview.13) with no lockups. Verification comment: https://github.com/dotnet/maui-labs/pull/637#issuecomment-6173764422. **When #637 ships in a preview package:** bump the packages and drop `LinuxRevealedContentNeverArranged` and `LinuxAutoCompleteGtkWedge`. The Expander root cause on main is that the page root's layout tick callback is invoked once (at 0x0) and never again, so later LayoutDirty flags are never serviced. Docking ("Unknown panel type 'output'") is still untriaged.
+>
 > **Update:** the double free, the legacy-package issue and the unreachable second ShellContent are all **already fixed upstream** in maui-labs `0.1.0-preview.13.26514.2`. v1 now uses that version, and their Linux skips are removed. On preview.13 the Badge idle repro survives 60s (3/3), and Badge, ChipGroup, DataGrid and Dialogs pass. Still open on Linux: the AutoComplete wedge, one Expander test and one PasswordStrength test. The text below describes preview.12.
 
 Found by a Claude session on a real Ubuntu aarch64 VM driving `./uitest linux`.

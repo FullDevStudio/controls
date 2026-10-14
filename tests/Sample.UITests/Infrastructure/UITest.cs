@@ -76,6 +76,11 @@ public abstract class UITest
 
         try { await Driver.Screenshot(Path.Combine("..", "failures", name + ".png")); } catch { }
 
+        // PrepareApp failed before the test started: there is no log window to read, and
+        // DateTimeOffset.MinValue.AddSeconds(-1) would throw and mask the real failure.
+        if (TestStarted == default)
+            return;
+
         var errors = await Driver.GetErrors(TestStarted.AddSeconds(-1));
         if (errors.Count > 0)
             await File.WriteAllLinesAsync(Path.Combine(dir, name + ".log"), errors.Select(e => e.ToString()));
