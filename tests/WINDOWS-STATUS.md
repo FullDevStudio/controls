@@ -249,3 +249,13 @@ follow a page that wedged Shell.
 1. Want the `uitest.ps1` PowerShell 5.1 fix applied here, or will you take it?
 2. For the font errors — ignore-predicate scoped to Windows, or report upstream to MAUI first?
 3. Is a Windows equivalent of `SHINY_UITEST_WATCHDOG_SECONDS` wanted, given stdout is unavailable here?
+
+---
+
+## Post-merge regression on iOS/Android (logged 2026-10-14, Mac session) — TO FIX
+
+After merging `uitest/windows` into v1, a smoke run of `./uitest ios android --no-build --filter Slider,Toast,Navigation` **failed every test on iOS (28/28)** and every Android test seen before it was stopped. The same classes passed on v1 before the merge (iOS 58/59, Android 59/59 on preview.13).
+
+- All failures are in fixture init: `TimeoutException: Element (automationId 'HomePage', type '', text '', index 0) not found within 60s`. So the driver connects to an agent that isn't the freshly launched app.
+- That's exactly the symptom the Windows changes describe (connecting to the broker or a stale agent on the fallback port). The likeliest culprit is the merge's new `Host.AgentSince = DateTimeOffset.UtcNow.AddSeconds(-2)` before the **first** launch in `AppFixture.InitializeAsync`. If the iOS/Android agent's broker `connectedAt` doesn't pass that filter (clock or format differences, or registration timing via simctl/adb), discovery returns nothing and falls back to 9223. Also check the `MatchesAgentPlatform` refactor and the page-missing relaunch.
+- Not yet diagnosed. To reproduce: `./uitest ios --no-build --filter Slider`.
