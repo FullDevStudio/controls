@@ -1,5 +1,6 @@
 namespace Sample.UITests.Features;
 
+[SkipOn(UIPlatform.Windows, KnownGaps.WinUiAnimationBlocksCapture)]
 public class MotionIconsTests : UITest
 {
     Task OpenPage() => Open("motionicons", "MotionIconsPage");

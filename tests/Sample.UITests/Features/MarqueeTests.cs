@@ -2,6 +2,7 @@ namespace Sample.UITests.Features;
 
 [SkipOn(UIPlatform.MacOS, "marquee page not in the macOS head")]
 [SkipOn(UIPlatform.Linux, "marquee page not in the Linux head")]
+[SkipOn(UIPlatform.Windows, KnownGaps.WinUiAnimationBlocksCapture)]
 public class MarqueeTests : UITest
 {
     Task OpenPage() => Open("marquee", "MarqueePage");

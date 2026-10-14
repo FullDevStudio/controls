@@ -63,8 +63,50 @@ public static class KnownGaps
     public const string LinuxRevealedContentNeverArranged =
         "BUG: GTK4 head never arranges content that was invisible at first layout once it becomes visible (Expander body stays unlaid-out)";
 
+    /// <summary>
+    /// The WinUI agent reads the UI by capturing a settled tree. A page that animates continuously never
+    /// settles, so every query, tree dump and property read comes back
+    /// "The UI kept changing while DevFlow was reading it" — and <see cref="MauiDevFlowDriver.Query"/>
+    /// turns that into an empty result, so it looks exactly like a page that never opened.
+    ///
+    /// Measured against the running app (agent 0.1.0-preview.12, CLI matched): a static page answers
+    /// every time (autocomplete 5/5, slider 5/5); marquee, motionicons, keyframe, badge and skeleton
+    /// answer 0/5 and raise the error 5/5. `ui tree` fails the same way, and `set-property` cannot be
+    /// used to stop the animation first because it has to resolve the element through a query.
+    ///
+    /// Nothing is wrong with these controls on Windows — they cannot be *observed* there.
+    /// </summary>
+    public const string WinUiAnimationBlocksCapture =
+        "DevFlow cannot read the UI on WinUI while the page animates continuously - every capture returns " +
+        "'The UI kept changing while DevFlow was reading it', so the page looks absent";
+
+    /// <summary>
+    /// Quick entry hosts its popup in a second MAUI <c>Window</c> on desktop by design
+    /// (<c>DesktopQuickEntryPresenter</c> calls <c>Application.OpenWindow</c>, then hides it). On WinUI the
+    /// agent reports the Shell route from a window that has no Shell once that second window exists, so
+    /// <c>status.route</c> reads <c>''</c> for the rest of the session and <see cref="MauiDevFlowDriver.NavigateTo"/>
+    /// can never confirm the route.
+    ///
+    /// Verified live: after <c>//quickentry</c>, <c>windowCount</c> is 2 — window 0 holds
+    /// <c>Sample.Features.QuickEntry.QuickEntryPage</c> (so the page really is displayed) and window 1 holds
+    /// <c>Shiny.Maui.Controls.Desktop.QuickEntry.QuickEntryPage</c> — while <c>route</c> is <c>''</c>.
+    ///
+    /// The page works; the suite cannot prove it got there. The harness could fall back to "the expected page
+    /// type is displayed" when the route is empty, which would recover these tests.
+    /// </summary>
+    public const string WinUiSecondWindowHidesTheRoute =
+        "quick entry's popup lives in a second Window on desktop, and with it open the WinUI agent reports " +
+        "the Shell route as '' - the page is displayed but navigation can't be confirmed";
+
     static readonly Dictionary<(UIPlatform, string), string> pages = new()
     {
+        [(UIPlatform.Windows, "quickentry")] = WinUiSecondWindowHidesTheRoute,
+        [(UIPlatform.Windows, "marquee")] = WinUiAnimationBlocksCapture,
+        [(UIPlatform.Windows, "progressbar")] = WinUiAnimationBlocksCapture,
+        [(UIPlatform.Windows, "motionicons")] = WinUiAnimationBlocksCapture,
+        [(UIPlatform.Windows, "keyframe")] = WinUiAnimationBlocksCapture,
+        [(UIPlatform.Windows, "badge")] = WinUiAnimationBlocksCapture,
+        [(UIPlatform.Windows, "skeleton")] = WinUiAnimationBlocksCapture,
         [(UIPlatform.MacOS, "floorplan")] = SkiaNoAppKitHandler,
         [(UIPlatform.MacOS, "seatingchart")] = SkiaNoAppKitHandler,
         [(UIPlatform.MacOS, "spreadsheet")] = SkiaNoAppKitHandler,

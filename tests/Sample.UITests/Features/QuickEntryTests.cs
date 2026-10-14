@@ -5,6 +5,7 @@ namespace Sample.UITests.Features;
 /// lifecycle reported through Opened/Closed, and the global-hotkey affordance being honest about
 /// platforms that have none.
 /// </summary>
+[SkipOn(UIPlatform.Windows, KnownGaps.WinUiSecondWindowHidesTheRoute)]
 public class QuickEntryTests : UITest
 {
     Task OpenPage() => Open("quickentry", "QuickEntryPage");

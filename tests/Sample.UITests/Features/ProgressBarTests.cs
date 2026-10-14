@@ -1,5 +1,10 @@
 namespace Sample.UITests.Features;
 
+// The page's indeterminate bar never stops, so the agent's capture is blocked for most of the time:
+// probed live, //progressbar answered 1 of 4 queries and raised the UI-busy error on the other 3, and
+// all five tests here fail in a full run - a property read comes back as an empty string rather than
+// erroring ("'ProgressValueLabel'.Text was ''").
+[SkipOn(UIPlatform.Windows, KnownGaps.WinUiAnimationBlocksCapture)]
 public class ProgressBarTests : UITest
 {
     Task OpenPage() => Open("progressbar", "ProgressBarPage");
