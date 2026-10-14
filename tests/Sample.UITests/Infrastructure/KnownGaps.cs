@@ -58,6 +58,7 @@ public static class KnownGaps
     static readonly Dictionary<(UIPlatform, string), string> pages = new()
     {
         [(UIPlatform.Windows, "marquee")] = WinUiAnimationBlocksCapture,
+        [(UIPlatform.Windows, "progressbar")] = WinUiAnimationBlocksCapture,
         [(UIPlatform.Windows, "motionicons")] = WinUiAnimationBlocksCapture,
         [(UIPlatform.Windows, "keyframe")] = WinUiAnimationBlocksCapture,
         [(UIPlatform.Windows, "badge")] = WinUiAnimationBlocksCapture,
