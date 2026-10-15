@@ -115,13 +115,23 @@ public class VideoTextTests : UITest
     }
 
 
-    [Test]
-    public async Task Text_Size_And_Mute_Options_Reach_The_Control()
+    [Test, SkipOn(UIPlatform.Linux, KnownGaps.LinuxEntryTextGtkWedge)]
+    public async Task Text_Entry_Reaches_The_Control()
     {
         await OpenPage();
         await Driver.SetProperty("Text", "SURF", automationId: "VideoTextEntry");
         await Driver.WaitForProperty("VideoText", "Text", "SURF");
 
+        await Driver.SetProperty("Text", "BLOOM", automationId: "VideoTextEntry");
+        await Driver.WaitForProperty("VideoText", "Text", "BLOOM");
+        await AssertNoAppErrors();
+    }
+
+
+    [Test]
+    public async Task Size_Mute_And_Italic_Options_Reach_The_Control()
+    {
+        await OpenPage();
         await Driver.SetProperty("Value", "96", automationId: "VideoTextSize");
         await Driver.WaitUntil(async () => await Driver.GetDouble("FontSize", "VideoText") == 96, "96 to reach the control");
 
@@ -135,8 +145,7 @@ public class VideoTextTests : UITest
         await Driver.SetProperty("IsToggled", "False", automationId: "VideoTextItalic");
         await Driver.SetProperty("IsToggled", "True", automationId: "VideoTextMuted");
         await Driver.SetProperty("Value", "0", automationId: "VideoTextSize");
-        await Driver.SetProperty("Text", "BLOOM", automationId: "VideoTextEntry");
-        await Driver.WaitForProperty("VideoText", "Text", "BLOOM");
+        await Driver.WaitUntil(async () => await Driver.GetDouble("FontSize", "VideoText") == 0, "auto-fit to come back");
         await AssertNoAppErrors();
     }
 
