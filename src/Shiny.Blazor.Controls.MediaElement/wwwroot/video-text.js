@@ -1,10 +1,30 @@
-// VideoText: the mask itself is pure CSS (an SVG data URL built in C#). This module only does the two
-// things markup cannot — set the muted *property* (the attribute is just defaultMuted, so toggling it
-// after load changes nothing) and kick playback where autoplay was refused — plus measure the glyphs so
-// auto-fit uses real widths instead of an estimate.
+// VideoText: the mask and overlay are SVG built in C#. This module only does the things markup cannot —
+// set the muted *property* (the attribute is just defaultMuted, so toggling it after load changes
+// nothing), kick playback where autoplay was refused, report the element's size for the marquee, and
+// measure the glyphs so auto-fit uses real widths instead of an estimate.
 
-export function start(video, muted) {
+export function start(video, container, dotnet, muted) {
     applyMuted(video, muted);
+
+    // a marquee's travel is in pixels, so .NET needs the element's size (and to hear when it changes)
+    if (container && dotnet && typeof ResizeObserver !== 'undefined') {
+        const observer = new ResizeObserver(entries => {
+            const box = entries[entries.length - 1].contentRect;
+            dotnet.invokeMethodAsync('OnResize', box.width, box.height).catch(() => { });
+        });
+        observer.observe(container);
+        observers.set(container, observer);
+    }
+}
+
+const observers = new WeakMap();
+
+export function stop(container) {
+    const observer = container && observers.get(container);
+    if (observer) {
+        observer.disconnect();
+        observers.delete(container);
+    }
 }
 
 export function setMuted(video, muted) {
@@ -30,14 +50,19 @@ function applyMuted(video, muted) {
 }
 
 // Widths of each line at 100px, as plain numbers (an array of primitives survives trimming; an array of
-// DTOs does not). Waits for web fonts so a late-loading face doesn't leave the fit measured in a fallback.
+// DTOs does not). Loads the face first: fonts.ready alone does not, because a web font nothing on the page
+// uses yet is never fetched, and the fit would be measured in the fallback.
 export async function measure(lines, family, weight, style) {
+    const font = `${style || 'normal'} ${weight || 'normal'} 100px ${family || 'sans-serif'}`;
     try {
-        if (document.fonts && document.fonts.ready) await document.fonts.ready;
+        if (document.fonts) {
+            await document.fonts.load(font, lines.join(''));
+            await document.fonts.ready;
+        }
     } catch { }
 
     const canvas = measure.canvas || (measure.canvas = document.createElement('canvas'));
     const ctx = canvas.getContext('2d');
-    ctx.font = `${style || 'normal'} ${weight || 'normal'} 100px ${family || 'sans-serif'}`;
+    ctx.font = font;
     return lines.map(l => ctx.measureText(l).width);
 }
