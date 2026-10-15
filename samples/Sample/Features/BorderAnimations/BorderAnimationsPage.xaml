@@ -20,7 +20,7 @@
                 <VerticalStackLayout Spacing="6">
                     <Label Text="Login" FontSize="20" FontAttributes="Bold" />
                     <Label Text="Enter your credentials to access your account." FontSize="13" Opacity="0.7" />
-                    <Button Text="Sign in" Margin="0,8,0,0" />
+                    <Button Text="Sign in" Margin="0,8,0,0" AutomationId="BeamCardButton" />
                 </VerticalStackLayout>
             </shiny:BorderBeam>
 
@@ -62,7 +62,7 @@
                                Background="{AppThemeBinding Light=#FFFFFF, Dark=#18181B}">
                 <VerticalStackLayout Spacing="6">
                     <Label Text="Pro plan" FontSize="20" FontAttributes="Bold" />
-                    <Label Text="Everything in Free, plus unlimited projects." FontSize="13" Opacity="0.7" />
+                    <Label Text="Everything in Free, plus unlimited projects." FontSize="13" Opacity="0.7" AutomationId="ShineCardText" />
                 </VerticalStackLayout>
             </shiny:ShineBorder>
 
@@ -77,18 +77,20 @@
 
             <Label Text="Running" FontSize="18" FontAttributes="Bold" />
             <HorizontalStackLayout Spacing="8">
-                <Switch x:Name="RunningSwitch" IsToggled="True" />
+                <Switch x:Name="RunningSwitch" AutomationId="RunningSwitch" IsToggled="True" />
                 <Label Text="Animate" VerticalOptions="Center" />
             </HorizontalStackLayout>
 
             <HorizontalStackLayout Spacing="12" HorizontalOptions="Center">
-                <shiny:BorderBeam IsRunning="{Binding IsToggled, Source={x:Reference RunningSwitch}}"
+                <shiny:BorderBeam AutomationId="RunningBeam"
+                                  IsRunning="{Binding IsToggled, Source={x:Reference RunningSwitch}}"
                                   CornerRadius="999"
                                   BorderWidth="2"
                                   Padding="18,8">
                     <Label Text="Beam" />
                 </shiny:BorderBeam>
-                <shiny:ShineBorder IsRunning="{Binding IsToggled, Source={x:Reference RunningSwitch}}"
+                <shiny:ShineBorder AutomationId="RunningShine"
+                                   IsRunning="{Binding IsToggled, Source={x:Reference RunningSwitch}}"
                                    CornerRadius="999"
                                    BorderWidth="2"
                                    Padding="18,8">

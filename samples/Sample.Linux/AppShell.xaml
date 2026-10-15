@@ -54,6 +54,7 @@
        xmlns:slider="clr-namespace:Sample.Features.Slider;assembly=Sample.Linux"
        xmlns:rangepickers="clr-namespace:Sample.Features.RangePickers;assembly=Sample.Linux"
        xmlns:confetti="clr-namespace:Sample.Features.Confetti;assembly=Sample.Linux"
+       xmlns:borderanimations="clr-namespace:Sample.Features.BorderAnimations;assembly=Sample.Linux"
        xmlns:staggeredgrid="clr-namespace:Sample.Features.StaggeredGrid;assembly=Sample.Linux"
        xmlns:flex="clr-namespace:Sample.Features.Flex;assembly=Sample.Linux"
        xmlns:yoga="clr-namespace:Sample.Features.Yoga;assembly=Sample.Linux"
@@ -242,6 +243,9 @@
     <FlyoutItem Title="Confetti">
         <ShellContent ContentTemplate="{DataTemplate confetti:ConfettiPage}" Route="confetti" />
     </FlyoutItem>
+    <FlyoutItem Title="Border Animations">
+        <ShellContent ContentTemplate="{DataTemplate borderanimations:BorderAnimationsPage}" Route="borderanimations" />
+    </FlyoutItem>
 
     <FlyoutItem Title="Motion Icons">
         <ShellContent ContentTemplate="{DataTemplate motionicons:MotionIconsPage}" Route="motionicons" />
@@ -251,6 +255,9 @@
 
     <FlyoutItem Title="Media Element">
         <ShellContent ContentTemplate="{DataTemplate mediaelement:MediaElementPage}" Route="mediaelement" />
+    </FlyoutItem>
+    <FlyoutItem Title="Video Text">
+        <ShellContent ContentTemplate="{DataTemplate mediaelement:VideoTextPage}" Route="videotext" />
     </FlyoutItem>
     <FlyoutItem Title="Shiny Image">
         <ShellContent ContentTemplate="{DataTemplate images:ImagesPage}" Route="shinyimage" />

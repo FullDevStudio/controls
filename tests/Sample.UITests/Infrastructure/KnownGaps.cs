@@ -53,6 +53,14 @@ public static class KnownGaps
         "BUG: GTK4 head - the GDK frame clock starves the MAUI dispatcher once the AutoComplete dropdown is open and the text changes";
 
     /// <summary>
+    /// GTK4 head (maui-labs preview.13): the same wedge with no AutoComplete involved. Setting a plain Entry's
+    /// Text (VideoText page, which has animated content above it) goes through gtk_editable_set_text and the
+    /// UI thread never answers the agent again, so every later query times out. Seen 2026-10-14 on macOS+GTK.
+    /// </summary>
+    public const string LinuxEntryTextGtkWedge =
+        "BUG: GTK4 head - setting an Entry's Text wedges the UI thread (gtk_editable_set_text), the same frame-clock starvation as the AutoComplete wedge";
+
+    /// <summary>
     /// GTK4 head (maui-labs preview.13): content that was invisible at first layout is never arranged once
     /// it becomes visible. After Expander.IsExpanded=True the Expander keeps its header-only bounds (58px)
     /// and the revealed label stays at Width/Height -1, and unlike AppKit a window resize does not fix it.
@@ -102,6 +110,7 @@ public static class KnownGaps
     {
         [(UIPlatform.Windows, "quickentry")] = WinUiSecondWindowHidesTheRoute,
         [(UIPlatform.Windows, "marquee")] = WinUiAnimationBlocksCapture,
+        [(UIPlatform.Windows, "videotext")] = WinUiAnimationBlocksCapture, // the fallback label's marquee demo
         [(UIPlatform.Windows, "progressbar")] = WinUiAnimationBlocksCapture,
         [(UIPlatform.Windows, "motionicons")] = WinUiAnimationBlocksCapture,
         [(UIPlatform.Windows, "keyframe")] = WinUiAnimationBlocksCapture,

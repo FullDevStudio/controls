@@ -2,10 +2,12 @@
 @implements IAsyncDisposable
 
 @*
-    The mask sits on the wrapper rather than the <video>: a few WebKit builds drop a mask applied straight
-    to a video element while it is hardware-decoding, and the wrapper costs nothing.
+    Without an overlay, the mask sits on the wrapper rather than the <video>: a few WebKit builds drop a mask applied straight
+    to a video element while it is hardware-decoding, and the wrapper costs nothing. With one, an inline SVG
+    sheet with the text knocked out of it covers the video instead — inline, so it can use web fonts.
 *@
-<div class="shiny-video-text @CssClass"
+<div @ref="containerEl"
+     class="shiny-video-text @CssClass"
      style="@ContainerStyle"
      role="img"
      aria-label="@Text">
@@ -20,4 +22,8 @@
            disablepictureinpicture
            disableremoteplayback
            aria-hidden="true"></video>
+    @if (HasOverlay)
+    {
+        <div class="shiny-video-text-overlay">@((MarkupString)OverlaySvg)</div>
+    }
 </div>

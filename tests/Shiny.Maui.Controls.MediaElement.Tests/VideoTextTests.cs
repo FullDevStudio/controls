@@ -92,6 +92,70 @@ public class VideoTextLayoutTests
         url.ShouldNotContain("#");
         url.ShouldNotContain("\"");
     }
+
+    [Fact]
+    public void A_horizontal_marquee_fits_to_the_height_only()
+    {
+        // 500x120 at 100px into 400x100: still auto-fit would be width-bound (72px); scrolling only the height (75px)
+        VideoTextLayout.FitFontSize(500, 120, 100, 400, 100, MarqueeDirection.Left).ShouldBe(75, 0.0001);
+        VideoTextLayout.FitFontSize(500, 120, 100, 400, 100, MarqueeDirection.None).ShouldBe(72, 0.0001);
+    }
+
+    [Fact]
+    public void A_vertical_marquee_fits_to_the_width_only()
+        => VideoTextLayout.FitFontSize(500, 120, 100, 400, 50, MarqueeDirection.Up).ShouldBe(72, 0.0001);
+
+    [Theory]
+    [InlineData(MarqueeDirection.Left, 250, 0, -250, 0)]
+    [InlineData(MarqueeDirection.Right, -250, 0, 250, 0)]
+    [InlineData(MarqueeDirection.Up, 0, 80, 0, -80)]
+    [InlineData(MarqueeDirection.Down, 0, -80, 0, 80)]
+    public void A_marquee_pass_runs_from_off_one_edge_to_off_the_other(
+        MarqueeDirection direction, double startX, double startY, double endX, double endY)
+    {
+        // a 300x100 view, a 200x60 text block: each pass travels view + text along its axis
+        VideoTextLayout.MarqueeOffset(direction, 0, 300, 100, 200, 60).ShouldBe((startX, startY));
+        VideoTextLayout.MarqueeOffset(direction, 1, 300, 100, 200, 60).ShouldBe((endX, endY));
+        VideoTextLayout.MarqueeOffset(direction, 0.5, 300, 100, 200, 60).ShouldBe((0d, 0d));
+    }
+
+    [Fact]
+    public void No_marquee_stays_centred()
+        => VideoTextLayout.MarqueeOffset(MarqueeDirection.None, 0.3, 300, 100, 200, 60).ShouldBe((0d, 0d));
+
+    [Fact]
+    public void A_marquee_svg_scrolls_in_pixels_once_the_size_is_known()
+    {
+        // 100px tall, one line: 90 / 1.2 = 75px font; 450 at 100px -> 337.5 wide; run = 600 + 337.5
+        var svg = VideoTextLayout.BuildSvgMask(["OCEAN"], 0, null, null, null, [450], MarqueeDirection.Left, 6, 600, 100);
+        svg.ShouldNotContain("viewBox");
+        svg.ShouldContain("font-size='75'");
+        svg.ShouldContain("from{transform:translate(468.75px,0px)}to{transform:translate(-468.75px,0px)}");
+        svg.ShouldContain("animation:shiny-vt-marquee 6s linear infinite");
+        svg.ShouldContain("<g id='shiny-vt-text'");
+    }
+
+    [Fact]
+    public void A_marquee_svg_is_still_until_the_size_is_known()
+    {
+        var svg = VideoTextLayout.BuildSvgMask(["OCEAN"], 0, null, null, null, [450], MarqueeDirection.Left, 6);
+        svg.ShouldContain("viewBox");
+        svg.ShouldNotContain("animation");
+    }
+
+    [Fact]
+    public void Overlay_svg_knocks_the_text_out_of_a_coloured_sheet()
+    {
+        var svg = VideoTextLayout.BuildSvgOverlay(["OCEAN"], 64, "Inter", null, null, "#112233", 0.75, "m1");
+        svg.ShouldContain("<mask id='m1'");
+        svg.ShouldContain("<rect width='100%' height='100%' fill='white'/>");
+        svg.ShouldContain("<g fill='black'");
+        svg.ShouldContain("fill='#112233' opacity='0.75' mask='url(#m1)'");
+    }
+
+    [Fact]
+    public void Overlay_opacity_is_clamped()
+        => VideoTextLayout.BuildSvgOverlay(["A"], 64, null, null, null, "black", 3, "m").ShouldContain("opacity='1'");
 }
 
 
@@ -104,6 +168,29 @@ public class VideoTextTests : MediaTestBase
         text.IsMuted.ShouldBeTrue();
         text.FontAttributes.ShouldBe(FontAttributes.Bold);
         text.FontSize.ShouldBe(0);
+        text.OverlayColor.ShouldBe(Colors.Black);
+        text.OverlayOpacity.ShouldBe(1);
+        text.Marquee.ShouldBe(MarqueeDirection.None);
+        text.MarqueeDuration.ShouldBe(TimeSpan.FromSeconds(8));
+    }
+
+    [Fact]
+    public void Overlay_opacity_is_clamped_to_0_1()
+    {
+        new VideoText { OverlayOpacity = 2 }.OverlayOpacity.ShouldBe(1);
+        new VideoText { OverlayOpacity = -1 }.OverlayOpacity.ShouldBe(0);
+    }
+
+    [Fact]
+    public void The_fallback_label_sits_on_the_overlay()
+    {
+        var text = new VideoText { Text = "OCEAN", OverlayColor = Colors.Navy, OverlayOpacity = 0.5 };
+        var label = text.Content.ShouldBeOfType<Label>();
+        label.BackgroundColor.Alpha.ShouldBe(0.5f, 0.001f);
+        label.BackgroundColor.Blue.ShouldBe(Colors.Navy.Blue, 0.001f);
+
+        text.OverlayColor = null;
+        label.BackgroundColor.ShouldBeNull();
     }
 
     [Fact]

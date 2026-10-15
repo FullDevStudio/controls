@@ -1,8 +1,10 @@
 namespace Shiny.Maui.Controls.Media;
 
 /// <summary>
-/// Display text whose letters are windows onto a looping video — the video plays only inside the glyphs,
-/// and everything around them is transparent, so whatever is behind the control shows through.
+/// Display text whose letters are windows onto a looping video. The video plays at full strength inside the
+/// glyphs; around them it sits under an <see cref="OverlayColor"/> sheet (black by default) at
+/// <see cref="OverlayOpacity"/>. Clear the overlay colour and everything around the letters is transparent
+/// instead, so whatever is behind the control shows through.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -18,6 +20,8 @@ namespace Shiny.Maui.Controls.Media;
 /// <para>
 /// Leave <see cref="FontSize"/> at <c>0</c> to auto-fit: the text grows until its longest line (or the
 /// whole block, if that is the tighter fit) fills 90% of the control. Only explicit line breaks split it.
+/// With a <see cref="Marquee"/> the text scrolls across the control instead, so auto-fit only sizes it to
+/// the cross axis (90% of the height for left/right, of the width for up/down).
 /// </para>
 /// </remarks>
 /// <example>
@@ -69,6 +73,59 @@ public class VideoText : ContentView
     public static readonly BindableProperty FallbackTextColorProperty = BindableProperty.Create(
         nameof(FallbackTextColor), typeof(Color), typeof(VideoText), null,
         propertyChanged: (b, _, _) => ((VideoText)b).ApplyText());
+
+    /// <summary>
+    /// The colour of the sheet over the video around the letters. Default black. <c>null</c> (or a fully
+    /// transparent colour) drops the sheet and clips the video to the letters, leaving the rest of the
+    /// control transparent.
+    /// </summary>
+    public static readonly BindableProperty OverlayColorProperty = BindableProperty.Create(
+        nameof(OverlayColor), typeof(Color), typeof(VideoText), Colors.Black,
+        propertyChanged: (b, _, _) => ((VideoText)b).ApplyText());
+
+    /// <summary>The overlay sheet's opacity, 0–1. Default 1 (solid). Lower it to let the video show faintly around the letters.</summary>
+    public static readonly BindableProperty OverlayOpacityProperty = BindableProperty.Create(
+        nameof(OverlayOpacity), typeof(double), typeof(VideoText), 1d,
+        coerceValue: (_, v) => Math.Clamp((double)v, 0d, 1d),
+        propertyChanged: (b, _, _) => ((VideoText)b).ApplyText());
+
+    /// <summary>Scroll the text continuously across the control. Default <see cref="MarqueeDirection.None"/> (centred, still).</summary>
+    public static readonly BindableProperty MarqueeProperty = BindableProperty.Create(
+        nameof(Marquee), typeof(MarqueeDirection), typeof(VideoText), MarqueeDirection.None,
+        propertyChanged: (b, _, _) => ((VideoText)b).ApplyText());
+
+    /// <summary>How long one marquee pass takes, from entering one edge to leaving the other. Default 8 seconds.</summary>
+    public static readonly BindableProperty MarqueeDurationProperty = BindableProperty.Create(
+        nameof(MarqueeDuration), typeof(TimeSpan), typeof(VideoText), TimeSpan.FromSeconds(8),
+        propertyChanged: (b, _, _) => ((VideoText)b).ApplyText());
+
+    /// <inheritdoc cref="OverlayColorProperty"/>
+    public Color? OverlayColor
+    {
+        get => (Color?)this.GetValue(OverlayColorProperty);
+        set => this.SetValue(OverlayColorProperty, value);
+    }
+
+    /// <inheritdoc cref="OverlayOpacityProperty"/>
+    public double OverlayOpacity
+    {
+        get => (double)this.GetValue(OverlayOpacityProperty);
+        set => this.SetValue(OverlayOpacityProperty, value);
+    }
+
+    /// <inheritdoc cref="MarqueeProperty"/>
+    public MarqueeDirection Marquee
+    {
+        get => (MarqueeDirection)this.GetValue(MarqueeProperty);
+        set => this.SetValue(MarqueeProperty, value);
+    }
+
+    /// <inheritdoc cref="MarqueeDurationProperty"/>
+    public TimeSpan MarqueeDuration
+    {
+        get => (TimeSpan)this.GetValue(MarqueeDurationProperty);
+        set => this.SetValue(MarqueeDurationProperty, value);
+    }
 
     /// <inheritdoc cref="SourceProperty"/>
     public MediaSource? Source
@@ -157,6 +214,7 @@ public class VideoText : ContentView
             };
             this.fallback.SizeChanged += (_, _) => this.ApplyFallbackText();
             this.Content = this.fallback;
+            this.IsClippedToBounds = true; // the marquee runs the label off the edges
         }
 
         this.ApplyText();
@@ -281,6 +339,10 @@ public class VideoText : ContentView
             this.surface.FontFamily = this.FontFamily;
             this.surface.FontSize = this.FontSize;
             this.surface.FontAttributes = this.FontAttributes;
+            this.surface.OverlayColor = this.OverlayColor;
+            this.surface.OverlayOpacity = this.OverlayOpacity;
+            this.surface.Marquee = this.Marquee;
+            this.surface.MarqueeDuration = this.MarqueeDuration;
             this.surface.Handler?.UpdateValue(nameof(VideoTextSurface.Text));
         }
 
@@ -295,33 +357,72 @@ public class VideoText : ContentView
             else
                 this.fallback.ClearValue(Label.TextColorProperty);
 
+            // no video to show through the letters here, so the overlay is just the label's backdrop
+            if (this.OverlayColor is { Alpha: > 0 } overlay)
+                this.fallback.BackgroundColor = overlay.WithAlpha(overlay.Alpha * (float)this.OverlayOpacity);
+            else
+                this.fallback.ClearValue(VisualElement.BackgroundColorProperty);
+
             this.ApplyFallbackText();
         }
     }
 
-    // The fallback has no native measuring to auto-fit with, so it approximates: average glyph advance of
-    // a bold display face is ~0.62em, and a line is ~1.2em tall. Close enough for a placeholder.
+    // The fallback has no native measuring to auto-fit with, so it approximates with the same average
+    // advance the Blazor prerender uses. Close enough for a placeholder.
     void ApplyFallbackText()
     {
         if (this.fallback is null)
             return;
 
+        var lines = VideoTextLayout.SplitLines(this.Text);
+        var longest = lines.Count == 0 ? 0 : lines.Max(l => l.Length);
+        var marquee = this.MarqueeDuration > TimeSpan.Zero ? this.Marquee : MarqueeDirection.None;
+
         if (this.FontSize > 0)
         {
             this.fallback.FontSize = this.FontSize;
-            return;
+        }
+        else
+        {
+            var fitted = VideoTextLayout.FitFontSize(
+                longest * VideoTextLayout.EstimatedAdvance * 100,
+                lines.Count * VideoTextLayout.LineHeight * 100,
+                100,
+                this.fallback.Width,
+                this.fallback.Height,
+                marquee);
+
+            if (fitted > 0)
+                this.fallback.FontSize = fitted;
         }
 
-        var lines = VideoTextLayout.SplitLines(this.Text);
-        var longest = lines.Count == 0 ? 0 : lines.Max(l => l.Length);
-        var fitted = VideoTextLayout.FitFontSize(
-            longest * 0.62 * 100,
-            lines.Count * 1.2 * 100,
-            100,
-            this.fallback.Width,
-            this.fallback.Height);
+        this.ApplyFallbackMarquee(lines.Count, longest, marquee);
+    }
 
-        if (fitted > 0)
-            this.fallback.FontSize = fitted;
+    const string MarqueeAnimation = "VideoTextMarquee";
+
+    void ApplyFallbackMarquee(int lineCount, int longest, MarqueeDirection marquee)
+    {
+        if (this.fallback is not { } label)
+            return;
+
+        label.AbortAnimation(MarqueeAnimation);
+        label.TranslationX = 0;
+        label.TranslationY = 0;
+
+        if (marquee == MarqueeDirection.None || lineCount == 0 || label.Width <= 0 || label.Height <= 0)
+            return;
+
+        var textWidth = longest * VideoTextLayout.EstimatedAdvance * label.FontSize;
+        var textHeight = lineCount * VideoTextLayout.LineHeight * label.FontSize;
+        var width = label.Width;
+        var height = label.Height;
+
+        new Animation(p =>
+        {
+            var (x, y) = VideoTextLayout.MarqueeOffset(marquee, p, width, height, textWidth, textHeight);
+            label.TranslationX = x;
+            label.TranslationY = y;
+        }).Commit(label, MarqueeAnimation, 16, (uint)this.MarqueeDuration.TotalMilliseconds, Easing.Linear, repeat: () => true);
     }
 }
