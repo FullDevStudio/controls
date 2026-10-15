@@ -67,8 +67,11 @@ New-Item -ItemType Directory -Force -Path $logs | Out-Null
 function Invoke-Build([string] $project) {
     Write-Host "==> Building $project"
     $log = Join-Path $logs "build-$project.log"
+    $ErrorActionPreference = 'Continue'
     dotnet build (Join-Path $root "tests/$project") --artifacts-path $artifacts *> $log
-    if ($LASTEXITCODE -ne 0) {
+    $buildCode = $LASTEXITCODE
+    $ErrorActionPreference = 'Stop'
+    if ($buildCode -ne 0) {
         Write-Host "Build of $project failed - see $log"
         Select-String -Path $log -Pattern ' error ' | Select-Object -First 20 | ForEach-Object { Write-Host $_.Line }
         exit 2
@@ -103,12 +106,16 @@ foreach ($platform in $platforms) {
 
     $log = Join-Path $logs "$platform.log"
     Write-Host "==> $platform  (log: $log)"
-    $testArgs = @('--no-progress')
+    $testArgs = @('--progress', 'off')
     if ($treeFilter) { $testArgs += @('--treenode-filter', $treeFilter) }
 
     $watch = [System.Diagnostics.Stopwatch]::StartNew()
+    # Windows PowerShell 5.1 turns a native command's stderr into an ErrorRecord, and under 'Stop' the
+    # first warning line aborts the script before a test runs - so relax it around the native calls.
+    $ErrorActionPreference = 'Continue'
     dotnet $dll @testArgs *> $log
     $code = $LASTEXITCODE
+    $ErrorActionPreference = 'Stop'
     $elapsed = '{0}m{1}s' -f [int]$watch.Elapsed.TotalMinutes, $watch.Elapsed.Seconds
 
     $content = Get-Content $log

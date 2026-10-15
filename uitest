@@ -106,7 +106,7 @@ failed_any=0
 run() {
     local platform="$1"
     local log="$LOGS/$platform.log"
-    local dll args=(--no-progress)
+    local dll args=(--progress off)
     [ -n "$tree_filter" ] && args+=(--treenode-filter "$tree_filter")
 
     local env_vars=()
