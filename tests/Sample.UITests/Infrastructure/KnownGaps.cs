@@ -110,6 +110,7 @@ public static class KnownGaps
     {
         [(UIPlatform.Windows, "quickentry")] = WinUiSecondWindowHidesTheRoute,
         [(UIPlatform.Windows, "marquee")] = WinUiAnimationBlocksCapture,
+        [(UIPlatform.Windows, "videotext")] = WinUiAnimationBlocksCapture, // the fallback label's marquee demo
         [(UIPlatform.Windows, "progressbar")] = WinUiAnimationBlocksCapture,
         [(UIPlatform.Windows, "motionicons")] = WinUiAnimationBlocksCapture,
         [(UIPlatform.Windows, "keyframe")] = WinUiAnimationBlocksCapture,

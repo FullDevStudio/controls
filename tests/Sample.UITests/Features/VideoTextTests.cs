@@ -4,6 +4,8 @@ namespace Sample.UITests.Features;
 /// VideoText's page options reach the control's bindables. Nothing waits on the remote video, so these
 /// hold offline and on heads without a masked output (Windows, Linux show a plain label instead).
 /// </summary>
+// Windows shows the fallback label, and the page's marquee demo scrolls it forever, so the WinUI capture never settles.
+[SkipOn(UIPlatform.Windows, KnownGaps.WinUiAnimationBlocksCapture)]
 public class VideoTextTests : UITest
 {
     // Shell keeps the page alive between visits, so each test sets the state it starts from.
