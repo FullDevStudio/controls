@@ -1,0 +1,74 @@
+@namespace Shiny.Blazor.Controls
+@typeparam TItem
+
+<div class="@RootClasses"
+     style="@RootStyle"
+     tabindex="0"
+     role="region"
+     aria-roledescription="carousel"
+     aria-label="@(AriaLabel ?? "Cover flow")"
+     @ref="rootRef"
+     @onkeydown="OnKeyDown"
+     @attributes="AdditionalAttributes">
+
+    @if (Count == 0)
+    {
+        <div class="shiny-coverflow-empty">
+            @if (EmptyTemplate is not null)
+            {
+                @EmptyTemplate
+            }
+            else
+            {
+                <span>No items</span>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="shiny-coverflow-stage" @ref="stageRef" aria-live="polite">
+            @foreach (var v in Window())
+            {
+                var item = Items![RealIndex(v)];
+                <div @key="v"
+                     class="shiny-coverflow-slide"
+                     data-index="@v"
+                     role="group"
+                     aria-roledescription="slide"
+                     aria-label="@($"{RealIndex(v) + 1} of {Count}")"
+                     aria-current="@(v == VirtualCenter ? "true" : null)">
+                    <div class="shiny-coverflow-item">
+                        @if (ItemTemplate is not null)
+                        {
+                            @ItemTemplate(item)
+                        }
+                        else
+                        {
+                            @item?.ToString()
+                        }
+                    </div>
+                    @if (ShowReflection)
+                    {
+                        <div class="shiny-coverflow-reflection" aria-hidden="true" inert>
+                            @if (ItemTemplate is not null)
+                            {
+                                @ItemTemplate(item)
+                            }
+                            else
+                            {
+                                @item?.ToString()
+                            }
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        @if (CaptionTemplate is not null)
+        {
+            <div class="shiny-coverflow-caption">
+                @CaptionTemplate(CurrentItem!)
+            </div>
+        }
+    }
+</div>

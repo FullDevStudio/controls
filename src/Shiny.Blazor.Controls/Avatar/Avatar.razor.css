@@ -1,0 +1,89 @@
+/* Everything keys off custom properties so an AvatarGroup can size and shape the avatars inside it
+   from one place. A parameter on the avatar writes the same property inline, and wins. */
+.shiny-avatar {
+    --_size: var(--shiny-avatar-size, 40px);
+    position: relative;
+    display: inline-flex;
+    flex: none;
+    width: var(--_size);
+    height: var(--_size);
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    vertical-align: middle;
+    box-sizing: border-box;
+    border-radius: var(--shiny-avatar-radius, 50%);
+}
+
+button.shiny-avatar {
+    cursor: pointer;
+}
+
+button.shiny-avatar:focus-visible {
+    outline: 2px solid var(--shiny-color-primary, #0055D9);
+    outline-offset: 2px;
+}
+
+.shiny-avatar-face {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border-radius: var(--shiny-avatar-radius, 50%);
+    background: var(--shiny-avatar-fill, var(--shiny-color-primary-container, #C2D8FA));
+    color: var(--shiny-avatar-ink, var(--shiny-color-on-primary-container, #124294));
+    /* The ring separates overlapping avatars, so by default it is the colour of what they sit on. */
+    box-shadow: 0 0 0 var(--shiny-avatar-ring-width, 0px) var(--shiny-avatar-ring-color, var(--shiny-color-surface, #F6FAFE));
+    font-size: var(--shiny-avatar-font-size, calc(var(--_size) * 0.4));
+    font-weight: 600;
+    line-height: 1;
+    user-select: none;
+}
+
+.shiny-avatar-initials {
+    white-space: nowrap;
+}
+
+.shiny-avatar-silhouette {
+    width: 100%;
+    height: 100%;
+    fill: currentColor;
+    opacity: 0.7;
+}
+
+.shiny-avatar-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.shiny-avatar-status {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: max(8px, calc(var(--_size) * 0.28));
+    height: max(8px, calc(var(--_size) * 0.28));
+    border-radius: 50%;
+    border: max(1.5px, calc(var(--_size) * 0.05)) solid var(--shiny-color-surface, #F6FAFE);
+    box-sizing: border-box;
+    background: var(--shiny-color-outline, #6C788D);
+}
+
+.shiny-avatar-status--online {
+    background: var(--shiny-color-success, #00711C);
+}
+
+.shiny-avatar-status--away {
+    background: var(--shiny-color-warning, #9C4500);
+}
+
+.shiny-avatar-status--busy {
+    background: var(--shiny-color-error, #C20014);
+}

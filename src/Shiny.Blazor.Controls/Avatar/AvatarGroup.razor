@@ -1,0 +1,24 @@
+@namespace Shiny.Blazor.Controls
+
+@* Hiding past Max is a stylesheet rule rather than a parameter on each avatar: the avatars come in as
+   ChildContent, so the group never renders them itself and could only reach them by re-rendering
+   every one. A MarkupString because prerendering HTML-encodes text, and an encoded quote inside
+   <style> is not a quote. *@
+@if (HiddenRule is not null)
+{
+    <style>@((MarkupString)HiddenRule)</style>
+}
+<div class="@RootClass" data-shiny-avatar-group="@groupId" role="group" aria-label="@AccessibleLabel" style="@RootStyle" @attributes="Splatted">
+    <CascadingValue Value="this" IsFixed="true">
+        @ChildContent
+    </CascadingValue>
+    @if (OverflowCount > 0)
+    {
+        @* Outside the CascadingValue, so the chip does not count itself. *@
+        <Avatar Initials="@OverflowText"
+                Size="ChipSize"
+                Shape="ChipShape"
+                CssClass="shiny-avatar-overflow"
+                OnClick="OverflowClickCallback" />
+    }
+</div>

@@ -15,12 +15,14 @@
        xmlns:shiny="clr-namespace:Shiny;assembly=Shiny.Maui.Shell"
        xmlns:autocomplete="clr-namespace:Sample.Features.AutoComplete;assembly=Sample.MacOS"
        xmlns:badge="clr-namespace:Sample.Features.Badge;assembly=Sample.MacOS"
+       xmlns:avatars="clr-namespace:Sample.Features.Avatars;assembly=Sample.MacOS"
        xmlns:barcodes="clr-namespace:Sample.Features.Barcodes;assembly=Sample.MacOS"
        xmlns:buttons="clr-namespace:Sample.Features.Buttons;assembly=Sample.MacOS"
        xmlns:btngroup="clr-namespace:Sample.Features.ButtonGroups;assembly=Sample.MacOS"
        xmlns:tags="clr-namespace:Sample.Features.Tags;assembly=Sample.MacOS"
        xmlns:chips="clr-namespace:Sample.Features.Chips;assembly=Sample.MacOS"
        xmlns:carouselgallery="clr-namespace:Sample.Features.CarouselGallery;assembly=Sample.MacOS"
+       xmlns:coverflow="clr-namespace:Sample.Features.CoverFlow;assembly=Sample.MacOS"
        xmlns:expanders="clr-namespace:Sample.Features.Expanders;assembly=Sample.MacOS"
        xmlns:colorpicker="clr-namespace:Sample.Features.ColorPicker;assembly=Sample.MacOS"
        xmlns:countryaddress="clr-namespace:Sample.Features.CountryAddress;assembly=Sample.MacOS"
@@ -62,6 +64,7 @@
        xmlns:rangepickers="clr-namespace:Sample.Features.RangePickers;assembly=Sample.MacOS"
        xmlns:confetti="clr-namespace:Sample.Features.Confetti;assembly=Sample.MacOS"
        xmlns:borderanimations="clr-namespace:Sample.Features.BorderAnimations;assembly=Sample.MacOS"
+       xmlns:animatedbackgrounds="clr-namespace:Sample.Features.AnimatedBackgrounds;assembly=Sample.MacOS"
        xmlns:staggeredgrid="clr-namespace:Sample.Features.StaggeredGrid;assembly=Sample.MacOS"
        xmlns:flex="clr-namespace:Sample.Features.Flex;assembly=Sample.MacOS"
        xmlns:yoga="clr-namespace:Sample.Features.Yoga;assembly=Sample.MacOS"
@@ -97,6 +100,9 @@
 
     <FlyoutItem Title="Carousel Gallery">
         <ShellContent ContentTemplate="{DataTemplate carouselgallery:CarouselGalleryPage}" Route="carouselgallery" />
+    </FlyoutItem>
+    <FlyoutItem Title="Cover Flow">
+        <ShellContent ContentTemplate="{DataTemplate coverflow:CoverFlowPage}" Route="coverflow" />
     </FlyoutItem>
     <FlyoutItem Title="Flex Layout">
         <ShellContent ContentTemplate="{DataTemplate flex:FlexLayoutPage}" Route="flexlayout" />
@@ -257,6 +263,9 @@
     <FlyoutItem Title="Badge">
         <ShellContent ContentTemplate="{DataTemplate badge:BadgePage}" Route="badge" />
     </FlyoutItem>
+    <FlyoutItem Title="Avatar">
+        <ShellContent ContentTemplate="{DataTemplate avatars:AvatarPage}" Route="avatar" />
+    </FlyoutItem>
     <FlyoutItem Title="Toast">
         <ShellContent ContentTemplate="{DataTemplate toast:ToastPage}" Route="toast" />
     </FlyoutItem>
@@ -279,6 +288,9 @@
     </FlyoutItem>
     <FlyoutItem Title="Border Animations">
         <ShellContent ContentTemplate="{DataTemplate borderanimations:BorderAnimationsPage}" Route="borderanimations" />
+    </FlyoutItem>
+    <FlyoutItem Title="Animated Backgrounds">
+        <ShellContent ContentTemplate="{DataTemplate animatedbackgrounds:AnimatedBackgroundsPage}" Route="animatedbackgrounds" />
     </FlyoutItem>
 
     <FlyoutItem Title="Keyframe">

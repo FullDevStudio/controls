@@ -15,11 +15,13 @@
        xmlns:shiny="clr-namespace:Shiny;assembly=Shiny.Maui.Shell"
        xmlns:autocomplete="clr-namespace:Sample.Features.AutoComplete;assembly=Sample.Linux"
        xmlns:badge="clr-namespace:Sample.Features.Badge;assembly=Sample.Linux"
+       xmlns:avatars="clr-namespace:Sample.Features.Avatars;assembly=Sample.Linux"
        xmlns:buttons="clr-namespace:Sample.Features.Buttons;assembly=Sample.Linux"
        xmlns:btngroup="clr-namespace:Sample.Features.ButtonGroups;assembly=Sample.Linux"
        xmlns:tags="clr-namespace:Sample.Features.Tags;assembly=Sample.Linux"
        xmlns:chips="clr-namespace:Sample.Features.Chips;assembly=Sample.Linux"
        xmlns:carouselgallery="clr-namespace:Sample.Features.CarouselGallery;assembly=Sample.Linux"
+       xmlns:coverflow="clr-namespace:Sample.Features.CoverFlow;assembly=Sample.Linux"
        xmlns:expanders="clr-namespace:Sample.Features.Expanders;assembly=Sample.Linux"
        xmlns:colorpicker="clr-namespace:Sample.Features.ColorPicker;assembly=Sample.Linux"
        xmlns:countryaddress="clr-namespace:Sample.Features.CountryAddress;assembly=Sample.Linux"
@@ -89,6 +91,9 @@
 
     <FlyoutItem Title="Carousel Gallery">
         <ShellContent ContentTemplate="{DataTemplate carouselgallery:CarouselGalleryPage}" Route="carouselgallery" />
+    </FlyoutItem>
+    <FlyoutItem Title="Cover Flow">
+        <ShellContent ContentTemplate="{DataTemplate coverflow:CoverFlowPage}" Route="coverflow" />
     </FlyoutItem>
     <FlyoutItem Title="Flex Layout">
         <ShellContent ContentTemplate="{DataTemplate flex:FlexLayoutPage}" Route="flexlayout" />
@@ -222,6 +227,9 @@
     </FlyoutItem>
     <FlyoutItem Title="Badge">
         <ShellContent ContentTemplate="{DataTemplate badge:BadgePage}" Route="badge" />
+    </FlyoutItem>
+    <FlyoutItem Title="Avatar">
+        <ShellContent ContentTemplate="{DataTemplate avatars:AvatarPage}" Route="avatar" />
     </FlyoutItem>
     <FlyoutItem Title="Toast">
         <ShellContent ContentTemplate="{DataTemplate toast:ToastPage}" Route="toast" />

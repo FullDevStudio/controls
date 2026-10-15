@@ -1,0 +1,39 @@
+/*
+    A positioned, isolated block so the canvas's stacking stays local: the canvas fills it, the content
+    sits above. overflow:hidden clips both to the corner radius.
+*/
+.shiny-animated-background {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.shiny-animated-background__canvas {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    pointer-events: none;
+}
+
+.shiny-animated-background__content {
+    position: relative;
+    z-index: 1;
+}
+
+/*
+    Fixed: the canvas covers the viewport and stays put while the page scrolls. The block itself no
+    longer clips, or the fixed canvas would be cut down to it.
+*/
+.shiny-animated-background--fixed {
+    overflow: visible;
+}
+
+.shiny-animated-background--fixed > .shiny-animated-background__canvas {
+    position: fixed;
+    width: 100vw;
+    height: 100vh;
+}

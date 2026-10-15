@@ -56,6 +56,7 @@ public static class Catalog
             new("flexlayout", "Flex Layout", "▥", "CSS flexbox wrapping, alignment and grow/shrink"),
             new("yogalayout", "Yoga Layout", "▥", "Full flexbox engine powered by Yoga"),
             new("carouselgallery", "Carousel Gallery", "◀", "Swipeable image gallery with indicators"),
+            new("coverflow", "Cover Flow", "◫", "3D album-art carousel with tilted, stacked side items"),
             new("staggeredgrid", "Staggered Grid", "▦", "Pinterest-style masonry of variable-height items"),
             new("virtualizedgrid", "Virtualized Grid", "▣", "Windowed grid that stays smooth over huge lists"),
             new("parallaxcollectionview", "Parallax Collection", "▰", "Collection with a hero that scrolls at half speed"),
@@ -144,6 +145,7 @@ public static class Catalog
         [
             new("pills", "Pills", "●", "Status badges in a range of tones"),
             new("badge", "Badge", "◍", "Corner badge that wraps any content"),
+            new("avatar", "Avatar & Group", "◉", "Picture, initials or silhouette, presence dot, and overlapping groups"),
             new("progressbar", "Progress Bar", "▤", "Determinate and indeterminate progress"),
             new("skeleton", "Skeleton", "☰", "Shimmering placeholders while content loads")
         ]),
@@ -201,7 +203,8 @@ public static class Catalog
             new("markdownview", "Markdown Viewer", "↓", "Markdig-powered renderer"),
             new("markdowneditor", "Markdown Editor", "✍", "Toolbar editor with live preview"),
             new("marquee", "Marquee", "⇆", "Endless scrolling content - horizontal, vertical or any angle"),
-            new("borderanimations", "Border Animations", "▢", "Border beam and shine border - animated card outlines")
+            new("borderanimations", "Border Animations", "▢", "Border beam and shine border - animated card outlines"),
+            new("animatedbackgrounds", "Animated Backgrounds", "✺", "Aurora, particles, snow, rain, meteors, spotlight dots and more behind any content")
         ]),
 
         new("Diagrams", "#FBBF24",

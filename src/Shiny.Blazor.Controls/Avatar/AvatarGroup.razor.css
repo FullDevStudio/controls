@@ -1,0 +1,20 @@
+.shiny-avatar-group {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    /* Keeps the overlap stacking local, so a later avatar never paints over a popup outside the row. */
+    isolation: isolate;
+    /* Room for the separator ring, which is drawn outside each avatar. */
+    padding: var(--shiny-avatar-ring-width, 2px);
+}
+
+/* The avatars are ChildContent, rendered by another component, so the scoped attribute never reaches
+   them - hence ::deep. A hidden avatar still counts as a sibling, so the chip after it still tucks in. */
+.shiny-avatar-group ::deep .shiny-avatar + .shiny-avatar {
+    margin-inline-start: calc(-1 * var(--shiny-avatar-overlap, calc(var(--shiny-avatar-size, 40px) * 0.25)));
+}
+
+.shiny-avatar-group ::deep .shiny-avatar-overflow {
+    --shiny-avatar-fill: var(--shiny-color-surface-container-highest, #D7DCE1);
+    --shiny-avatar-ink: var(--shiny-color-on-surface-variant, #3B475B);
+}

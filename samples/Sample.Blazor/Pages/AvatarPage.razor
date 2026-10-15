@@ -1,0 +1,122 @@
+@page "/avatar"
+
+<PageTitle>Avatar</PageTitle>
+
+<h1>Avatar &amp; Avatar Group</h1>
+
+<section class="demo-section">
+    <h2>Picture, Initials, Silhouette</h2>
+    <p>A picture when there is one, initials from <code>Name</code> when there is not, a silhouette when there is not even a name. A broken URL falls back to the initials.</p>
+    <div class="avatar-row">
+        <Avatar Name="Grace Hopper" Uri="https://i.pravatar.cc/150?img=47" Size="56" />
+        <Avatar Name="Allan Ritchie" Size="56" />
+        <Avatar Name="Ada Lovelace" Uri="https://example.invalid/missing.png" Size="56" />
+        <Avatar Size="56" />
+    </div>
+</section>
+
+<section class="demo-section">
+    <h2>Sizes &amp; Shapes</h2>
+    <div class="avatar-row">
+        <Avatar Name="Alan Turing" Size="24" />
+        <Avatar Name="Alan Turing" Size="32" />
+        <Avatar Name="Alan Turing" />
+        <Avatar Name="Alan Turing" Size="56" Shape="AvatarShape.Rounded" />
+        <Avatar Name="Alan Turing" Size="72" Shape="AvatarShape.Square" />
+    </div>
+</section>
+
+<section class="demo-section">
+    <h2>Colour From Name</h2>
+    <p><code>ColorFromName</code> gives every name its own stable hue - the same one on MAUI and Blazor.</p>
+    <div class="avatar-row">
+        @foreach (var name in names.Take(6))
+        {
+            <Avatar Name="@name" ColorFromName="true" />
+        }
+    </div>
+</section>
+
+<section class="demo-section">
+    <h2>Presence</h2>
+    <p>Click the avatar to cycle its status.</p>
+    <div class="avatar-row">
+        <Avatar Name="Allan Ritchie" Size="56" Status="status" OnClick="CycleStatus" />
+        <span>@status</span>
+    </div>
+    <div class="avatar-row">
+        <Avatar Name="Grace Hopper" Status="AvatarStatus.Online" />
+        <Avatar Name="Ada Lovelace" Status="AvatarStatus.Away" />
+        <Avatar Name="Alan Turing" Status="AvatarStatus.Busy" />
+        <Avatar Name="Linus Torvalds" Status="AvatarStatus.Offline" />
+    </div>
+</section>
+
+<section class="demo-section">
+    <h2>Avatar Group</h2>
+    <p>Overlapping avatars; everyone past <code>Max</code> collapses into a +N chip.</p>
+    <AvatarGroup Max="4">
+        <Avatar Name="Grace Hopper" Uri="https://i.pravatar.cc/150?img=47" />
+        <Avatar Name="Allan Ritchie" ColorFromName="true" />
+        <Avatar Name="Ada Lovelace" Uri="https://i.pravatar.cc/150?img=45" />
+        <Avatar Name="Alan Turing" ColorFromName="true" />
+        <Avatar Name="Linus Torvalds" />
+        <Avatar Name="Margaret Hamilton" />
+    </AvatarGroup>
+</section>
+
+<section class="demo-section">
+    <h2>Bound, With a Total</h2>
+    <p><code>TotalCount</code> makes +N count everyone, not just the sample loaded. Click +N.</p>
+    <AvatarGroup Max="5" TotalCount="totalPeople" Size="32" Shape="AvatarShape.Rounded" OnOverflowClick="ShowEveryone">
+        @foreach (var person in people)
+        {
+            <Avatar @key="person.Id" Name="@person.Name" />
+        }
+    </AvatarGroup>
+    <div class="avatar-row">
+        <button class="btn btn-primary" @onclick="AddPerson">Add person</button>
+        <button class="btn btn-secondary" @onclick="RemovePerson">Remove</button>
+    </div>
+    <p>@message</p>
+</section>
+
+<style>
+    .avatar-row { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin: 8px 0; }
+</style>
+
+@code {
+    static readonly string[] names =
+    [
+        "Grace Hopper", "Ada Lovelace", "Alan Turing", "Linus Torvalds", "Margaret Hamilton",
+        "Dennis Ritchie", "Barbara Liskov", "Ken Thompson", "Radia Perlman", "Donald Knuth"
+    ];
+
+    readonly List<(int Id, string Name)> people = names.Take(7).Select((n, i) => (i, n)).ToList();
+    AvatarStatus status = AvatarStatus.Online;
+    int totalPeople = 48;
+    string message = "";
+    int added;
+
+    void CycleStatus()
+        => status = status == AvatarStatus.Offline ? AvatarStatus.None : status + 1;
+
+    void AddPerson()
+    {
+        // Ids rather than names under @key: the same name twice would collide.
+        people.Add((7 + ++added, names[people.Count % names.Length]));
+        totalPeople++;
+    }
+
+    void RemovePerson()
+    {
+        if (people.Count == 0)
+            return;
+
+        people.RemoveAt(people.Count - 1);
+        totalPeople--;
+    }
+
+    void ShowEveryone(int hidden)
+        => message = $"Clicked +{hidden} - this is where the full list of {totalPeople} would open.";
+}

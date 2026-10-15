@@ -1,0 +1,83 @@
+@page "/coverflow"
+
+<PageTitle>Cover Flow</PageTitle>
+
+<h1>Cover Flow</h1>
+<p>The centre item faces you; its neighbours tilt away and stack up on either side. Drag, flick,
+   scroll sideways, click a side item, or focus the control and use the arrow keys.</p>
+
+<div class="cf-demo">
+    <CoverFlowView TItem="Album" Items="@albums"
+                   ItemWidth="200" ItemHeight="200"
+                   SideAngle="@sideAngle" SideScale="@sideScale"
+                   Loop="@loop" ShowReflection="@reflection"
+                   @bind-CurrentPosition="position"
+                   ItemSelected="@(a => selected = a.Title)">
+        <ItemTemplate Context="a">
+            <div class="cover" style="background:linear-gradient(135deg,@a.Color,@a.GradientEnd)">
+                <span class="glyph">@a.Glyph</span>
+                <span class="name">@a.Title</span>
+            </div>
+        </ItemTemplate>
+        <CaptionTemplate Context="a">
+            <div class="cf-caption-title">@a.Title</div>
+            <div class="cf-caption-artist">@a.Artist</div>
+        </CaptionTemplate>
+    </CoverFlowView>
+</div>
+
+<div class="cf-controls">
+    <button @onclick="() => position = Math.Max(0, position - 1)">‹ Previous</button>
+    <span>Position <strong>@position</strong> of @albums.Count</span>
+    <button @onclick="() => position = Math.Min(albums.Count - 1, position + 1)">Next ›</button>
+    <button @onclick="() => position = albums.Count - 1">Last</button>
+</div>
+
+<div class="cf-controls">
+    <label><input type="checkbox" @bind="loop" /> Loop</label>
+    <label><input type="checkbox" @bind="reflection" /> Reflection</label>
+    <label>Side angle <input type="range" min="0" max="80" @bind="sideAngle" @bind:event="oninput" /> @sideAngle°</label>
+    <label>Side scale <input type="range" min="0.5" max="1" step="0.05" @bind="sideScale" @bind:event="oninput" /> @sideScale.ToString("0.00")</label>
+</div>
+
+<p class="cf-selected">Selected: <strong>@(selected ?? "— click the centre album —")</strong></p>
+
+<style>
+    .cf-demo { max-width: 900px; margin: 16px auto; padding: 8px 0; border-radius: 16px;
+               background: var(--shiny-color-surface-container, #f3f4f6); }
+    .cover { display: flex; flex-direction: column; align-items: center; justify-content: center;
+             color: #fff; text-align: center; }
+    .cover .glyph { font-size: 56px; }
+    .cover .name { font-size: 16px; font-weight: 600; margin-top: 8px; }
+    .cf-caption-title { font-weight: 600; font-size: 18px; }
+    .cf-caption-artist { font-size: 14px; opacity: .7; }
+    .cf-controls { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: center; margin: 12px 0; }
+    .cf-selected { text-align: center; }
+</style>
+
+@code {
+    record Album(string Title, string Artist, string Color, string GradientEnd, string Glyph);
+
+    readonly List<Album> albums =
+    [
+        new("Midnight Drive", "The Neon Lines", "#1A365D", "#4FD1C5", "🌌"),
+        new("Desert Bloom", "Sahara Choir", "#C05621", "#F6AD55", "🏜️"),
+        new("Deep Blue", "Tidewater", "#2B6CB0", "#63B3ED", "🌊"),
+        new("Evergreen", "Pine & Ash", "#276749", "#68D391", "🌲"),
+        new("Summit", "High Altitude", "#2D3748", "#718096", "🏔️"),
+        new("City Lights", "Metro Hearts", "#553C9A", "#B794F4", "🌃"),
+        new("Ember", "Firewalk", "#9B2C2C", "#FC8181", "🔥"),
+        new("Lemonade", "Sunny Days", "#B7791F", "#F6E05E", "🍋"),
+        new("Static", "Radio Silence", "#4A5568", "#A0AEC0", "📻"),
+        new("Bloom", "Petal Jam", "#97266D", "#F687B3", "🌸"),
+        new("Orbit", "Satellite Kids", "#2A4365", "#7F9CF5", "🪐"),
+        new("Harvest", "Golden Fields", "#744210", "#ECC94B", "🌾")
+    ];
+
+    int position = 4;
+    bool loop;
+    bool reflection = true;
+    double sideAngle = 60;
+    double sideScale = 0.85;
+    string? selected;
+}

@@ -1,0 +1,143 @@
+@page "/animated-backgrounds"
+@using Shiny.Blazor.Controls
+
+<PageTitle>Animated Backgrounds</PageTitle>
+
+<h1>Animated Backgrounds</h1>
+
+<p>
+    <code>&lt;AnimatedBackground&gt;</code> is a block, like a <code>div</code>, that draws an animated
+    effect behind whatever you put in it. Pick the effect with <code>Effect</code>; each effect has its
+    own colours and options. It pauses off screen and holds a still frame for reduced motion.
+</p>
+
+<section class="demo-section">
+    <h2>Playground</h2>
+
+    <AnimatedBackground Effect="current" IsRunning="running" Fixed="fixedToPage" Background="#0b1020" CornerRadius="20"
+                        Style="height:280px; display:flex; align-items:center; justify-content:center; text-align:center; color:#fff">
+        <div>
+            <h2 style="margin:0 0 6px; font-size:2rem">@effects[selected].Name</h2>
+            <p style="margin:0 0 14px; opacity:.75">Content sits on top - clicks go straight through to it.</p>
+            <button class="demo-button" @onclick="() => clicks++">A real button (@clicks)</button>
+        </div>
+    </AnimatedBackground>
+
+    <div style="display:grid; grid-template-columns:auto 1fr; gap:10px 14px; align-items:center; max-width:560px; margin-top:16px">
+        <label for="effect">Effect</label>
+        <select id="effect" @bind="Selected">
+            @for (var i = 0; i < effects.Length; i++)
+            {
+                <option value="@i">@effects[i].Name</option>
+            }
+        </select>
+
+        <label for="speed">Speed</label>
+        <input id="speed" type="range" min="0" max="3" step="0.1" @bind="Speed" @bind:event="oninput" />
+
+        <span>Palette</span>
+        <div style="display:flex; gap:8px; flex-wrap:wrap">
+            <button class="demo-button" @onclick="() => ApplyPalette(null)">Default</button>
+            <button class="demo-button" @onclick='() => ApplyPalette(["#f97316", "#ec4899", "#facc15"])'>Sunset</button>
+            <button class="demo-button" @onclick='() => ApplyPalette(["#34d399", "#22d3ee", "#a3e635"])'>Mint</button>
+        </div>
+
+        <span>Options</span>
+        <div style="display:flex; gap:16px; flex-wrap:wrap">
+            <label><input type="checkbox" @bind="running" /> Animate</label>
+            <label><input type="checkbox" @bind="fixedToPage" /> Fixed (full-page background)</label>
+        </div>
+    </div>
+</section>
+
+<section class="demo-section">
+    <h2>Gallery</h2>
+
+    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:12px">
+        <AnimatedBackground Effect="new AuroraEffect()" Background="#0b1020" CornerRadius="16" Style="@CardStyle"><b>Aurora</b></AnimatedBackground>
+        <AnimatedBackground Effect="new ParticlesEffect { LinkDistance = 70 }" Background="#0b1020" CornerRadius="16" Style="@CardStyle"><b>Particles</b></AnimatedBackground>
+        <AnimatedBackground Effect="new SnowEffect { Wind = 0.4 }" Background="#0b1020" CornerRadius="16" Style="@CardStyle"><b>Snow</b></AnimatedBackground>
+        <AnimatedBackground Effect="new RainEffect()" Background="#0f172a" CornerRadius="16" Style="@CardStyle"><b>Rain</b></AnimatedBackground>
+        <AnimatedBackground Effect="new MeteorsEffect { Density = 1.5, MaxDelay = TimeSpan.FromSeconds(1.5), Length = 60 }" Background="#020617" CornerRadius="16" Style="@CardStyle"><b>Meteors</b></AnimatedBackground>
+        <AnimatedBackground Effect='new DotPatternEffect { Spacing = 14, SpotlightColor = "#a78bfa", SpotlightRadius = 70, Glow = 0.25 }' Background="#09090b" CornerRadius="16" Style="@CardStyle"><b>Dot spotlight</b></AnimatedBackground>
+        <AnimatedBackground Effect="new NoiseEffect { Intensity = 0.25 }" Background="linear-gradient(135deg, #4f46e5, #db2777)" CornerRadius="16" Style="@CardStyle"><b>Noise over a gradient</b></AnimatedBackground>
+        <AnimatedBackground Effect="new StarfieldEffect { Warp = true, Density = 12 }" Background="#000" CornerRadius="16" Style="@CardStyle"><b>Starfield (warp)</b></AnimatedBackground>
+        <AnimatedBackground Effect="new FirefliesEffect { Density = 1.2 }" Background="#052e16" CornerRadius="16" Style="@CardStyle"><b>Fireflies</b></AnimatedBackground>
+        <AnimatedBackground Effect="new BubblesEffect { Density = 1.5, MaxSize = 12 }" Background="#082f49" CornerRadius="16" Style="@CardStyle"><b>Bubbles</b></AnimatedBackground>
+        <AnimatedBackground Effect="new WavesEffect { Level = 0.45, Amplitude = 10, Wavelength = 160 }" Background="#0c1222" CornerRadius="16" Style="@CardStyleTop"><b>Waves</b></AnimatedBackground>
+        <AnimatedBackground Effect="new MatrixEffect { FontSize = 12 }" Background="#000" CornerRadius="16" Style="@CardStyle"><b>Matrix</b></AnimatedBackground>
+    </div>
+</section>
+
+@code {
+    const string CardStyle = "height:140px; padding:14px; color:#fff; display:flex; align-items:flex-end";
+    const string CardStyleTop = "height:140px; padding:14px; color:#fff; display:flex; align-items:flex-start";
+
+    // Each entry builds a fresh effect, so switching back to one starts it from its defaults.
+    readonly (string Name, Func<BackgroundEffect> Create)[] effects =
+    [
+        ("Aurora", () => new AuroraEffect()),
+        ("Particles", () => new ParticlesEffect()),
+        ("Snow", () => new SnowEffect { Density = 7, Wind = 0.3 }),
+        ("Rain", () => new RainEffect()),
+        ("Meteors", () => new MeteorsEffect { Density = 0.35, MaxDelay = TimeSpan.FromSeconds(3) }),
+        ("Dot spotlight", () => new DotPatternEffect { SpotlightColor = "#a78bfa", Glow = 0.25 }),
+        ("Dot pulse", () => new DotPatternEffect { Pulse = true, Spotlight = SpotlightMode.None }),
+        ("Noise", () => new NoiseEffect { Intensity = 0.3 }),
+        ("Starfield", () => new StarfieldEffect()),
+        ("Starfield (warp)", () => new StarfieldEffect { Warp = true }),
+        ("Fireflies", () => new FirefliesEffect { Density = 0.8 }),
+        ("Bubbles", () => new BubblesEffect { Density = 1 }),
+        ("Waves", () => new WavesEffect()),
+        ("Matrix", () => new MatrixEffect())
+    ];
+
+    BackgroundEffect current = new AuroraEffect();
+    int selected;
+    bool running = true;
+    bool fixedToPage;
+    int clicks;
+
+    int Selected
+    {
+        get => selected;
+        set
+        {
+            selected = value;
+            current = effects[value].Create();
+            current.Speed = speed;
+        }
+    }
+
+    double speed = 1;
+    double Speed
+    {
+        get => speed;
+        set
+        {
+            // The background compares what it would send, so changing the same instance is enough.
+            speed = value;
+            current.Speed = value;
+        }
+    }
+
+    void ApplyPalette(string[]? colors)
+    {
+        var defaults = effects[selected].Create();
+        switch (current)
+        {
+            case AuroraEffect e: e.Colors = colors ?? ((AuroraEffect)defaults).Colors; break;
+            case ParticlesEffect e: e.Colors = colors ?? ((ParticlesEffect)defaults).Colors; break;
+            case FirefliesEffect e: e.Colors = colors ?? ((FirefliesEffect)defaults).Colors; break;
+            case BubblesEffect e: e.Colors = colors ?? ((BubblesEffect)defaults).Colors; break;
+            case WavesEffect e: e.Colors = colors ?? ((WavesEffect)defaults).Colors; break;
+            case SnowEffect e: e.Color = colors?[0] ?? ((SnowEffect)defaults).Color; break;
+            case RainEffect e: e.Color = colors?[0] ?? ((RainEffect)defaults).Color; break;
+            case MeteorsEffect e: e.Color = colors?[0] ?? ((MeteorsEffect)defaults).Color; break;
+            case DotPatternEffect e: e.SpotlightColor = colors?[0] ?? ((DotPatternEffect)defaults).SpotlightColor; break;
+            case NoiseEffect e: e.Color = colors?[0] ?? ((NoiseEffect)defaults).Color; break;
+            case StarfieldEffect e: e.Color = colors?[0] ?? ((StarfieldEffect)defaults).Color; break;
+            case MatrixEffect e: e.Color = colors?[0] ?? ((MatrixEffect)defaults).Color; break;
+        }
+    }
+}

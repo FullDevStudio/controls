@@ -34,6 +34,7 @@ public static class Catalog
             new("applayout", "App Layout", "◫", "Application shell with collapsible, resizable panels"),
             new("carousel", "Carousel Gallery", "◀", "Swipeable image gallery with indicators"),
             new("carousel-advanced", "Carousel", "▶", "Templated carousel with looping and autoplay"),
+            new("coverflow", "Cover Flow", "◫", "3D album-art carousel with tilted, stacked side items"),
             new("staggeredgrid", "Staggered Grid", "▦", "Pinterest-style masonry of variable-height items"),
             new("virtualizedgrid", "Virtualized Grid", "▣", "Windowed grid that stays smooth over huge lists"),
             new("parallaxlist", "Parallax List", "▰", "Collection with a hero that scrolls at half speed"),
@@ -108,6 +109,7 @@ public static class Catalog
         [
             new("pills", "Pills", "●", "Status badges in a range of tones"),
             new("badge", "Badge", "●", "Corner badge that wraps any content"),
+            new("avatar", "Avatar & Group", "◉", "Picture, initials or silhouette, presence dot, and overlapping groups"),
             new("progressbar", "Progress Bar", "▣", "Determinate and indeterminate progress"),
             new("skeleton", "Skeleton", "☰", "Shimmering placeholders while content loads"),
             new("splashscreen", "Splash Screen", "☀", "Startup screen with status and progress"),
@@ -157,7 +159,8 @@ public static class Catalog
             new("markdown-editor", "Markdown Editor", "✍", "Toolbar editor with live preview"),
             new("mermaid", "Mermaid", "⬓", "Flowcharts and diagrams, with an interactive editor"),
             new("marquee", "Marquee", "⇆", "Endless scrolling content - horizontal, vertical or any angle"),
-            new("border-animations", "Border Animations", "▢", "Border beam and shine border - animated card outlines")
+            new("border-animations", "Border Animations", "▢", "Border beam and shine border - animated card outlines"),
+            new("animated-backgrounds", "Animated Backgrounds", "✺", "Aurora, particles, snow, rain, meteors, spotlight dots and more behind any content")
         ]),
 
         new("Barcodes", "#A78BFA",

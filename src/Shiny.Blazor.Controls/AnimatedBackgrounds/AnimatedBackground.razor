@@ -1,0 +1,13 @@
+@namespace Shiny.Blazor.Controls
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+@*
+    A plain block, like a div: the canvas sits under the content and is sized by the script to the box
+    (or to the viewport when Fixed). Declared in markup so CSS isolation stamps every element.
+*@
+
+<div @attributes="AdditionalAttributes" class="shiny-animated-background @StateClasses @Class" style="@RootStyle" @ref="root">
+    <canvas class="shiny-animated-background__canvas" aria-hidden="true" @ref="canvas"></canvas>
+    <div class="shiny-animated-background__content">@ChildContent</div>
+</div>

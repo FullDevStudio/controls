@@ -1,0 +1,106 @@
+.shiny-coverflow {
+    --coverflow-pad: 24px;
+    position: relative;
+    width: 100%;
+    outline: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.shiny-coverflow:focus-visible {
+    outline: var(--shiny-border-medium, 2px) solid var(--shiny-color-primary, #0055D9);
+    outline-offset: 2px;
+    border-radius: var(--shiny-shape-corner-medium, 12px);
+}
+
+.shiny-coverflow-empty {
+    padding: var(--shiny-spacing-5, 24px);
+    text-align: center;
+    color: var(--shiny-color-on-surface-variant, #3B475B);
+}
+
+/* ===== Stage ===== */
+
+.shiny-coverflow-stage {
+    position: relative;
+    width: 100%;
+    height: calc(var(--coverflow-item-h, 200px) + var(--coverflow-pad) * 2);
+    overflow: hidden;
+    perspective: var(--coverflow-perspective, 800px);
+    touch-action: pan-y;
+}
+
+.shiny-coverflow.has-reflection .shiny-coverflow-stage {
+    height: calc(var(--coverflow-item-h, 200px) * 1.5 + var(--coverflow-pad) * 2);
+}
+
+.shiny-coverflow.is-swipeable .shiny-coverflow-stage { cursor: grab; }
+.shiny-coverflow-stage.is-dragging { cursor: grabbing; }
+
+/* ===== Slides ===== */
+
+.shiny-coverflow-slide {
+    position: absolute;
+    top: var(--coverflow-pad);
+    left: 50%;
+    width: var(--coverflow-item-w, 200px);
+    height: var(--coverflow-item-h, 200px);
+    margin-left: calc(var(--coverflow-item-w, 200px) / -2);
+    transform-origin: 50% 50%;
+    will-change: transform, opacity;
+    /* Until the engine has placed them, every slide sits on top of every other one. */
+    visibility: hidden;
+}
+
+.shiny-coverflow[data-ready] .shiny-coverflow-slide {
+    visibility: visible;
+}
+
+.shiny-coverflow-slide:not([data-center]) {
+    cursor: pointer;
+}
+
+.shiny-coverflow-item,
+.shiny-coverflow-reflection {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    border-radius: var(--shiny-shape-corner-small, 4px);
+}
+
+.shiny-coverflow-item {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.shiny-coverflow-item ::deep > *,
+.shiny-coverflow-reflection ::deep > * {
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+}
+
+.shiny-coverflow-item ::deep img,
+.shiny-coverflow-reflection ::deep img {
+    -webkit-user-drag: none;
+}
+
+.shiny-coverflow-reflection {
+    top: calc(100% + 2px);
+    bottom: auto;
+    height: 100%;
+    transform: scaleY(-1);
+    opacity: var(--coverflow-reflection-opacity, 0.3);
+    pointer-events: none;
+    /* The element is flipped, so its own bottom edge is the one touching the item. */
+    -webkit-mask-image: linear-gradient(to top, #000 0%, transparent 55%);
+    mask-image: linear-gradient(to top, #000 0%, transparent 55%);
+}
+
+/* ===== Caption ===== */
+
+.shiny-coverflow-caption {
+    text-align: center;
+    padding-top: var(--shiny-spacing-2, 8px);
+    color: var(--shiny-color-on-surface, #161C23);
+    min-height: 1.5em;
+}

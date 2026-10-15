@@ -52,6 +52,7 @@
                   xmlns:keyframe="clr-namespace:Sample.Features.Keyframe"
                   xmlns:motionicons="clr-namespace:Sample.Features.MotionIcons"
                   xmlns:badge="clr-namespace:Sample.Features.Badge"
+                  xmlns:avatars="clr-namespace:Sample.Features.Avatars"
                   xmlns:trayicon="clr-namespace:Sample.Features.TrayIcon"
                   xmlns:filedrop="clr-namespace:Sample.Features.FileDrop"
                   xmlns:quickentry="clr-namespace:Sample.Features.QuickEntry"
@@ -61,11 +62,13 @@
                   xmlns:progressline="clr-namespace:Sample.Features.ProgressLine"
                   xmlns:marquee="clr-namespace:Sample.Features.Marquee"
                   xmlns:borderanimations="clr-namespace:Sample.Features.BorderAnimations"
+                  xmlns:animatedbackgrounds="clr-namespace:Sample.Features.AnimatedBackgrounds"
                   xmlns:confetti="clr-namespace:Sample.Features.Confetti"
                   xmlns:rangepickers="clr-namespace:Sample.Features.RangePickers"
                   xmlns:slider="clr-namespace:Sample.Features.Slider"
                   xmlns:expanders="clr-namespace:Sample.Features.Expanders"
                   xmlns:carouselgallery="clr-namespace:Sample.Features.CarouselGallery"
+                  xmlns:coverflow="clr-namespace:Sample.Features.CoverFlow"
                   xmlns:staggeredgrid="clr-namespace:Sample.Features.StaggeredGrid"
                   xmlns:flex="clr-namespace:Sample.Features.Flex"
                   xmlns:yoga="clr-namespace:Sample.Features.Yoga"
@@ -331,6 +334,14 @@
                              Color="{AppThemeBinding Light=#0284C7, Dark=#60A5FA}" />
         </FlyoutItem.FlyoutIcon>
         <ShellContent ContentTemplate="{DataTemplate carouselgallery:CarouselGalleryPage}" Route="carouselgallery" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Cover Flow">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x25EB;" Size="20"
+                             Color="{AppThemeBinding Light=#0284C7, Dark=#60A5FA}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate coverflow:CoverFlowPage}" Route="coverflow" />
     </FlyoutItem>
 
     <FlyoutItem Title="Flex Layout">
@@ -903,6 +914,14 @@
         <ShellContent ContentTemplate="{DataTemplate badge:BadgePage}" Route="badge" />
     </FlyoutItem>
 
+    <FlyoutItem Title="Avatar">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x25CF;" Size="20"
+                             Color="{AppThemeBinding Light=#DB2777, Dark=#F472B6}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate avatars:AvatarPage}" Route="avatar" />
+    </FlyoutItem>
+
     <FlyoutItem Title="Toast">
         <FlyoutItem.FlyoutIcon>
             <FontImageSource Glyph="&#x25AC;" Size="20"
@@ -973,6 +992,14 @@
                              Color="{AppThemeBinding Light=#7C3AED, Dark=#A78BFA}" />
         </FlyoutItem.FlyoutIcon>
         <ShellContent ContentTemplate="{DataTemplate borderanimations:BorderAnimationsPage}" Route="borderanimations" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Animated Backgrounds">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x273A;" Size="20"
+                             Color="{AppThemeBinding Light=#7C3AED, Dark=#A78BFA}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate animatedbackgrounds:AnimatedBackgroundsPage}" Route="animatedbackgrounds" />
     </FlyoutItem>
 
     <FlyoutItem Title="Skeleton">

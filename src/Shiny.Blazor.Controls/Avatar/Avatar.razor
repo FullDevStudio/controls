@@ -1,0 +1,46 @@
+@namespace Shiny.Blazor.Controls
+@implements IDisposable
+
+@* Splatting must not carry `style` or `class`: a splatted attribute replaces the literal one outright
+   rather than merging, which would drop the custom properties the group and the parameters write.
+   Splatted strips both and RootStyle / RootClass append them instead. *@
+@if (OnClick.HasDelegate)
+{
+    <button type="button" class="@RootClass" style="@(RootStyle.Length > 0 ? RootStyle : null)" aria-label="@AccessibleLabel" @onclick="OnClick" @attributes="Splatted">
+        @Body
+    </button>
+}
+else
+{
+    <span class="@RootClass" style="@(RootStyle.Length > 0 ? RootStyle : null)" role="img" aria-label="@AccessibleLabel" @attributes="Splatted">
+        @Body
+    </span>
+}
+
+@code {
+    RenderFragment Body => @<text>
+        <span class="shiny-avatar-face" aria-hidden="true">
+            @if (DisplayInitials.Length > 0)
+            {
+                <span class="shiny-avatar-initials">@DisplayInitials</span>
+            }
+            else
+            {
+                <svg class="shiny-avatar-silhouette" viewBox="0 0 40 40" focusable="false">
+                    <circle cx="20" cy="14.8" r="7.6" />
+                    <ellipse cx="20" cy="36" rx="14.4" ry="11.2" />
+                </svg>
+            }
+            @if (ShowImage)
+            {
+                @* alt="" so a picture that is still on its way, or never arrives, draws nothing at all
+                   rather than a broken-image glyph over the initials. *@
+                <img class="shiny-avatar-img" src="@Uri" alt="" loading="lazy" @onerror="OnImageError" />
+            }
+        </span>
+        @if (Status != AvatarStatus.None)
+        {
+            <span class="shiny-avatar-status shiny-avatar-status--@StatusClass" style="@StatusStyle"></span>
+        }
+    </text>;
+}
