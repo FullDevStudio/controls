@@ -259,3 +259,31 @@ After merging `uitest/windows` into v1, a smoke run of `./uitest ios android --n
 - All failures are in fixture init: `TimeoutException: Element (automationId 'HomePage', type '', text '', index 0) not found within 60s`. So the driver connects to an agent that isn't the freshly launched app.
 - That's exactly the symptom the Windows changes describe (connecting to the broker or a stale agent on the fallback port). The likeliest culprit is the merge's new `Host.AgentSince = DateTimeOffset.UtcNow.AddSeconds(-2)` before the **first** launch in `AppFixture.InitializeAsync`. If the iOS/Android agent's broker `connectedAt` doesn't pass that filter (clock or format differences, or registration timing via simctl/adb), discovery returns nothing and falls back to 9223. Also check the `MatchesAgentPlatform` refactor and the page-missing relaunch.
 - Not yet diagnosed. To reproduce: `./uitest ios --no-build --filter Slider`.
+
+---
+
+## VideoText/BorderAnimations run (logged 2026-10-14, Windows session)
+
+Commit `7a4f5f3` (`videotext-overlay-marquee`), WinUI sample on arm64, maui CLI `0.1.0-preview.12` (so `--port 9223`).
+
+```
+Test run summary: Failed!  total 13  failed 9  succeeded 4  skipped 0  duration 10m 17s
+```
+
+- **BorderAnimationsTests: 4/4 passed.**
+- **VideoTextTests: 9/9 failed**, all in the same place before any assertion ran:
+  `TimeoutException: Page did not appear: 'VideoTextPage' after reaching '//videotext' within 30s`
+  (`UITest.Open` → `MauiDevFlowDriver.NavigateTo:139`). The inner error is DevFlow's own message every time:
+  `InvalidOperationException: The UI kept changing while DevFlow was reading it. Retry the operation after the current UI update completes.`
+  (`AgentClient.QueryAsync` → `GetStringWithRetryableUiReadAsync`). The route navigates, but every visual-tree
+  query on that page loses the race. My guess is the playing video or marquee animation keeps changing the WinUI tree,
+  so DevFlow's read never settles.
+  - Failed tests: `Defaults_Are_A_Black_Solid_Overlay_With_No_Marquee`, `Overlay_Picker_Sets_The_Overlay_Colour`,
+    `Opacity_Slider_Is_Two_Way_And_Clamped`, `Marquee_Picker_Sets_Each_Direction`,
+    `Marquee_Runs_Over_A_See_Through_Overlay_Without_Errors`, `Font_Picker_Sets_The_Family`,
+    `Text_Entry_Reaches_The_Control`, `Size_Mute_And_Italic_Options_Reach_The_Control`,
+    `No_Overlay_Demo_Is_Transparent_Around_The_Letters`.
+- `uitest.ps1` still dies on Windows PowerShell 5.1 (the `--no-progress` stderr warning becomes a terminating error, as above), so I
+  ran the dll by hand with `SHINY_UITEST_PLATFORM=windows SHINY_UITEST_PORT=9223 --progress off --treenode-filter "/*/*/(VideoTextTests|BorderAnimationsTests)/*"`.
+  Also, the script's `$dll` path resolves to `artifacts/bin/...`, but the build output lands in `artifacts/uitest/bin/...`.
+- Note: the remote `uitest/windows` had been deleted after the merge, so this branch was recreated from `v1` (21c24b3) plus this commit.
