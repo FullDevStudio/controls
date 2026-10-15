@@ -35,7 +35,9 @@ $filter = ''; $noBuild = $false; $attach = $false; $port = ''
 for ($i = 0; $i -lt $args.Count; $i++) {
     switch ($args[$i]) {
         { $_ -in '-h', '--help' } { Show-Usage }
-        { $_ -in '--filter', '-f' } { $filter = $args[++$i] }
+        # An unquoted `--filter A,B` reaches $args as an object[], not a string; join it back so the
+        # filter stays one argument (on 5.1 a raw array also made .StartsWith('/') look true).
+        { $_ -in '--filter', '-f' } { $filter = @($args[++$i]) -join ',' }
         '--no-build' { $noBuild = $true }
         '--attach' { $attach = $true }
         '--port' { $port = $args[++$i] }
