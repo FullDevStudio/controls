@@ -12,6 +12,7 @@ public partial class CarouselGalleryHandler
             [nameof(CarouselGallery.CurrentPosition)] = MapCurrentPosition,
             [nameof(CarouselGallery.ItemWidth)] = MapItemSize,
             [nameof(CarouselGallery.ItemHeight)] = MapItemSize,
+            [nameof(CarouselGallery.ItemSpacing)] = MapItemSize,
             [nameof(CarouselGallery.FocusedItemScale)] = MapScaling,
             [nameof(CarouselGallery.UnfocusedItemScale)] = MapScaling,
             [nameof(CarouselGallery.PeekAreaInsets)] = MapPeekInsets,

@@ -44,7 +44,7 @@ TODO: capture screenshots for animated-background
 - **Live changes:** effect properties are bindable. Bind them or change them in code while the effect runs, and it picks up the change without restarting. One effect instance can be shared by several backgrounds (from a resource or a style), and they do not move in lock-step.
 - **Drawing:** the effect is drawn on a `GraphicsView` under the content, so it looks the same on iOS, Android, Mac Catalyst, macOS (AppKit), Windows and Linux (GTK4).
 - **Timing:** frames come from the window's shared frame ticker, the same one that Marquee, Border Animations and Motion Icons use. It runs only while the control is loaded.
-- **Pointer:** the DotPattern spotlight and the Particles repel/attract follow the pointer through hover (`PointerGestureRecognizer`), so they work with a mouse, trackpad or pen. Touch is best effort, and a lifted finger clears the pointer. `SpotlightMode.Auto` wanders when there is no pointer, which is the right choice for phones. Tracking the pointer never claims the touch, so the content's own gestures still work.
+- **Pointer:** on the desktop heads (Windows, Mac Catalyst, macOS, Linux) the DotPattern spotlight and the Particles repel/attract follow the mouse, trackpad or pen through hover (`PointerGestureRecognizer`). iOS and Android do not track the pointer at all: a phone has no hover, and on Android the recognizer claimed the press, so a `Button` in the content never got its tap. On a phone, `SpotlightMode.Auto` wanders, and `Pointer` mode shows no spotlight. The content's own gestures always work.
 
 ## Blazor
 

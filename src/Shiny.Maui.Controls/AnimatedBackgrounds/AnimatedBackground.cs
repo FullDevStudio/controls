@@ -58,17 +58,16 @@ public class AnimatedBackground : Layout
         // wraps the native view, and doing that mid layout pass leaves it at a stale size.
         this.Clip = this.clip;
 
-        // Hover tracking for effects that follow the pointer. It never claims the touch, so the
-        // content's own gestures are unaffected.
+#if !ANDROID && !IOS
+        // Hover tracking for effects that follow the pointer. Desktop heads only: on a phone there is
+        // no hover, and on Android a gesture recognizer on this layout claims the press, so a Button in
+        // the content never received its tap. Phones get the wandering spotlight instead.
         var pointer = new PointerGestureRecognizer();
         pointer.PointerMoved += (_, e) => this.SetPointer(e.GetPosition(this));
         pointer.PointerPressed += (_, e) => this.SetPointer(e.GetPosition(this));
         pointer.PointerExited += (_, _) => this.SetPointer(null);
-#if ANDROID || IOS
-        // A lifted finger has no hover; leaving the point where it lifted would park the effect there.
-        pointer.PointerReleased += (_, _) => this.SetPointer(null);
-#endif
         this.GestureRecognizers.Add(pointer);
+#endif
 
         this.Loaded += (_, _) =>
         {

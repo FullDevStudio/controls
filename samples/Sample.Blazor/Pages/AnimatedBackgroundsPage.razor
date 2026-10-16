@@ -17,8 +17,8 @@
     <AnimatedBackground Effect="current" IsRunning="running" Fixed="fixedToPage" Background="#0b1020" CornerRadius="20"
                         Style="height:280px; display:flex; align-items:center; justify-content:center; text-align:center; color:#fff">
         <div>
-            <h2 style="margin:0 0 6px; font-size:2rem">@effects[selected].Name</h2>
-            <p style="margin:0 0 14px; opacity:.75">Content sits on top - clicks go straight through to it.</p>
+            <h2 style="margin:0 0 6px; font-size:2rem; color:inherit">@effects[selected].Name</h2>
+            <p style="margin:0 0 14px; opacity:.75; color:inherit">Content sits on top - clicks go straight through to it.</p>
             <button class="demo-button" @onclick="() => clicks++">A real button (@clicks)</button>
         </div>
     </AnimatedBackground>

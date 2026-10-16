@@ -48,7 +48,7 @@
                               Size="56"
                               Status="{Binding Status}"
                               Command="{Binding CycleStatusCommand}" />
-                <Label Text="{Binding Status}" VerticalOptions="Center" />
+                <Label AutomationId="StatusLabel" Text="{Binding Status}" VerticalOptions="Center" />
             </HorizontalStackLayout>
             <HorizontalStackLayout Spacing="12">
                 <shiny:Avatar Name="Grace Hopper" Status="Online" />
@@ -81,7 +81,7 @@
                 <Button AutomationId="AddPersonButton" Text="Add person" Command="{Binding AddPersonCommand}" />
                 <Button AutomationId="RemovePersonButton" Text="Remove" Command="{Binding RemovePersonCommand}" />
             </HorizontalStackLayout>
-            <Label Text="{Binding Message}" />
+            <Label AutomationId="AvatarMessage" Text="{Binding Message}" />
 
         </VerticalStackLayout>
     </ScrollView>

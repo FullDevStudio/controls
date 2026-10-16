@@ -256,6 +256,58 @@ public sealed class AndroidAppHost : AppHost
     Task<ProcessResult> AdbShell(string command)
         => ProcessRunner.Run(Adb, $"-s {serial} shell {command}");
 
+    double? pixelsPerDp;
+
+    /// <summary>
+    /// A real finger tap at a point in window dp, through the OS input pipeline. DevFlow's tap invokes
+    /// the recognizer or the control's action directly, so it can't see a view that swallows the touch
+    /// before the control under it gets it - this can.
+    /// </summary>
+    public async Task TouchTap(double x, double y)
+    {
+        var scale = await PixelsPerDp();
+        (await AdbShell($"input tap {(int)(x * scale)} {(int)(y * scale)}")).EnsureSuccess("adb input tap");
+    }
+
+    /// <summary>A real finger drag between two points in window dp, taking <paramref name="durationMs"/>.</summary>
+    public async Task TouchSwipe(double x1, double y1, double x2, double y2, int durationMs)
+    {
+        var scale = await PixelsPerDp();
+        (await AdbShell($"input swipe {(int)(x1 * scale)} {(int)(y1 * scale)} {(int)(x2 * scale)} {(int)(y2 * scale)} {durationMs}"))
+            .EnsureSuccess("adb input swipe");
+    }
+
+    async Task<double> PixelsPerDp()
+    {
+        if (pixelsPerDp is { } known)
+            return known;
+
+        // "Physical density: 420", plus "Override density: 480" when one is set - the override wins.
+        var output = (await AdbShell("wm density")).Output;
+        var dpi = output.Split('\n')
+            .Select(line => line.Split(':'))
+            .Where(parts => parts.Length == 2 && Int32.TryParse(parts[1].Trim(), out _))
+            .Select(parts => Int32.Parse(parts[1].Trim()))
+            .Last();
+
+        pixelsPerDp = dpi / 160d;
+        return pixelsPerDp.Value;
+    }
+
+    /// <summary>
+    /// The native view hierarchy as uiautomator sees it, bounds in screen pixels. For views DevFlow can't
+    /// see - a handler's RecyclerView items are created with ToPlatform outside the MAUI tree.
+    /// </summary>
+    public async Task<System.Xml.Linq.XElement> NativeHierarchy()
+    {
+        (await AdbShell("uiautomator dump /sdcard/shiny-uitest.xml")).EnsureSuccess("uiautomator dump");
+        var xml = (await AdbShell("cat /sdcard/shiny-uitest.xml")).EnsureSuccess("reading the uiautomator dump").Output;
+        return System.Xml.Linq.XElement.Parse(xml[xml.IndexOf('<')..]);
+    }
+
+    /// <summary>Screen pixels per dp, for comparing native bounds with MAUI sizes.</summary>
+    public Task<double> Density() => PixelsPerDp();
+
     public override async Task BuildAsync()
     {
         serial = await ResolveDeviceAsync();
@@ -266,34 +318,19 @@ public sealed class AndroidAppHost : AppHost
             install += $" --artifacts-path {ProcessRunner.Quote(artifacts)}";
         await BuildProject("net10.0-android", install);
 
-        // Shiny.Maui.Controls.Desktop has no Android TFM, so the Android sample also receives its net10.0
-        // build of Shiny.Maui.Controls.dll. On a clean build the Java stub scanner can read that copy and
-        // write an empty scan for Shiny.Maui.Controls ("Found 0 Java types") — every Java.Lang.Object
-        // subclass in the core package (CarouselAdapter, StaggeredGridAdapter, BlurPreDrawListener, …) then
-        // dies at runtime with "no Java peer type found" and takes the app down. An incremental rebuild with
-        // the empty scan deleted usually re-scans the Android copy (which assembly the scanner's resolver
-        // caches first depends on build order, so it can take more than one try): drop it and rebuild.
-        for (var attempt = 0; ; attempt++)
-        {
-            var emptyScans = EmptyCoreJavaScans();
-            if (emptyScans.Count == 0)
-                return;
-
-            if (attempt == 3)
-                throw new InvalidOperationException(
-                    "The Android build kept scanning Shiny.Maui.Controls as having no Java types — the app would crash " +
-                    "on any page with an Android adapter/listener. Delete the Android obj/bin of samples/Sample and retry."
-                );
-
-            foreach (var file in emptyScans)
-            {
-                File.Delete(file);
-                var typemap = file[..^".jlo.xml".Length] + ".typemap.xml";
-                if (File.Exists(typemap))
-                    File.Delete(typemap);
-            }
-            await BuildProject("net10.0-android", install);
-        }
+        // A clean build once shipped an app that crashed on every page with a core Java peer: the sample
+        // got core's net10.0 assembly through Shiny.Maui.Controls.Desktop (then without an Android TFM),
+        // the Java stub scanner read that copy ("Found 0 Java types"), and CarouselAdapter,
+        // StaggeredGridAdapter, BlurPreDrawListener ... died with "no Java peer type found". Desktop now
+        // has android/ios assets, so this should never happen; if it does, fail here, loudly, rather than
+        // with a crash on whichever page happens to come first.
+        var emptyScans = EmptyCoreJavaScans();
+        if (emptyScans.Count > 0)
+            throw new InvalidOperationException(
+                "The Android build scanned Shiny.Maui.Controls as having no Java types, so every Android adapter/listener " +
+                "in it would crash with \"no Java peer type found\". Something is handing the Android head core's net10.0 " +
+                "assembly again (a reference without an Android TFM). Empty scans:\n" + String.Join("\n", emptyScans)
+            );
     }
 
     /// <summary>Per-ABI Java stub scans of the core package that came out empty (see <see cref="BuildAsync"/>).</summary>

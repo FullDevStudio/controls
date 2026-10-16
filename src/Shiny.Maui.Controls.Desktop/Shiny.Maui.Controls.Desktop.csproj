@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFrameworks>$(BaseTargetFramework);$(BaseTargetFramework)-maccatalyst;$(TargetFrameworks);$(BaseTargetFramework)-macos</TargetFrameworks>
+        <TargetFrameworks>$(BaseTargetFramework);$(BaseTargetFramework)-android;$(BaseTargetFramework)-ios;$(BaseTargetFramework)-maccatalyst;$(TargetFrameworks);$(BaseTargetFramework)-macos</TargetFrameworks>
         <!--
             Windows packaging (MakePri) only runs on Windows, so the Windows TFM is normally added
             only there and the solution still builds on macOS/Linux. ForceWindowsTfm=true adds it
@@ -76,9 +76,20 @@
     </ItemGroup>
 
     <!--
+        Phones have no desktop window, so these assets only report every service unsupported. They
+        exist so an Android/iOS app gets core's android/ios asset through this package: with only the
+        net10.0 asset, an Android app also received core's net10.0 assembly, the Java stub scanner read
+        it on a clean build, and every Java peer in core (CarouselGallery's adapter, ...) crashed with
+        "no Java peer type found".
+    -->
+    <ItemGroup Condition="'$(TargetPlatformIdentifier)' == 'android' Or '$(TargetPlatformIdentifier)' == 'ios'">
+        <Compile Include="Platforms/Mobile/**/*.cs" />
+    </ItemGroup>
+
+    <!--
         MAUI's SingleProject targets tag every Platforms/**/*.cs file with
         ExcludeFromCurrentConfiguration=true and only re-enable known platforms
-        (Android, iOS, MacCatalyst, Windows, Tizen). AppKit MacOS and Linux
+        (Android, iOS, MacCatalyst, Windows, Tizen). AppKit MacOS, Linux and Mobile
         aren't in that list, so this target re-enables them before removal.
     -->
     <Target Name="_ReincludeNonMauiPlatforms"
@@ -91,6 +102,10 @@
             </Compile>
             <Compile Update="Platforms/Linux/**/*.cs"
                      Condition="'$(TargetPlatformIdentifier)' == ''">
+                <ExcludeFromCurrentConfiguration>false</ExcludeFromCurrentConfiguration>
+            </Compile>
+            <Compile Update="Platforms/Mobile/**/*.cs"
+                     Condition="'$(TargetPlatformIdentifier)' == 'android' Or '$(TargetPlatformIdentifier)' == 'ios'">
                 <ExcludeFromCurrentConfiguration>false</ExcludeFromCurrentConfiguration>
             </Compile>
         </ItemGroup>

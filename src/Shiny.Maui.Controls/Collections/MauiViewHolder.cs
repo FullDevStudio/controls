@@ -20,6 +20,9 @@ internal class MauiViewHolder : RecyclerView.ViewHolder
 
     public Microsoft.Maui.Controls.View? MauiView => mauiView;
 
+    /// <summary>The MAUI view's native view, inside <see cref="RecyclerView.ViewHolder.ItemView"/>.</summary>
+    public Android.Views.View? PlatformChild => platformView;
+
     public void Bind(CollectionControlBase control, object item, int position)
     {
         if (mauiView is null)

@@ -23,6 +23,10 @@ public partial class CarouselGalleryHandler : ViewHandler<CarouselGallery, Recyc
         recyclerView.SetLayoutManager(layoutManager);
         recyclerView.SetItemAnimator(new DefaultItemAnimator());
 
+        // The scale effect ran only from the scroll listener, so until the first scroll every item sat
+        // at full size. A pass after each layout applies it to whatever is on screen.
+        recyclerView.LayoutChange += (_, _) => ApplyScaleTransforms();
+
         return recyclerView;
     }
 
@@ -31,6 +35,7 @@ public partial class CarouselGalleryHandler : ViewHandler<CarouselGallery, Recyc
         base.ConnectHandler(platformView);
         adapter = new CarouselAdapter(VirtualView, MauiContext!);
         platformView.SetAdapter(adapter);
+        platformView.AddItemDecoration(new CarouselItemDecoration(VirtualView));
         platformView.AddOnScrollListener(new CarouselScrollListener(this));
         UpdatePeekInsets();
         UpdateSnapMode();
@@ -55,13 +60,12 @@ public partial class CarouselGalleryHandler : ViewHandler<CarouselGallery, Recyc
         if (PlatformView is null)
             return;
 
+        // Only the horizontal insets: the peek is beside the item. A uniform PeekAreaInsets="40" also
+        // padded top and bottom, which left a 160-high card 100 of a 180-high carousel and pushed it out
+        // the bottom; iOS centres the item vertically in the full height, and so does the decoration.
         var density = Context?.Resources?.DisplayMetrics?.Density ?? 1f;
         var insets = VirtualView.PeekAreaInsets;
-        PlatformView.SetPadding(
-            (int)(insets.Left * density),
-            (int)(insets.Top * density),
-            (int)(insets.Right * density),
-            (int)(insets.Bottom * density));
+        PlatformView.SetPadding((int)(insets.Left * density), 0, (int)(insets.Right * density), 0);
     }
 
     void UpdateSnapMode()
@@ -103,6 +107,28 @@ public partial class CarouselGalleryHandler : ViewHandler<CarouselGallery, Recyc
             child.ScaleX = scale;
             child.ScaleY = scale;
         }
+    }
+
+    /// <summary>
+    /// Brings <paramref name="position"/> to the middle, as iOS does (CenteredHorizontally). Start-aligning
+    /// it left it off centre, and the snap helper - which snaps to the centre - then moved the carousel
+    /// to a different item on the next scroll.
+    /// </summary>
+    void ScrollToCentre(int position)
+    {
+        if (layoutManager is null || PlatformView is null)
+            return;
+
+        if (PlatformView.Width == 0)
+        {
+            PlatformView.Post(() => ScrollToCentre(position));
+            return;
+        }
+
+        var density = Context?.Resources?.DisplayMetrics?.Density ?? 1f;
+        var itemWidth = (int)(VirtualView.ItemWidth * density);
+        var offset = (PlatformView.Width - itemWidth) / 2 - PlatformView.PaddingLeft;
+        layoutManager.ScrollToPositionWithOffset(position, offset);
     }
 
     void OnScrollSettled()
@@ -158,12 +184,13 @@ public partial class CarouselGalleryHandler : ViewHandler<CarouselGallery, Recyc
         if (handler.isUpdatingPosition)
             return;
 
-        handler.layoutManager?.ScrollToPositionWithOffset(view.CurrentPosition, 0);
+        handler.ScrollToCentre(view.CurrentPosition);
     }
 
     static partial void MapItemSize(CarouselGalleryHandler handler, CarouselGallery view)
     {
         handler.adapter?.NotifyDataSetChanged();
+        handler.PlatformView?.InvalidateItemDecorations();
     }
 
     static partial void MapScaling(CarouselGalleryHandler handler, CarouselGallery view)
@@ -208,21 +235,66 @@ public partial class CarouselGalleryHandler : ViewHandler<CarouselGallery, Recyc
 
         public override RecyclerView.ViewHolder OnCreateViewHolder(ViewGroup parent, int viewType)
         {
-            return new MauiViewHolder(mauiContext, parent);
+            var holder = new MauiViewHolder(mauiContext, parent);
+
+            // iOS raises ItemSelected when a cell is tapped; Android never did.
+            holder.ItemView.Click += (_, _) =>
+            {
+                var position = holder.BindingAdapterPosition;
+                if (position != RecyclerView.NoPosition && position < items.Count)
+                    control.RaiseItemSelected(items[position], position);
+            };
+            return holder;
         }
 
         public override void OnBindViewHolder(RecyclerView.ViewHolder holder, int position)
         {
-            if (holder is MauiViewHolder mauiHolder && position < items.Count)
-            {
-                // Set fixed size for carousel items
-                var density = mauiContext.Context!.Resources!.DisplayMetrics!.Density;
-                holder.ItemView.LayoutParameters = new ViewGroup.LayoutParams(
-                    (int)(control.ItemWidth * density),
-                    (int)(control.ItemHeight * density));
+            if (holder is not MauiViewHolder mauiHolder || position >= items.Count)
+                return;
 
-                mauiHolder.Bind(control, items[position], position);
+            mauiHolder.Bind(control, items[position], position);
+
+            // Every item is ItemWidth x ItemHeight - set after Bind, which sizes the item to its content
+            // for list-style collections and so overwrote a size set before it (the cards shrank to their
+            // icon and label). RecyclerView's own LayoutParams, so the layout manager keeps them.
+            var density = mauiContext.Context!.Resources!.DisplayMetrics!.Density;
+            holder.ItemView.LayoutParameters = new RecyclerView.LayoutParams(
+                (int)(control.ItemWidth * density),
+                (int)(control.ItemHeight * density));
+
+            // The template's view fills the item, as the cell's content does on iOS. It went in with
+            // wrap-content params, so each card shrank to its label and icon - tiny tiles huddled
+            // together with the item's space empty around them.
+            if (mauiHolder.PlatformChild is { } child
+                && child.LayoutParameters is not { Width: ViewGroup.LayoutParams.MatchParent, Height: ViewGroup.LayoutParams.MatchParent })
+            {
+                child.LayoutParameters = new Android.Widget.FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MatchParent,
+                    ViewGroup.LayoutParams.MatchParent);
             }
+        }
+    }
+
+    /// <summary>
+    /// ItemSpacing between items (iOS: MinimumLineSpacing), and items centred vertically in the carousel
+    /// as the iOS flow layout does - Android ignored ItemSpacing and pinned every item to the top.
+    /// </summary>
+    class CarouselItemDecoration : RecyclerView.ItemDecoration
+    {
+        readonly CarouselGallery gallery;
+
+        public CarouselItemDecoration(CarouselGallery gallery) => this.gallery = gallery;
+
+        public override void GetItemOffsets(Android.Graphics.Rect outRect, AView view, RecyclerView parent, RecyclerView.State state)
+        {
+            var density = parent.Context?.Resources?.DisplayMetrics?.Density ?? 1f;
+            var position = parent.GetChildAdapterPosition(view);
+
+            outRect.Left = position > 0 ? (int)(gallery.ItemSpacing * density) : 0;
+
+            var available = parent.Height - parent.PaddingTop - parent.PaddingBottom;
+            var itemHeight = (int)(gallery.ItemHeight * density);
+            outRect.Top = Math.Max(0, (available - itemHeight) / 2);
         }
     }
 

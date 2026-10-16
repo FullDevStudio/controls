@@ -32,7 +32,7 @@ A Netflix-style horizontal carousel with snap-to-center behavior, configurable s
 | `ItemWidth` | `double` | required | Width of each carousel item |
 | `ItemHeight` | `double` | required | Height of each carousel item |
 | `CurrentPosition` | `int` | `0` | Current centered item index (TwoWay) |
-| `PeekAreaInsets` | `Thickness` | `0` | Visible area of adjacent items |
+| `PeekAreaInsets` | `Thickness` | `0` | Visible area of adjacent items (left and right; the item is centred vertically in the carousel) |
 | `IsInfinite` | `bool` | `false` | Enable infinite loop scrolling |
 | `SnapCount` | `int` | `1` | Number of items to snap into view at once. Set to `0` for free-scroll (Netflix-style) with no snapping |
 | `PositionChangedCommand` | `ICommand` | `null` | Fires when position changes |

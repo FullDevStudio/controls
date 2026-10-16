@@ -378,6 +378,28 @@ public class CoverFlowViewTests
 
 
     [Fact]
+    public void TappingASideCoverWhileSettlingStillMovesToIt()
+    {
+        var view = Create(count: 10, position: 0);
+        view.AnimateWithoutHandler = true;
+        object? selected = null;
+        view.ItemSelected += (_, e) => selected = e.Item;
+
+        view.CurrentPosition = 3;
+        view.AdvanceAnimation(80);
+
+        // cover 0, left of the centre slot while the move to 3 is under way
+        var point = view.CentreOf(0);
+        (view.StageCentre.X - point.X).ShouldBeGreaterThan(100);
+        view.HandleTap(point);
+        view.AdvanceAnimation(5000);
+
+        selected.ShouldBeNull();
+        view.CurrentPosition.ShouldBe(0);
+    }
+
+
+    [Fact]
     public void TappingTheCentreCoverSelectsIt()
     {
         var view = Create(count: 10, position: 2);
@@ -393,6 +415,72 @@ public class CoverFlowViewTests
         args.Item.ShouldBe("Item 2");
         commanded.ShouldBe("Item 2");
         view.CurrentPosition.ShouldBe(2);
+    }
+
+
+    [Fact]
+    public void TappingTheCentreWhileSettlingFinishesTheMoveAndSelectsTheArrivingCover()
+    {
+        // The iOS UI run caught this: a tap straight after setting CurrentPosition landed mid-animation,
+        // and instead of selecting it re-targeted to the cover passing the middle (3 -> 1).
+        var view = Create(count: 10, position: 0);
+        view.AnimateWithoutHandler = true;
+        object? selected = null;
+        view.ItemSelected += (_, e) => selected = e.Item;
+
+        view.CurrentPosition = 3;
+        view.AdvanceAnimation(80);
+        view.IsAnimating.ShouldBeTrue();
+        view.Position.ShouldBeInRange(0.5, 2.5);
+
+        view.HandleTap(view.StageCentre);
+
+        view.IsAnimating.ShouldBeFalse();
+        view.Position.ShouldBe(3);
+        view.CurrentPosition.ShouldBe(3);
+        selected.ShouldBe("Item 3");
+    }
+
+
+    [Fact]
+    public void SelectCentreSelectsWhereItIsHeading()
+    {
+        var view = Create(count: 10, position: 0);
+        view.AnimateWithoutHandler = true;
+        object? selected = null;
+        view.ItemSelected += (_, e) => selected = e.Item;
+
+        view.Next();
+        view.Next();
+        view.AdvanceAnimation(40);
+
+        view.SelectCentre();
+
+        selected.ShouldBe("Item 2");
+        view.CurrentPosition.ShouldBe(2);
+    }
+
+
+    [Fact]
+    public void TurningLoopOnMidAnimationKeepsTheTarget()
+    {
+        // The other half of the iOS failure: Loop toggled while a move ran parked it between covers
+        // (CurrentPosition still 11, the covers near 6), so Next then went to 7 instead of wrapping.
+        var view = Create(count: 12, position: 0);
+        view.AnimateWithoutHandler = true;
+
+        view.CurrentPosition = 11;
+        view.AdvanceAnimation(100);
+        view.IsAnimating.ShouldBeTrue();
+
+        view.Loop = true;
+
+        view.Position.ShouldBe(11);
+        view.CurrentPosition.ShouldBe(11);
+
+        view.Next();
+        view.AdvanceAnimation(5000);
+        view.CurrentPosition.ShouldBe(0);
     }
 
 

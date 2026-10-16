@@ -102,10 +102,14 @@ public class CoverFlowView : ContentView
         this.GestureRecognizers.Add(pan);
 
         var tap = new TapGestureRecognizer();
+        // A tap with no position (an accessibility activation, UI automation) means the control as a
+        // whole was activated - treat it as a tap on the centre cover, which selects it.
         tap.Tapped += (_, e) =>
         {
             if (e.GetPosition(this.stage) is { } point)
                 this.HandleTap(point);
+            else
+                this.SelectCentre();
         };
         this.GestureRecognizers.Add(tap);
 
@@ -383,6 +387,24 @@ public class CoverFlowView : ContentView
     /// <summary>The continuous (and, when looping, unwrapped) position.</summary>
     internal double Position => this.position;
 
+    /// <summary>Lets a headless test start real animations, which otherwise need a handler.</summary>
+    internal bool AnimateWithoutHandler { get; set; }
+
+    bool CanAnimate => this.Handler is not null || this.AnimateWithoutHandler;
+
+    /// <summary>Where the centre cover sits when it is at rest, in stage coordinates.</summary>
+    internal Point StageCentre => this.stageCentre;
+
+    /// <summary>Whether a move is still animating.</summary>
+    internal bool IsAnimating => this.ticker is not null;
+
+    /// <summary>Advances a running animation by <paramref name="milliseconds"/>, as frames would.</summary>
+    internal void AdvanceAnimation(double milliseconds)
+    {
+        if (this.ticker is not null)
+            this.OnTick(TimeSpan.FromMilliseconds(milliseconds));
+    }
+
     /// <summary>The covers currently realized, keyed by virtual index.</summary>
     internal IReadOnlyDictionary<int, CoverFlowSlot> RealizedSlots => this.realized;
 
@@ -453,7 +475,9 @@ public class CoverFlowView : ContentView
     void OnLoopChanged(bool wasLooping)
     {
         // An unwrapped looping position means nothing to a bounded list, so start again from the index.
-        var index = CoverFlowGeometry.IndexAt(this.position, this.items.Count, wasLooping);
+        // The index it is heading to, not the one it is passing: switching mid-animation used to leave
+        // it parked half way, between covers, while CurrentPosition still named the target.
+        var index = CoverFlowGeometry.IndexAt(this.TargetPosition, this.items.Count, wasLooping);
         this.StopAnimation(snap: false);
         this.ReleaseAll(discard: false);
         this.position = index;
@@ -470,7 +494,7 @@ public class CoverFlowView : ContentView
         if (CoverFlowGeometry.IndexAt(this.TargetPosition, this.items.Count, this.Loop) == CoverFlowGeometry.IndexAt(value, this.items.Count, this.Loop))
             return;
 
-        this.GoTo(CoverFlowGeometry.IndexAt(value, this.items.Count, this.Loop), animate: this.Handler is not null);
+        this.GoTo(CoverFlowGeometry.IndexAt(value, this.items.Count, this.Loop), animate: this.CanAnimate);
     }
 
     void OnSizeChanged()
@@ -805,6 +829,17 @@ public class CoverFlowView : ContentView
             return;
 
         var layout = this.CoverLayout;
+
+        // While a move is settling, the centre slot belongs to the cover arriving in it: a tap there
+        // finishes the move and selects that cover, rather than re-targeting to whichever cover happens
+        // to be passing the middle (which is what a tap straight after Next or a swipe used to do).
+        if (this.ticker is not null
+            && CoverFlowGeometry.Footprint(CoverFlowGeometry.For(0, layout), this.stageCentre, this.ItemWidth, this.ItemHeight).Contains(point))
+        {
+            this.SelectCentre();
+            return;
+        }
+
         var hit = this.realized.Values
             .Select(slot => (Slot: slot, Transform: CoverFlowGeometry.For(slot.VirtualIndex - this.position, layout)))
             .Where(x => x.Transform.Opacity > 0.05)
@@ -814,19 +849,27 @@ public class CoverFlowView : ContentView
         if (hit.Slot is null)
             return;
 
-        var centre = (int)Math.Round(this.position, MidpointRounding.AwayFromZero);
-        if (hit.Slot.VirtualIndex == centre && this.ticker is null)
-        {
-            var index = CoverFlowGeometry.Mod(hit.Slot.VirtualIndex, this.items.Count);
-            var item = this.items[index];
-            this.ItemSelected?.Invoke(this, new CollectionItemEventArgs(item, index));
-            if (this.ItemSelectedCommand?.CanExecute(item) == true)
-                this.ItemSelectedCommand.Execute(item);
-        }
+        if (hit.Slot.VirtualIndex == (int)Math.Round(this.TargetPosition, MidpointRounding.AwayFromZero))
+            this.SelectCentre();
         else
-        {
             this.MoveTo(hit.Slot.VirtualIndex, animate: true);
-        }
+    }
+
+    /// <summary>
+    /// Selects the centre cover - the one a running animation is heading to, which it finishes first.
+    /// Also what a tap with no position does (an accessibility activation, UI automation).
+    /// </summary>
+    internal void SelectCentre()
+    {
+        if (this.items.Count == 0)
+            return;
+
+        this.StopAnimation(snap: true);
+        var index = CoverFlowGeometry.IndexAt(this.position, this.items.Count, this.Loop);
+        var item = this.items[index];
+        this.ItemSelected?.Invoke(this, new CollectionItemEventArgs(item, index));
+        if (this.ItemSelectedCommand?.CanExecute(item) == true)
+            this.ItemSelectedCommand.Execute(item);
     }
 
     /// <summary>The point a test should tap to hit the cover at <paramref name="virtualIndex"/>.</summary>
@@ -843,7 +886,7 @@ public class CoverFlowView : ContentView
 
     void MoveTo(double target, bool animate)
     {
-        var ticker = animate && this.AnimationDuration > 0 && this.Handler is not null
+        var ticker = animate && this.AnimationDuration > 0 && this.CanAnimate
             ? MotionTicker.For(this)
             : null;
 
@@ -912,12 +955,10 @@ public class CoverFlowView : ContentView
         }
 
         var index = CoverFlowGeometry.IndexAt(this.position, this.items.Count, this.Loop);
-        if (index == this.reportedIndex)
-            return;
 
-        var first = this.reportedIndex < 0;
-        this.reportedIndex = index;
-
+        // CurrentPosition is brought back into line even when the index did not change: set it to 3,
+        // tap back to 0 before the move arrives, and the control rests on 0 while CurrentPosition still
+        // said 3 - the event is unchanged (nothing moved), but the binding must not lie.
         if (this.CurrentPosition != index)
         {
             this.syncing = true;
@@ -930,6 +971,12 @@ public class CoverFlowView : ContentView
                 this.syncing = false;
             }
         }
+
+        if (index == this.reportedIndex)
+            return;
+
+        var first = this.reportedIndex < 0;
+        this.reportedIndex = index;
 
         if (!raise || first)
             return;

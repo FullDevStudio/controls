@@ -125,6 +125,7 @@ public partial class CarouselGalleryHandler : ViewHandler<CarouselGallery, UICol
         if (handler.flowLayout is not null)
         {
             handler.flowLayout.ItemSize = new CGSize(view.ItemWidth, view.ItemHeight);
+            handler.flowLayout.MinimumLineSpacing = (nfloat)view.ItemSpacing;
             handler.flowLayout.InvalidateLayout();
         }
     }

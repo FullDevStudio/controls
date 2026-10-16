@@ -26,6 +26,9 @@ public static class DesktopMauiAppBuilderExtensions
         builder.Services.TryAddSingleton<ITrayIconFactory, MacCatalystTrayIconFactory>();
 #elif MACOS
         builder.Services.TryAddSingleton<ITrayIconFactory, MacTrayIconFactory>();
+#elif ANDROID || IOS
+        // Phones have no tray.
+        builder.Services.TryAddSingleton<ITrayIconFactory, UnsupportedTrayIconFactory>();
 #else
         // net10.0 fallback — Linux at runtime, otherwise unsupported.
         builder.Services.TryAddSingleton<ITrayIconFactory>(_ =>
@@ -79,6 +82,10 @@ public static class DesktopMauiAppBuilderExtensions
 #elif MACOS
         builder.Services.TryAddSingleton<IGlobalHotKeyService, MacGlobalHotKeyService>();
         builder.Services.AddSingleton<IScreenGlowPresenter>(sp => new DesktopScreenGlowPresenter(sp.GetService<ILogger<DesktopScreenGlowPresenter>>()));
+#elif ANDROID || IOS
+        // Phones have no global hotkeys; the screen glow presenter reports itself unsupported.
+        builder.Services.TryAddSingleton<IGlobalHotKeyService, UnsupportedGlobalHotKeyService>();
+        builder.Services.AddSingleton<IScreenGlowPresenter>(sp => new DesktopScreenGlowPresenter(sp.GetService<ILogger<DesktopScreenGlowPresenter>>()));
 #else
         // net10.0 fallback — Linux at runtime, otherwise unsupported.
         builder.Services.TryAddSingleton<IGlobalHotKeyService>(sp =>
@@ -128,7 +135,7 @@ public static class DesktopMauiAppBuilderExtensions
     {
 #if MACOS || MACCATALYST
         Shiny.Maui.Controls.KeyboardShortcutManager.PlatformAttach = Shiny.Maui.Controls.Desktop.KeyboardShortcuts.KeyboardShortcutPlatform.Attach;
-#elif !WINDOWS
+#elif !WINDOWS && !ANDROID && !IOS
         // net10.0 asset — Linux at runtime, otherwise nothing to attach.
         if (OperatingSystem.IsLinux())
             Shiny.Maui.Controls.KeyboardShortcutManager.PlatformAttach = Shiny.Maui.Controls.Desktop.KeyboardShortcuts.KeyboardShortcutPlatform.Attach;

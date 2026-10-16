@@ -163,9 +163,12 @@ public class MatrixEffect : BackgroundEffect
 
                     var alpha = 1f - ((float)i / trail);
                     canvas.FontColor = i == 0 ? head : color.WithAlpha(color.Alpha * alpha * 0.9f);
+                    // A box twice the cell, on the same centre: iOS lays the string out in a CoreText
+                    // frame and drops any line taller than the box, and a glyph's line height is more
+                    // than the cell - so a cell-sized box drew nothing at all on iOS.
                     canvas.DrawString(
                         c.Glyphs[row].ToString(),
-                        x * cell, row * cell, cell, cell,
+                        (x - 0.5f) * cell, (row - 0.5f) * cell, cell * 2, cell * 2,
                         HorizontalAlignment.Center, VerticalAlignment.Center
                     );
                 }

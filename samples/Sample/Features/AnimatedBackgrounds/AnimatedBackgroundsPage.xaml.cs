@@ -99,6 +99,9 @@ public partial class AnimatedBackgroundsPage : ContentPage
     }
 
 
-    async void OnHeroButton(object? sender, EventArgs e)
-        => await this.DisplayAlertAsync("Animated Background", "The effect never gets in the way of the content.", "OK");
+    int heroClicks;
+
+    // Counts rather than opening an alert, so a tap that reaches the button is visible on the page.
+    void OnHeroButton(object? sender, EventArgs e)
+        => this.HeroButton.Text = $"A real button ({++this.heroClicks})";
 }

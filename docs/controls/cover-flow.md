@@ -83,5 +83,7 @@ On MAUI it is drawn with plain MAUI transforms (`TranslationX`, `RotationY`, `Sc
 - Without `Loop`, dragging past either end stretches, then springs back.
 - `PositionChanged` / `CurrentPositionChanged` fire once per settled index, not on every frame.
 - A drag is never treated as a tap.
+- On MAUI, tapping the centre while a move is still settling (straight after a swipe, Next, or a `CurrentPosition` change) finishes the move and selects the cover arriving there; a tap on any other cover goes to that cover. On Blazor, a press during a move catches it where it is, as a finger would, and it settles from there.
+- On MAUI, a tap with no position (an accessibility activation, or UI automation such as DevFlow) counts as a tap on the centre cover, so it selects that item.
 - Item templates are for display. The control handles every tap itself, so a button inside a cover does not get the tap.
 - With `ShowReflection` on MAUI, the template is created twice per cover. The reflection fades into the theme's Surface colour, so place the control on a Surface-coloured background.

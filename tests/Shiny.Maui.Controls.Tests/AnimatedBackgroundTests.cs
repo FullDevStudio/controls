@@ -1,3 +1,4 @@
+using System.Reflection;
 using Microsoft.Maui;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
@@ -308,6 +309,42 @@ public class AnimatedBackgroundTests
 
         renderer.Columns.Count.ShouldBe(10);
         renderer.Columns.ShouldAllBe(c => c.Glyphs.Length == 6);
+    }
+
+
+    [Fact]
+    public void MatrixDrawsEachGlyphInABoxTallerThanItsLine()
+    {
+        // iOS lays a string out in a CoreText frame and drops any line taller than the box. A glyph's
+        // line is taller than its cell, so the cell-sized boxes this used to pass drew nothing on iOS
+        // (Android draws regardless, which is why only iOS showed an empty black card).
+        var renderer = (MatrixEffect.Renderer)new MatrixEffect { FontSize = 12 }.CreateRenderer(new Random(1));
+        renderer.Resize(120, 240);
+        for (var i = 0; i < 240; i++)
+            renderer.Step(1d / 60);
+
+        var canvas = DispatchProxy.Create<ICanvas, DrawStringRecorder>();
+        renderer.Draw(canvas);
+
+        var boxes = ((DrawStringRecorder)(object)canvas).Boxes;
+        boxes.ShouldNotBeEmpty();
+        boxes.ShouldAllBe(b => b.Width >= 24 && b.Height >= 24);
+    }
+
+
+    /// <summary>An <see cref="ICanvas"/> that records the box of every rect-based DrawString.</summary>
+    public class DrawStringRecorder : DispatchProxy
+    {
+        public List<RectF> Boxes { get; } = [];
+
+        protected override object? Invoke(MethodInfo? method, object?[]? args)
+        {
+            if (method?.Name == nameof(ICanvas.DrawString) && args is [string, float x, float y, float w, float h, ..])
+                this.Boxes.Add(new RectF(x, y, w, h));
+
+            var type = method?.ReturnType;
+            return type is null || type == typeof(void) || !type.IsValueType ? null : Activator.CreateInstance(type);
+        }
     }
 
 

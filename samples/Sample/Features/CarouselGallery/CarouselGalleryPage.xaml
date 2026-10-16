@@ -128,7 +128,7 @@
                    FontSize="12"
                    TextColor="Gray" />
 
-            <shiny:CarouselGallery ItemsSource="{Binding GradientItems}"
+            <shiny:CarouselGallery AutomationId="DestinationsCarousel" ItemsSource="{Binding GradientItems}"
                                    ItemWidth="300"
                                    ItemHeight="200"
                                    ItemSpacing="20"

@@ -92,6 +92,43 @@ public abstract class UITest
     }
 
     /// <summary>Navigates to a Shell route and waits for its page type (or a marker AutomationId) to be on screen.</summary>
+    /// <summary>
+    /// Real finger input goes through the OS only on Android (adb input). Everywhere else DevFlow's tap
+    /// and pan invoke the recognizer directly, which proves the handler but not that a touch reaches it.
+    /// </summary>
+    protected bool HasRealTouch => App.Host is AndroidAppHost;
+
+    /// <summary>A real tap at a fraction of the element's bounds (Android only, see <see cref="HasRealTouch"/>).</summary>
+    protected async Task TouchTap(string automationId, double fractionX = 0.5, double fractionY = 0.5)
+    {
+        var bounds = await OnScreenBounds(automationId);
+        await ((AndroidAppHost)App.Host).TouchTap(bounds.X + bounds.Width * fractionX, bounds.Y + bounds.Height * fractionY);
+    }
+
+    /// <summary>A real horizontal drag across the element's vertical middle (Android only).</summary>
+    protected async Task TouchSwipe(string automationId, double fromFractionX, double toFractionX, int durationMs)
+    {
+        var bounds = await OnScreenBounds(automationId);
+        var y = bounds.Y + bounds.Height / 2;
+        await ((AndroidAppHost)App.Host).TouchSwipe(
+            bounds.X + bounds.Width * fromFractionX, y,
+            bounds.X + bounds.Width * toFractionX, y,
+            durationMs
+        );
+    }
+
+    async Task<(double X, double Y, double Width, double Height)> OnScreenBounds(string automationId)
+    {
+        if (!HasRealTouch)
+            throw new InvalidOperationException("Real touch input is only available on Android.");
+
+        await Driver.Scroll(automationId);
+        await Task.Delay(500); // let the scroll settle before reading where the element landed
+        var b = (await Driver.Find(automationId)).WindowBounds
+            ?? throw new InvalidOperationException($"'{automationId}' has no window bounds.");
+        return (b.X, b.Y, b.Width, b.Height);
+    }
+
     protected async Task Open(string route, string? pageType = null)
     {
         // Android: the Office editors need ~20k JNI global refs just to open (every ribbon tab built up front,
