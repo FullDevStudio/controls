@@ -18,6 +18,7 @@ public class FloorPlanTests : BlazorTest
 
     async Task ClickCanvas(double fx, double fy)
     {
+        await Canvas.ScrollIntoViewIfNeededAsync();
         var box = (await Canvas.BoundingBoxAsync())!;
         await Page.Mouse.ClickAsync((float)(box.X + box.Width * fx), (float)(box.Y + box.Height * fy));
     }

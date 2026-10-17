@@ -38,6 +38,8 @@ On MAUI the values follow MAUI's own pickers:
 
 The popup is a card over a scrim in the page's overlay layer, so any `ContentPage` works; no `ShinyContentPage` or `OverlayHost` is needed. Android's back button cancels it.
 
+The popup has one vertical scroller. The date pickers' card scrolls as a whole on a short or landscape screen. `TimeRangePicker`'s card does not scroll. Its two time columns are the scrollers, and they shrink (from 280 down to 96pt) so that the title and the Apply/Cancel footer always stay on screen.
+
 ## Blazor
 
 ```razor

@@ -64,6 +64,12 @@ On touch the drag arms on a long press, so a vertical swipe still scrolls the ti
 
 The Blazor `SchedulerAgendaView` has the same feature set — `DaysToShow` (1–7 day columns), `DatePickerMode` (`Carousel` / `Calendar` / `None`), `ShowAdditionalTimezones` + `AdditionalTimezones` side-by-side timezone columns, overlap-aware event layout, and an auto-updating current time marker — using CSS color strings instead of `Color`.
 
+On Blazor all three views draw one outer border, and the cells and columns inside never draw a line
+along it: the calendar's last column and last week, the agenda's last day column and last hour, and the
+list's day headers (which draw only their bottom line) sit flush against the frame. The agenda and the
+list scroll themselves, so give them a real height (fill a full-height column with `flex: 1; min-height: 0`)
+rather than a fixed height inside a scrolling page.
+
 **ISchedulerEventProvider** - Implement this interface to supply event data:
 
 ```csharp

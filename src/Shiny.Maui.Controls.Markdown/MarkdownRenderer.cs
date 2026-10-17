@@ -219,6 +219,11 @@ public static class MarkdownRenderer
         };
     }
 
+    /// <remarks>
+    /// One outer border and single 1px dividers drawn between cells. Each cell used to be a bordered box
+    /// of its own, so every inner line was two half-strokes side by side and the outer edge doubled up
+    /// against the table's own rounded border.
+    /// </remarks>
     static View RenderTable(Table table, MarkdownTheme theme, Action<string>? linkHandler)
     {
         var columnCount = table.ColumnDefinitions?.Count ?? 0;
@@ -241,6 +246,15 @@ public static class MarkdownRenderer
             grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
             var isHeader = row.IsHeader;
 
+            if (isHeader)
+            {
+                // A row background behind every column, so a header row with fewer cells than columns
+                // is still shaded edge to edge.
+                var shade = new BoxView { Color = theme.TableHeaderBackgroundColor };
+                grid.Add(shade, 0, rowIndex);
+                Grid.SetColumnSpan(shade, columnCount);
+            }
+
             for (var c = 0; c < row.Count && c < columnCount; c++)
             {
                 if (row[c] is not TableCell cell) continue;
@@ -258,16 +272,25 @@ public static class MarkdownRenderer
                 if (cell.Count > 0 && cell[0] is ParagraphBlock pb)
                     ApplyInlines(label, pb.Inline, theme, linkHandler);
 
-                var border = new Border
-                {
-                    Stroke = theme.TableBorderColor,
-                    StrokeThickness = 0.5,
-                    BackgroundColor = isHeader ? theme.TableHeaderBackgroundColor : Colors.Transparent,
-                    Content = label
-                };
-                grid.Add(border, c, rowIndex);
+                grid.Add(label, c, rowIndex);
             }
             rowIndex++;
+        }
+
+        // Dividers on the leading edge of every row and column after the first: drawn once per shared
+        // edge, and never on the outside, which is the outer border's job.
+        for (var r = 1; r < rowIndex; r++)
+        {
+            var line = new BoxView { HeightRequest = 1, VerticalOptions = LayoutOptions.Start, Color = theme.TableBorderColor };
+            grid.Add(line, 0, r);
+            Grid.SetColumnSpan(line, columnCount);
+        }
+
+        for (var c = 1; c < columnCount && rowIndex > 0; c++)
+        {
+            var line = new BoxView { WidthRequest = 1, HorizontalOptions = LayoutOptions.Start, Color = theme.TableBorderColor };
+            grid.Add(line, c, 0);
+            Grid.SetRowSpan(line, rowIndex);
         }
 
         return new Border
@@ -275,6 +298,7 @@ public static class MarkdownRenderer
             StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 4 },
             Stroke = theme.TableBorderColor,
             StrokeThickness = 1,
+            Padding = 0,
             Content = grid
         };
     }

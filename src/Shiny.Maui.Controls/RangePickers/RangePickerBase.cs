@@ -216,7 +216,10 @@ public abstract partial class RangePickerBase : ContentView
             HorizontalOptions = LayoutOptions.Center,
             VerticalOptions = LayoutOptions.Center,
             StrokeShape = new RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerExtraLargeRadius),
-            Content = new ScrollView { Content = stack }
+            // One scroll owner per axis. Content that scrolls itself (the time picker's two columns) is
+            // given the room instead; wrapping it in a card scroller too meant that on a short or
+            // landscape screen both scrolled, and a flick in a column ran the card at its end.
+            Content = this.PopupContentScrolls ? stack : new ScrollView { Content = stack }
         }
         .WithStrokeThickness(ShinyThemeKeys.Border.Thin)
         .WithElevation(ShinyThemeKeys.Elevation.Level3);
@@ -227,12 +230,52 @@ public abstract partial class RangePickerBase : ContentView
         card.GestureRecognizers.Add(new TapGestureRecognizer());
 
         this.PopupCard = card;
-        return new Grid
+        var overlay = new Grid
         {
             InputTransparent = false,
             CascadeInputTransparent = false,
             Children = { scrim, card }
         };
+
+        if (this.PopupContentScrolls)
+        {
+            void Fit(object? sender, EventArgs e) => this.FitPopupContent(overlay, card, stack, content);
+            overlay.SizeChanged += Fit;
+            card.SizeChanged += Fit;
+        }
+        return overlay;
+    }
+
+
+    /// <summary>
+    /// Tells self-scrolling content how tall it may be: whatever the page has left once the card's own
+    /// chrome (title, footer, padding, margin) is taken off.
+    /// </summary>
+    /// <remarks>
+    /// The chrome is added up from the card's other rows rather than taken as "card less content": a
+    /// card taller than the page is clipped to it, which would understate the chrome exactly when it
+    /// matters. None of it changes when the content is resized, so this settles in one pass.
+    /// </remarks>
+    void FitPopupContent(Grid overlay, Border card, VerticalStackLayout stack, View content)
+    {
+        if (!ReferenceEquals(this.overlay, overlay) || overlay.Height <= 0)
+            return;
+
+        var chrome = card.Padding.VerticalThickness + (card.StrokeThickness * 2);
+        foreach (var child in stack.Children.OfType<View>())
+        {
+            if (ReferenceEquals(child, content) || !child.IsVisible)
+                continue;
+
+            if (child.Height <= 0)
+                return; // not laid out yet; the next SizeChanged comes back here
+
+            chrome += child.Height + child.Margin.VerticalThickness;
+        }
+
+        var room = overlay.Height - card.Margin.VerticalThickness - chrome;
+        if (room > 0)
+            this.OnPopupContentRoom(room);
     }
 
 
@@ -308,6 +351,18 @@ public abstract partial class RangePickerBase : ContentView
 
     /// <summary>The field text when there is no value and no <see cref="Placeholder"/>.</summary>
     protected abstract string DefaultPlaceholder { get; }
+
+    /// <summary>
+    /// True when <see cref="CreatePopupContent"/> scrolls itself vertically, so the card must not wrap it
+    /// in a scroller of its own. The content is then sized through <see cref="OnPopupContentRoom"/>.
+    /// </summary>
+    protected virtual bool PopupContentScrolls => false;
+
+    /// <summary>
+    /// The vertical room self-scrolling content has inside the card on this screen. Only called when
+    /// <see cref="PopupContentScrolls"/> is true; called again when the page resizes (rotation).
+    /// </summary>
+    protected virtual void OnPopupContentRoom(double height) { }
 
     /// <summary>The widest the popup card may be.</summary>
     protected virtual double PopupMaxWidth => 400;

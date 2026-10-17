@@ -47,6 +47,21 @@ The Blazor `FontSizePickerButton` puts a text field beside the caret so a size t
 13pt, say — can be typed; a value that will not parse, or falls outside `MinimumFontSize`/
 `MaximumFontSize`, snaps back rather than being committed.
 
+On Blazor the inline `FontPicker` and `FontSizePicker` size to their list: placed on a page, they do not
+scroll, and the page does. Only the button's dropdown caps them (at 320px) and scrolls inside. To give an
+inline picker its own capped scroller (in a fixed-height side panel, say), set the custom property:
+
+```css
+.my-panel { --shiny-fontpicker-max-height: 240px; --shiny-fontsizepicker-max-height: 240px; }
+```
+
+On MAUI the inline pickers are a `ScrollView` over their rows. Left unconstrained (in a `VerticalStackLayout`
+inside a page `ScrollView`) they measure to their full list and do not scroll — the page does. When the
+list should scroll itself (a long system-font list), give the picker the space instead: a `*` row of a
+`Grid` page that is **not** wrapped in a `ScrollView`. Never give one a fixed `HeightRequest` inside a
+scrolling page, which puts a scroller inside a scroller. The sample's Font Picker page shows the
+`*`-row layout.
+
 ## Sizing the button
 
 On MAUI the trigger shrink-wraps its label, down to a minimum width, so a button dropped into a stack

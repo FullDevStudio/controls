@@ -194,7 +194,8 @@ it — a tree with no expanders is unusable, and silently so.
 
 Leave `Columns` empty and a Task/Start/Finish set is used. The splitter between the panes is
 draggable unless `IsTaskPaneResizable` says otherwise, and `ShowTaskPane="False"` gives a bare
-timeline.
+timeline. On Blazor the pane is capped at 45% of the control's width (`min(TaskPaneWidth px, 45%)`), so
+on a phone the timeline always stays visible instead of being pushed off by a wide pane.
 
 ## The time axis
 

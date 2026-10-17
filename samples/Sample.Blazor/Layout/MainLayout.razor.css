@@ -89,7 +89,10 @@
     height: 22px;
 }
 
+/* a flex item won't shrink below its text unless told to, so without min-width the ellipsis never
+   kicked in and a long page name pushed the GitHub link off a phone screen */
 ::deep .app-title {
+    min-width: 0;
     font-size: 17px;
     font-weight: 600;
     white-space: nowrap;
@@ -166,6 +169,48 @@
 
 .content-inner {
     padding: 28px 36px;
+}
+
+/* A page whose demo is a control that scrolls itself (a chat, an agenda, a dock host) marks it
+   `.demo-fill` and the page stops scrolling: the content column becomes exactly the region's
+   height and the demo takes what the heading and notes leave. Giving it a fixed height inside the
+   scrolling page instead is two scrollers on one axis (CLAUDE.md, Jon rule 1). The source panel
+   keeps its place underneath and scrolls on its own once opened, a sibling rather than a parent. */
+.content-inner:has(.demo-fill) {
+    box-sizing: border-box;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.content-inner:has(.demo-fill) > ::deep * {
+    flex: 0 0 auto;
+}
+
+.content-inner:has(.demo-fill) > ::deep .demo-fill {
+    flex: 1 1 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.content-inner:has(.demo-fill) > ::deep .demo-fill > .demo-fill-body {
+    flex: 1 1 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.content-inner:has(.demo-fill) > ::deep .demo-fill > .demo-fill-body > * {
+    flex: 1 1 0;
+    min-height: 0;
+}
+
+.content-inner:has(.demo-fill) ::deep .source-code-panel {
+    max-height: 40%;
+    margin-top: 16px;
+    padding-top: 12px;
+    overflow-y: auto;
 }
 
 /* The bottom tab bar is a mobile affordance — on desktop the nav panel is showing instead, so

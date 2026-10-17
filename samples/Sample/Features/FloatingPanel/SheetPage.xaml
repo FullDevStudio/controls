@@ -207,6 +207,7 @@
 
     <!-- Locked: Country selector sheet -->
     <shiny:FloatingPanel IsOpen="{Binding IsSelectorOpen}" AutomationId="CountrySelectorSheet"
+                  IsContentScrollEnabled="False"
                   IsLocked="True"
                   HasBackdrop="True"
                   PanelCornerRadius="20"

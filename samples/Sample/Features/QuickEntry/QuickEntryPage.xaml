@@ -128,13 +128,18 @@
                     StrokeShape="RoundRectangle 10">
                 <VerticalStackLayout Spacing="6">
                     <Label Text="Events" FontAttributes="Bold" FontSize="14" />
-                    <CollectionView ItemsSource="{Binding EventLog}" HeightRequest="180">
-                        <CollectionView.ItemTemplate>
+                    <!--
+                        The log is capped at 20 lines, so it sizes to its content and the page does
+                        the scrolling. A fixed-height CollectionView here was a scroller inside the
+                        page's ScrollView.
+                    -->
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding EventLog}" AutomationId="QuickEntryEventLog">
+                        <BindableLayout.ItemTemplate>
                             <DataTemplate x:DataType="x:String">
                                 <Label Text="{Binding .}" FontSize="12" Padding="0,2" />
                             </DataTemplate>
-                        </CollectionView.ItemTemplate>
-                    </CollectionView>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
                 </VerticalStackLayout>
             </Border>
 

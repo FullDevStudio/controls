@@ -17,13 +17,22 @@ public abstract class BlazorTest
 
     protected IPage Page { get; private set; } = null!;
 
+    TouchInput? touch;
+
+    /// <summary>A finger: real touch events through the browser's input pipeline (Chromium only).</summary>
+    protected TouchInput Touch => touch ??= new TouchInput(Page);
+
     /// <summary>Console errors and uncaught page exceptions seen so far in this test.</summary>
     protected IReadOnlyList<string> ConsoleErrors => consoleErrors;
+
+    /// <summary>True opens this class's pages on a phone, even in a desktop run.</summary>
+    protected virtual bool Phone => false;
 
     [Before(Test)]
     public async Task OpenPage()
     {
-        Page = await App.Context.NewPageAsync();
+        var context = Phone ? await App.GetPhoneContextAsync() : App.Context;
+        Page = await context.NewPageAsync();
         Page.SetDefaultTimeout(15_000);
         Page.Console += (_, msg) =>
         {
@@ -115,6 +124,13 @@ public abstract class BlazorTest
         if (errors.Count > 0)
             Assert.Fail("The page logged errors:\n" + String.Join("\n", errors.Take(10)));
     }
+
+    /// <summary>
+    /// Scrolls the gallery's content region, the way a wheel or a finger would. Mobile WebKit cannot
+    /// synthesise a wheel, so this is the one scroll that works in every run.
+    /// </summary>
+    protected Task ScrollContentAsync(int dy)
+        => Page.EvaluateAsync("dy => (document.querySelector('.shiny-applayout-content') ?? document.scrollingElement).scrollBy(0, dy)", dy);
 
     protected Task Screenshot(string name)
     {

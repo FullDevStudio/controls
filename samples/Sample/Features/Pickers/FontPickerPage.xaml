@@ -12,74 +12,75 @@
         Content when that Content is already a Grid, and otherwise re-parents the whole tree
         into a new wrapper. Starting with a Grid keeps the native views intact.
     -->
+    <!--
+        The inline pickers are scrolling lists, so they own the vertical axis: each gets a star row
+        and the page itself does not scroll. Wrapping them in the page's ScrollView with a fixed
+        HeightRequest put a scroller inside a scroller (see the Jon Dick nitpick checklist).
+        The outer single-cell Grid is the one the popup buttons add their overlay to, so the
+        overlay covers the page instead of landing in the first row of the layout grid.
+    -->
     <Grid>
-        <ScrollView>
-            <VerticalStackLayout Padding="20" Spacing="18">
-                <Label Text="FontPicker"
-                       FontSize="24"
-                       FontAttributes="Bold" />
+    <Grid Padding="20,12,20,20"
+          RowSpacing="10"
+          RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,*,Auto,*">
+        <VerticalStackLayout Spacing="4">
+            <Label Text="FontPicker"
+                   FontSize="24"
+                   FontAttributes="Bold" />
 
-                <Label Text="Font family and size selection, inline or as a popup button. Every row previews itself in its own typeface."
-                       FontSize="14"
-                       TextColor="Gray" />
+            <Label Text="Font family and size selection, inline or as a popup button. Every row previews itself in its own typeface."
+                   FontSize="14"
+                   TextColor="Gray" />
+        </VerticalStackLayout>
 
-                <BoxView HeightRequest="1" Color="LightGray" />
+        <!-- Live preview -->
+        <Border Grid.Row="1" Padding="14" StrokeThickness="1" Stroke="LightGray">
+            <Label Text="{Binding PreviewText}"
+                   FontFamily="{Binding SelectedFont}"
+                   FontSize="{Binding SelectedFontSize}"
+                   LineBreakMode="TailTruncation"
+                   AutomationId="font-preview" />
+        </Border>
+        <HorizontalStackLayout Grid.Row="2" Spacing="16">
+            <Label AutomationId="font-family-label" Text="{Binding SelectedFont, StringFormat='Family: {0}'}"
+                   FontSize="13"
+                   TextColor="Gray" />
+            <Label AutomationId="font-size-label" Text="{Binding SelectedFontSize, StringFormat='Size: {0}'}"
+                   FontSize="13"
+                   TextColor="Gray" />
+        </HorizontalStackLayout>
 
-                <!-- Live preview -->
-                <Label Text="Preview" FontSize="16" FontAttributes="Bold" />
-                <Border Padding="14" StrokeThickness="1" Stroke="LightGray">
-                    <Label Text="{Binding PreviewText}"
-                           FontFamily="{Binding SelectedFont}"
-                           FontSize="{Binding SelectedFontSize}"
-                           AutomationId="font-preview" />
-                </Border>
-                <Label AutomationId="font-family-label" Text="{Binding SelectedFont, StringFormat='Family: {0}'}"
-                       FontSize="13"
-                       TextColor="Gray" />
-                <Label AutomationId="font-size-label" Text="{Binding SelectedFontSize, StringFormat='Size: {0}'}"
-                       FontSize="13"
-                       TextColor="Gray" />
+        <!-- Popup buttons -->
+        <Label Grid.Row="3" Text="Popup pickers" FontSize="16" FontAttributes="Bold" />
+        <HorizontalStackLayout Grid.Row="4" Spacing="12">
+            <fonts:FontPickerButton AvailableFonts="{Binding AvailableFonts}"
+                                    SelectedFont="{Binding SelectedFont, Mode=TwoWay}"
+                                    Placeholder="Font"
+                                    AutomationId="font-picker-button" />
 
-                <BoxView HeightRequest="1" Color="LightGray" />
+            <fonts:FontSizePickerButton AvailableFontSizes="{Binding AvailableFontSizes}"
+                                        SelectedFontSize="{Binding SelectedFontSize, Mode=TwoWay}"
+                                        AutomationId="font-size-picker-button" />
+        </HorizontalStackLayout>
 
-                <!-- Popup buttons -->
-                <Label Text="Popup pickers" FontSize="16" FontAttributes="Bold" />
-                <HorizontalStackLayout Spacing="12">
-                    <fonts:FontPickerButton AvailableFonts="{Binding AvailableFonts}"
-                                            SelectedFont="{Binding SelectedFont, Mode=TwoWay}"
-                                            Placeholder="Font"
-                                            AutomationId="font-picker-button" />
+        <!-- Inline family list: fills its row and scrolls itself -->
+        <Label Grid.Row="5" Text="Inline FontPicker" FontSize="16" FontAttributes="Bold" />
+        <Border Grid.Row="6" StrokeThickness="1" Stroke="LightGray" Padding="0">
+            <fonts:FontPicker AvailableFonts="{Binding AvailableFonts}"
+                              SelectedFont="{Binding SelectedFont, Mode=TwoWay}"
+                              PreviewText="Sphinx of black quartz"
+                              PreviewFontSize="17"
+                              AutomationId="font-picker-inline" />
+        </Border>
 
-                    <fonts:FontSizePickerButton AvailableFontSizes="{Binding AvailableFontSizes}"
-                                                SelectedFontSize="{Binding SelectedFontSize, Mode=TwoWay}"
-                                                AutomationId="font-size-picker-button" />
-                </HorizontalStackLayout>
-
-                <BoxView HeightRequest="1" Color="LightGray" />
-
-                <!-- Inline family list -->
-                <Label Text="Inline FontPicker" FontSize="16" FontAttributes="Bold" />
-                <Border StrokeThickness="1" Stroke="LightGray" Padding="0">
-                    <fonts:FontPicker AvailableFonts="{Binding AvailableFonts}"
-                                      SelectedFont="{Binding SelectedFont, Mode=TwoWay}"
-                                      PreviewText="Sphinx of black quartz"
-                                      PreviewFontSize="17"
-                                      HeightRequest="300"
-                                      AutomationId="font-picker-inline" />
-                </Border>
-
-                <BoxView HeightRequest="1" Color="LightGray" />
-
-                <!-- Inline size list -->
-                <Label Text="Inline FontSizePicker" FontSize="16" FontAttributes="Bold" />
-                <Border StrokeThickness="1" Stroke="LightGray" Padding="0">
-                    <fonts:FontSizePicker AvailableFontSizes="{Binding AvailableFontSizes}"
-                                          SelectedFontSize="{Binding SelectedFontSize, Mode=TwoWay}"
-                                          PreviewText="Aa"
-                                          HeightRequest="220"
-                                          AutomationId="font-size-picker-inline" />
-                </Border>
-            </VerticalStackLayout>
-        </ScrollView>
+        <!-- Inline size list -->
+        <Label Grid.Row="7" Text="Inline FontSizePicker" FontSize="16" FontAttributes="Bold" />
+        <Border Grid.Row="8" StrokeThickness="1" Stroke="LightGray" Padding="0">
+            <fonts:FontSizePicker AvailableFontSizes="{Binding AvailableFontSizes}"
+                                  SelectedFontSize="{Binding SelectedFontSize, Mode=TwoWay}"
+                                  PreviewText="Aa"
+                                  AutomationId="font-size-picker-inline" />
+        </Border>
+    </Grid>
     </Grid>
 </ContentPage>

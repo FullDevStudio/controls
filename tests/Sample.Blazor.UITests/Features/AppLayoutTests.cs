@@ -38,6 +38,7 @@ public class AppLayoutTests : BlazorTest
 
 
     [Test]
+    [SkipOnPhone("the demo's panels collapse below 900px by design, so there is no resizer or toolbar state to cycle")]
     public async Task Left_Button_Cycles_Shown_Hidden_Toolbar()
     {
         await OpenFresh();
@@ -108,6 +109,7 @@ public class AppLayoutTests : BlazorTest
 
 
     [Test]
+    [SkipOnPhone("the demo's panels collapse below 900px by design, so there is no resizer or toolbar state to cycle")]
     public async Task Dragging_The_Resizer_Changes_The_Width_And_Persists()
     {
         await OpenFresh();
@@ -135,6 +137,7 @@ public class AppLayoutTests : BlazorTest
 
 
     [Test]
+    [SkipOnPhone("the demo's panels collapse below 900px by design, so there is no resizer or toolbar state to cycle")]
     public async Task Resize_Is_Clamped_To_MaxSize()
     {
         await OpenFresh();

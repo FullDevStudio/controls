@@ -37,13 +37,23 @@ With each fix and each new feature, update all of the following so they stay in 
 5. Add it to the **homepage section** — the "UI Controls" `<Card>` in `src/content/docs/index.mdx` (place it in the appropriate category group).
 6. Add its top-level node to the **main menu** (`src/sidebar-topics.mjs`) under the `Controls` topic — which also surfaces it in the homepage menu.
 7. **Leave a screenshot TODO** — do **not** capture screenshots as part of the feature/release work. Instead, after wiring up a new component, note a TODO (e.g. `TODO: capture screenshots for <control>`) so they can be done later on request. See **Screenshots** below.
+8. **Pass the Jon Dick Nitpick checklist** (below) on both hosts before calling the control done.
 
 ### Additionally, if the PACKAGE is new (or removed / renamed)
 
-8. Add it to the solution (`Shiny.Controls.slnx`) and to `Build.slnf`.
-9. Add a NuGet badge to `README.md` — the badge block sits directly under the summary paragraph — and mention the package in the summary paragraph itself.
-10. Add it to the **`Package` dropdown** in `.github/ISSUE_TEMPLATE/bug_report.yml` and to the **`Target Package`** dropdown in `.github/ISSUE_TEMPLATE/feature_request.yml`. Both dropdowns mirror `src/` exactly, so a removed or renamed package must come out of them too.
-11. Update the **Repo layout** bullet at the top of this file.
+9. Add it to the solution (`Shiny.Controls.slnx`) and to `Build.slnf`.
+10. Add a NuGet badge to `README.md` — the badge block sits directly under the summary paragraph — and mention the package in the summary paragraph itself.
+11. Add it to the **`Package` dropdown** in `.github/ISSUE_TEMPLATE/bug_report.yml` and to the **`Target Package`** dropdown in `.github/ISSUE_TEMPLATE/feature_request.yml`. Both dropdowns mirror `src/` exactly, so a removed or renamed package must come out of them too.
+12. Update the **Repo layout** bullet at the top of this file.
+
+## Jon Dick Nitpick checklist (new controls)
+
+Things that get spotted as bugs straight away, so check every new control (and any reworked layout) for them on **both hosts** before it ships. Each one is a symptom of the control fighting the container it was put in rather than fitting it.
+
+1. **No scroll region inside a scroll region (double scrollbars).** A control that scrolls must not end up inside another scroller on the same axis: two scrollbars side by side, or a wheel or finger that scrolls the inner region until it hits the end and then jerks the outer one. Pick one owner per axis. If the control fills its parent, the control scrolls and the parent doesn't (give it a real height: `height:100%` / `flex:1` with `min-height:0` on Blazor, a `Grid` row of `*` on MAUI, never a `ScrollView` around it). If it sizes to its content, it doesn't scroll and the page does. Watch for the usual causes: a scroller in the control's template plus one in the sample page, a Blazor `overflow:auto` on both the root and an inner pane, a MAUI `CollectionView`/`ScrollView` placed inside a `ScrollView`, and a content region that is a few pixels too tall because of a border or padding, which adds a scrollbar that only moves 2px.
+2. **No double borders.** When a control with its own border fills a parent that also draws one (a card, a `demo-section`, a `Border`, another Shiny control), the two edges sit together and read as one double-thick line. Only one of them may draw the edge. A control that is designed to fill its host should have a way to drop its own border or stroke (a `Border`/`ShowBorder` parameter, or a CSS custom property / style token), and when one Shiny control hosts another, the inner one is turned off. The same goes for stacked `border-radius` (a rounded inner edge inside a rounded outer edge with a gap of background between them) and for doubled dividers where two adjacent panes each draw the shared edge.
+
+*More to come — add new items here as they are found.*
 
 ## Supported platforms
 

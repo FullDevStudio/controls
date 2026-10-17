@@ -40,7 +40,7 @@ public class ProgressLineTests : BlazorTest
         await Assert.That(box.Height).IsEqualTo(4);
 
         // it does not scroll away with the content
-        await Page.Mouse.WheelAsync(0, 400);
+        await ScrollContentAsync(400);
         await Page.WaitForTimeoutAsync(300);
         box = (await WindowLine.BoundingBoxAsync())!;
         await Assert.That(box.Y).IsLessThan(1);
@@ -109,7 +109,7 @@ public class ProgressLineTests : BlazorTest
     public async Task Trickle_Run_Puts_A_Line_On_The_Viewport_Top()
     {
         await Open("progressline");
-        await Page.Mouse.WheelAsync(0, 400);
+        await ScrollContentAsync(400);
 
         await Button("Trickle (no reported progress)").ClickAsync();
         await Expect(Lines).ToHaveCountAsync(3);

@@ -181,9 +181,12 @@ public partial class ButtonGroup
         this.nestedGroups++;
 
         // One re-render, and only the first time, so the cluster class can appear. See Register for why
-        // this is otherwise avoided.
-        if (this.nestedGroups == 1)
-            this.InvokeAsync(this.Repaint);
+        // this is otherwise avoided. A nested group registers during this group's own first render, when
+        // a repaint is not allowed yet - and InvokeAsync does not defer it: on the WASM dispatcher it ran
+        // there and then, found nothing rendered, and the cluster class never appeared at all. That
+        // first-render case is picked up by OnAfterRender instead.
+        if (this.nestedGroups == 1 && this.hasRendered)
+            this.StateHasChanged();
     }
 
 
@@ -319,8 +322,14 @@ public partial class ButtonGroup
 
     protected override void OnAfterRender(bool firstRender)
     {
-        if (firstRender)
-            this.hasRendered = true;
+        if (!firstRender)
+            return;
+
+        this.hasRendered = true;
+
+        // nested groups registered while this one was rendering for the first time
+        if (this.nestedGroups > 0)
+            this.StateHasChanged();
     }
 
 

@@ -2,8 +2,10 @@ namespace Sample.Blazor.UITests.Features;
 
 /// <summary>
 /// Keyboard shortcuts, driven with real key presses: page shortcuts, CanExecute, chords, the
-/// text-input rule, element scopes, modal blocking, and press/release pairs. "ControlOrMeta" is
-/// Playwright's Primary — ⌘ on a Mac host, Ctrl elsewhere — matching the sample's Primary+….
+/// text-input rule, element scopes, modal blocking, and press/release pairs. Primary is ⌘ where the
+/// page reports an Apple platform and Ctrl everywhere else - worked out from the page, not the host,
+/// since Playwright's own ControlOrMeta follows the host and a Mac running an emulated Android phone
+/// would press ⌘ at a page that expects Ctrl.
 /// </summary>
 public class KeyboardShortcutsTests : BlazorTest
 {
@@ -17,7 +19,13 @@ public class KeyboardShortcutsTests : BlazorTest
         // status line is only filled in after that, so it doubles as a readiness signal.
         await Expect(Page.Locator("#kbs-status strong")).Not.ToHaveTextAsync("");
         await Page.GetByRole(AriaRole.Heading, new() { Name = "Keyboard Shortcuts", Level = 1 }).ClickAsync();
+        primary = await Page.EvaluateAsync<bool>(
+            "() => { const p = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || ''; return /mac|iphone|ipad|ipod/i.test(p) || /iPhone|iPad|Macintosh/.test(navigator.userAgent); }")
+            ? "Meta" : "Control";
     }
+
+    /// <summary>The page's Primary modifier, the same detection keyboard-shortcuts.js does.</summary>
+    string primary = "Control";
 
 
     [Test]
@@ -26,8 +34,8 @@ public class KeyboardShortcutsTests : BlazorTest
         await OpenAndFocusPage();
         await Expect(Saves).ToHaveTextAsync("0");
 
-        await Page.Keyboard.PressAsync("ControlOrMeta+s");
-        await Page.Keyboard.PressAsync("ControlOrMeta+s");
+        await Page.Keyboard.PressAsync($"{primary}+s");
+        await Page.Keyboard.PressAsync($"{primary}+s");
 
         await Expect(Saves).ToHaveTextAsync("2");
         await Expect(Log.Locator("li").First).ToContainTextAsync("Saved (2)");
@@ -42,7 +50,7 @@ public class KeyboardShortcutsTests : BlazorTest
 
         await Page.Locator("label", new() { HasText = "enabled" }).GetByRole(AriaRole.Checkbox).UncheckAsync();
         await Page.GetByRole(AriaRole.Heading, new() { Name = "Keyboard Shortcuts", Level = 1 }).ClickAsync();
-        await Page.Keyboard.PressAsync("ControlOrMeta+s");
+        await Page.Keyboard.PressAsync($"{primary}+s");
         await Page.WaitForTimeoutAsync(300);
 
         await Expect(Saves).ToHaveTextAsync("0");
@@ -93,11 +101,11 @@ public class KeyboardShortcutsTests : BlazorTest
     {
         await OpenAndFocusPage();
 
-        await Page.Keyboard.PressAsync("ControlOrMeta+k");
+        await Page.Keyboard.PressAsync($"{primary}+k");
         await Expect(Page.Locator("#kbs-status")).ToContainTextAsync("waiting for the next key");
         await Expect(Log).Not.ToContainTextAsync("Commented the selection");
 
-        await Page.Keyboard.PressAsync("ControlOrMeta+c");
+        await Page.Keyboard.PressAsync($"{primary}+c");
         await Expect(Log.Locator("li").First).ToContainTextAsync("Commented the selection (chord)");
         await Expect(Page.Locator("#kbs-status")).Not.ToContainTextAsync("waiting for the next key");
         await AssertNoConsoleErrors();
@@ -116,7 +124,7 @@ public class KeyboardShortcutsTests : BlazorTest
         await Expect(Page.Locator("#kbs-cheatsheet")).ToHaveCountAsync(0);
         await Expect(Page.Locator("#kbs-talking")).ToHaveCountAsync(0);
 
-        await Page.Keyboard.PressAsync("ControlOrMeta+s");
+        await Page.Keyboard.PressAsync($"{primary}+s");
         await Expect(Saves).ToHaveTextAsync("1");
         await AssertNoConsoleErrors();
     }
@@ -129,12 +137,12 @@ public class KeyboardShortcutsTests : BlazorTest
         var editor = Page.Locator("#kbs-editor");
 
         // Outside the box: nothing.
-        await Page.Keyboard.PressAsync("ControlOrMeta+b");
+        await Page.Keyboard.PressAsync($"{primary}+b");
         await Page.WaitForTimeoutAsync(300);
         await Expect(Log).Not.ToContainTextAsync("Bold on");
 
         await editor.ClickAsync();
-        await Page.Keyboard.PressAsync("ControlOrMeta+b");
+        await Page.Keyboard.PressAsync($"{primary}+b");
 
         await Expect(Log.Locator("li").First).ToContainTextAsync("Bold on (element scope)");
         await Expect(editor).ToHaveAttributeAsync("style", new System.Text.RegularExpressions.Regex("font-weight:bold"));
@@ -152,7 +160,7 @@ public class KeyboardShortcutsTests : BlazorTest
         await Expect(modal).ToBeVisibleAsync();
 
         // The page's Save is blocked while the modal is up; the modal's own keys work.
-        await Page.Keyboard.PressAsync("ControlOrMeta+s");
+        await Page.Keyboard.PressAsync($"{primary}+s");
         await Page.Keyboard.PressAsync("Enter");
         await Expect(Log.Locator("li").First).ToContainTextAsync("Modal's own Enter shortcut");
         await Expect(Saves).ToHaveTextAsync("0");
@@ -165,7 +173,7 @@ public class KeyboardShortcutsTests : BlazorTest
         // next key can still land while it is going. Press until the page's Save is reachable again.
         for (var i = 0; i < 10 && await Saves.InnerTextAsync() == "0"; i++)
         {
-            await Page.Keyboard.PressAsync("ControlOrMeta+s");
+            await Page.Keyboard.PressAsync($"{primary}+s");
             await Page.WaitForTimeoutAsync(300);
         }
         await Expect(Saves).Not.ToHaveTextAsync("0");

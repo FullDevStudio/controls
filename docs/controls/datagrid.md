@@ -154,7 +154,13 @@ and `ResetColumnWidths()`.
 
 **Frozen header** — MAUI's header is always frozen (it sits in its own row above the `CollectionView`).
 Blazor needs `FixedHeader="true"` **and** a `Height`: the header sticks against the scroller, and
-without a capped height nothing scrolls.
+without a capped height nothing scrolls. A capped grid is a scroller of its own, so don't put one inside a
+scrolling page: give it the page's remaining height (`flex: 1; min-height: 0` in a full-height column)
+or let it size to its rows (paging keeps that short) and let the page scroll.
+
+With `Outlined` and `Bordered`, the outline is the grid's outer edge: the last column draws no right
+line of its own, and the last row draws no bottom line against the outline or the pager, so no edge is
+doubled. A column frozen to the end gets the same treatment.
 
 **Frozen columns** — pin a contiguous run at either edge, per column (`Frozen="Start"` / `"End"`) or by
 count on the grid (`FrozenColumns` / `FrozenEndColumns`, which also pins the multi-select checkbox

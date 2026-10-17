@@ -98,6 +98,9 @@
     color: var(--shiny-media-control, #fff);
     line-height: normal;
     transition: opacity 0.2s ease, visibility 0.2s ease;
+    /* the bar is pinned left/right to the player, so its width never comes from its content — safe to
+       contain, and it lets the controls below thin out on a phone-width player */
+    container-type: inline-size;
 }
 
 /*
@@ -169,6 +172,25 @@
 .shiny-media-volume {
     flex: 0 0 auto;
     width: 74px;
+}
+
+/* A phone-width player: the volume slider goes (mute stays, and iOS ignores page volume anyway), the
+   buttons tighten, and below that the time labels give way so the seek bar keeps something to drag. */
+@container (max-width: 420px) {
+    .shiny-media-volume {
+        display: none;
+    }
+
+    .shiny-media-btn {
+        width: 30px;
+        height: 30px;
+    }
+}
+
+@container (max-width: 260px) {
+    .shiny-media-time {
+        display: none;
+    }
 }
 
 .shiny-media-seek:disabled {

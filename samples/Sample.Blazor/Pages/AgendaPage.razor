@@ -4,7 +4,7 @@
 
 <h1>Scheduler — Agenda View</h1>
 
-<div class="demo-section" style="height:680px;display:flex;flex-direction:column;">
+<div class="demo-section demo-fill">
     <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center;">
         <label style="font-size:12px;"><input type="checkbox" @bind="allowDrag" /> Drag</label>
         <label style="font-size:12px;"><input type="checkbox" @bind="allowResize" /> Resize</label>
@@ -14,6 +14,7 @@
         <button class="toggle toggle--blue" @onclick="ToggleDays">@DaysToggleText</button>
     </div>
 
+    <div class="demo-fill-body">
     <SchedulerAgendaView Provider="provider"
                          AllowEventDrag="allowDrag"
                          AllowEventResize="allowResize"
@@ -33,6 +34,7 @@
                          DefaultEventColor="cornflowerblue"
                          TimeSlotHeight="60"
                          Use24HourTime="false" />
+    </div>
 </div>
 
 <div class="demo-section">

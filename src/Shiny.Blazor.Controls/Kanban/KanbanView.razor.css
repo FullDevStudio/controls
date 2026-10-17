@@ -222,9 +222,25 @@
 .shiny-kanban-card {
     border-radius: var(--shiny-shape-corner-medium, 12px);
     cursor: grab;
-    /* A pointer drag has to own the gesture, or the scroller takes it on touch. */
+    /* manipulation, not none: a finger that moves straight away is scrolling the board. A card is
+       picked up by press-and-hold instead, and kanban.js cancels the touchmoves once it is held. */
     touch-action: manipulation;
+    /* a long-press picks the card up - it must not select its text or raise the iOS callout */
+    -webkit-touch-callout: none;
     outline-offset: 2px;
+}
+
+/* held long enough to pick up: lift it before it moves, so the finger knows the press registered */
+.shiny-kanban-card.is-pressed {
+    transform: scale(1.03);
+    transition: transform 120ms ease;
+}
+
+@media (pointer: coarse) {
+    .shiny-kanban-card {
+        -webkit-user-select: none;
+        user-select: none;
+    }
 }
 
 .shiny-kanban-card.is-locked {

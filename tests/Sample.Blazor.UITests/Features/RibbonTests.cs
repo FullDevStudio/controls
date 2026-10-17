@@ -8,6 +8,7 @@ public class RibbonTests : BlazorTest
     ILocator Item(string label) => Ribbon.Locator($".shiny-ribbon__body button[aria-label='{label}']");
 
     [Test]
+    [SkipOnPhone("the ribbon folds its groups into buttons at phone width by design; these drive the unfolded commands")]
     public async Task Command_Buttons_Raise_Their_Handlers()
     {
         await Open("ribbon");
@@ -27,6 +28,7 @@ public class RibbonTests : BlazorTest
     }
 
     [Test]
+    [SkipOnPhone("the ribbon folds its groups into buttons at phone width by design; these drive the unfolded commands")]
     public async Task Toggle_Button_Flips_Pressed_State()
     {
         await Open("ribbon");
@@ -44,6 +46,7 @@ public class RibbonTests : BlazorTest
     }
 
     [Test]
+    [SkipOnPhone("the ribbon folds its groups into buttons at phone width by design; these drive the unfolded commands")]
     public async Task Alignment_Toggles_Are_Exclusive()
     {
         await Open("ribbon");
@@ -60,6 +63,7 @@ public class RibbonTests : BlazorTest
     }
 
     [Test]
+    [SkipOnPhone("the ribbon folds its groups into buttons at phone width by design; these drive the unfolded commands")]
     public async Task Split_Button_Menu_Runs_The_Chosen_Entry()
     {
         await Open("ribbon");
@@ -80,6 +84,7 @@ public class RibbonTests : BlazorTest
     }
 
     [Test]
+    [SkipOnPhone("the ribbon folds its groups into buttons at phone width by design; these drive the unfolded commands")]
     public async Task Nested_Menu_Entry_Opens_A_Submenu()
     {
         await Open("ribbon");
@@ -152,6 +157,7 @@ public class RibbonTests : BlazorTest
     }
 
     [Test]
+    [SkipOnPhone("the ribbon folds its groups into buttons at phone width by design; these drive the unfolded commands")]
     public async Task Display_Mode_Buttons_Switch_The_Bar()
     {
         await Open("ribbon");
@@ -174,6 +180,7 @@ public class RibbonTests : BlazorTest
     }
 
     [Test]
+    [SkipOnPhone("the ribbon folds its groups into buttons at phone width by design; these drive the unfolded commands")]
     public async Task Clicking_The_Showing_Tab_Collapses_And_A_Command_Puts_A_Peek_Away()
     {
         await Open("ribbon");

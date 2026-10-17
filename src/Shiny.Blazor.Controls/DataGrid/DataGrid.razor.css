@@ -338,6 +338,18 @@
     border-right: var(--shiny-border-thin, 1px) solid var(--shiny-color-outline-variant, #BBC7DF);
 }
 
+/* Lines that would sit on an edge something else already draws read as one double-thick line:
+   the last column against the outline (always, once it is frozen to the end), and the last row
+   against the outline or the pager's top rule. */
+.shiny-dg-bordered .shiny-dg-table tr > :last-child {
+    border-right: 0;
+}
+
+.shiny-dg-outlined .shiny-dg-table tbody:last-child > tr:last-child > td,
+.shiny-dg:has(> .shiny-dg-pager-host) .shiny-dg-table tbody:last-child > tr:last-child > td {
+    border-bottom: 0;
+}
+
 .shiny-dg-striped tbody tr:nth-of-type(odd) {
     background: color-mix(in srgb, var(--shiny-color-on-surface, #161C23) 3%, transparent);
 }

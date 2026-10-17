@@ -9,6 +9,13 @@
     overflow: auto;
 }
 
+/* A long unbroken word - a namespace in a heading, a bare URL - wraps instead of pushing the view a
+   few pixels wider than its host, which turned the whole view into a sideways scroller that only
+   moved those few pixels. Code blocks keep their own horizontal scroll. */
+::deep .shiny-md-content {
+    overflow-wrap: break-word;
+}
+
 ::deep .shiny-md-content > *:first-child {
     margin-top: 0;
 }

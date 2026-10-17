@@ -9,8 +9,19 @@
              Title="ShinyImage"
              AutomationId="ImagesPage">
 
-    <ScrollView Padding="16">
-        <VerticalStackLayout Spacing="24">
+    <!--
+        The photo grid is a virtualized, scrolling CollectionView, so it is the page's one vertical
+        scroller and every demo above it is its Header. A CollectionView with a fixed HeightRequest
+        inside a page ScrollView was a scroller inside a scroller (the Jon Dick nitpick checklist).
+    -->
+    <CollectionView ItemsSource="{Binding Photos}"
+                    AutomationId="PhotoGrid"
+                    Margin="16,0">
+        <CollectionView.ItemsLayout>
+            <GridItemsLayout Orientation="Vertical" Span="3" HorizontalItemSpacing="6" VerticalItemSpacing="6" />
+        </CollectionView.ItemsLayout>
+        <CollectionView.Header>
+        <VerticalStackLayout Spacing="24" Padding="0,16,0,12">
 
             <!-- Determinate: picsum sends a Content-Length, so the ring fills and counts -->
             <Label Text="Download progress" FontSize="18" FontAttributes="Bold" />
@@ -141,25 +152,21 @@
             <Label Text="Queued downloads" FontSize="18" FontAttributes="Bold" />
             <Label Text="Thirty images requested at once against a small download budget. Cells waiting for a slot show an indeterminate ring - there is nothing to measure yet - and switch to a percentage the moment their download starts." />
 
-            <CollectionView ItemsSource="{Binding Photos}"
-                            AutomationId="PhotoGrid"
-                            HeightRequest="620">
-                <CollectionView.ItemsLayout>
-                    <GridItemsLayout Orientation="Vertical" Span="3" HorizontalItemSpacing="6" VerticalItemSpacing="6" />
-                </CollectionView.ItemsLayout>
-                <CollectionView.ItemTemplate>
-                    <DataTemplate x:DataType="sys:String">
-                        <Border Stroke="#E5E7EB" StrokeThickness="1" StrokeShape="RoundRectangle 8" Padding="0">
-                            <shiny:ShinyImage Uri="{Binding .}"
-                                              Aspect="AspectFill"
-                                              RingSize="32"
-                                              ShowProgressText="False"
-                                              HeightRequest="110" />
-                        </Border>
-                    </DataTemplate>
-                </CollectionView.ItemTemplate>
-            </CollectionView>
-
         </VerticalStackLayout>
-    </ScrollView>
+        </CollectionView.Header>
+        <CollectionView.ItemTemplate>
+            <DataTemplate x:DataType="sys:String">
+                <Border Stroke="#E5E7EB" StrokeThickness="1" StrokeShape="RoundRectangle 8" Padding="0">
+                    <shiny:ShinyImage Uri="{Binding .}"
+                                      Aspect="AspectFill"
+                                      RingSize="32"
+                                      ShowProgressText="False"
+                                      HeightRequest="110" />
+                </Border>
+            </DataTemplate>
+        </CollectionView.ItemTemplate>
+        <CollectionView.Footer>
+            <BoxView HeightRequest="16" Color="Transparent" />
+        </CollectionView.Footer>
+    </CollectionView>
 </ContentPage>

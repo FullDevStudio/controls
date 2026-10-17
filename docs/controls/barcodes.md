@@ -96,6 +96,7 @@ string dataUri = BarcodeRenderer.RenderDataUri("Hello", BarcodeFormat.QRCode, Ba
 
 **Notes:**
 - The PNG encoder is pure managed (zlib stored blocks + CRC32 + Adler32) — no SkiaSharp / `System.Drawing` dependency, ships clean on iOS / Android / Mac Catalyst / Windows / Blazor WebAssembly.
+- Blazor: the code is capped at `max-width: 100%`, and without a `CssHeight` it keeps its aspect ratio (`aspect-ratio` + `height: auto`), so a 400px barcode scales down inside a 360px phone instead of overflowing. An explicit `CssWidth`/`CssHeight` still wins.
 - SVG output uses a single horizontal-run `<path>` (with `shape-rendering="crispEdges"`), so it scales infinitely without aliasing and stays tiny in DOM size — preferred for Blazor.
 - `ErrorCorrection.High` adds ~30% redundancy to a QR code — use it for printed labels, stickers, or anything that might be partially obscured.
 - 1D formats (EAN, UPC, Code 128, etc.) require a valid payload for the chosen symbology — invalid input clears the image silently rather than throwing.

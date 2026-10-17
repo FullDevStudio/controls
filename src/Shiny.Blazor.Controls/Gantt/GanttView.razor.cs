@@ -611,7 +611,9 @@ public partial class GanttView : ComponentBase, IAsyncDisposable
         var splitter = this.ShowTaskPane ? 6 : 0;
 
         var style =
-            $"grid-template-columns:{Css(pane)}px {Css(splitter)}px 1fr;" +
+            // capped at 45% of the control: a 385px pane on a 360px phone left the timeline zero
+            // columns wide, so there was no chart and no bar anywhere to touch
+            $"grid-template-columns:min({Css(pane)}px, 45%) {Css(splitter)}px 1fr;" +
             $"--gantt-row-height:{Css(this.RowHeight)}px;" +
             $"--gantt-header-height:{Css(this.HeaderHeight)}px;";
 

@@ -25,9 +25,18 @@ export function init(root, dotnet) {
     const state = { root, dotnet, widths: new Map(), collapsedWidths: new Map(), reported: null };
     states.set(root, state);
 
+    // Deferred to the next frame, and coalesced: measuring folds and unfolds groups, which resizes the
+    // bar inside its own observer callback - on a phone-width bar that fed straight back in and the
+    // browser reported "ResizeObserver loop completed with undelivered notifications".
+    let frame = 0;
     const ro = new ResizeObserver(() => {
-        measure(state);
-        markOverflow(state);
+        if (frame) return;
+        frame = requestAnimationFrame(() => {
+            frame = 0;
+            if (!states.has(root)) return;
+            measure(state);
+            markOverflow(state);
+        });
     });
     ro.observe(root);
     state.ro = ro;

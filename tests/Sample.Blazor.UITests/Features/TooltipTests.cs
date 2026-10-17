@@ -43,6 +43,7 @@ public class TooltipTests : BlazorTest
     [Arguments("Bottom", "Below", "bottom")]
     [Arguments("Left", "To the left", "left")]
     [Arguments("Right", "To the right", "right")]
+    [SkipOnPhone("with no room beside the button on a phone the bubble flips to the side that fits, by design")]
     public async Task Bubble_Sits_On_The_Requested_Side(string button, string text, string side)
     {
         await Open("tooltip");

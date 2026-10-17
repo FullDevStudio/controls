@@ -78,6 +78,10 @@
    merged edges and they are spaced apart. */
 .shiny-btn-group--cluster {
     gap: var(--shiny-spacing-2, 8px);
+    /* the inner groups are separate controls, so on a narrow screen they wrap onto a second row
+       rather than running off the side */
+    flex-wrap: wrap;
+    max-width: 100%;
 }
 
 

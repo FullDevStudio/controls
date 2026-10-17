@@ -140,6 +140,7 @@ public class CoverFlowTests : BlazorTest
 
 
     [Test]
+    [SkipOnPhone("a wheel gesture; drag and keyboard are covered by the other tests")]
     public async Task Horizontal_Wheel_Scrolls()
     {
         await OpenPage();

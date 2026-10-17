@@ -4,7 +4,8 @@
 #   ./uitest ios                        one platform
 #   ./uitest ios android                several, one after another
 #   ./uitest mobile | desktop | all     groups (all = everything this OS can run, plus Blazor)
-#   ./uitest blazor                     Chromium; also blazor-webkit, blazor-firefox, blazor-publish
+#   ./uitest blazor                     Chromium; also blazor-webkit, blazor-firefox, blazor-publish,
+#                                       blazor-mobile (iPhone), blazor-android (360px Android)
 #   ./uitest android --filter Slider    one control class (Slider,Ribbon for several, or a raw /*/*/X/* filter)
 #   ./uitest ios --no-build             reuse the last build/install
 #   ./uitest ios --attach --port 9223   drive an app that is already running
@@ -20,9 +21,9 @@ ARTIFACTS="$ROOT/artifacts/uitest"
 LOGS="$ROOT/artifacts/uitest-logs"
 
 usage() {
-    sed -n '2,14p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+    sed -n '2,15p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
     echo
-    echo "Platforms: ios android macos linux windows blazor blazor-webkit blazor-firefox blazor-publish"
+    echo "Platforms: ios android macos linux windows blazor blazor-webkit blazor-firefox blazor-publish blazor-mobile blazor-android"
     echo "Groups:    mobile (ios android)  desktop (this OS's desktop head)  all"
     exit "${1:-0}"
 }
@@ -55,7 +56,7 @@ while [ $# -gt 0 ]; do
             [ "$os" = Darwin ] && platforms+=(ios)
             platforms+=(android "$(desktop_head)" blazor)
             ;;
-        ios|android|macos|linux|windows|blazor|blazor-webkit|blazor-firefox|blazor-publish) platforms+=("$1") ;;
+        ios|android|macos|linux|windows|blazor|blazor-webkit|blazor-firefox|blazor-publish|blazor-mobile|blazor-android) platforms+=("$1") ;;
         *) echo "Unknown argument: $1" >&2; usage 1 ;;
     esac
     shift
@@ -117,6 +118,8 @@ run() {
                 blazor-webkit) env_vars+=(SHINY_BLAZOR_BROWSER=webkit) ;;
                 blazor-firefox) env_vars+=(SHINY_BLAZOR_BROWSER=firefox) ;;
                 blazor-publish) env_vars+=(SHINY_BLAZOR_MODE=publish) ;;
+                blazor-mobile) env_vars+=(SHINY_BLAZOR_BROWSER=webkit SHINY_BLAZOR_DEVICE=iphone) ;;
+                blazor-android) env_vars+=(SHINY_BLAZOR_DEVICE=android) ;;
             esac
             ;;
         *)

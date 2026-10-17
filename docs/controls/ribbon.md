@@ -367,7 +367,8 @@ every group is small.
 
 The decision needs real measured widths, so on Blazor it is made in `ribbon.js` and handed back to the
 component. It degrades cleanly: with no JS module — prerendering, a locked-down host — every group
-stays open and the body scrolls.
+stays open and the body scrolls. The measuring runs on the next animation frame after a resize, so a
+phone-width window no longer logs "ResizeObserver loop completed with undelivered notifications".
 
 ---
 

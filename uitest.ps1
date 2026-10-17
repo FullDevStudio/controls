@@ -20,7 +20,7 @@ $logs = Join-Path $root 'artifacts/uitest-logs'
 
 function Show-Usage([int] $code = 0) {
     Get-Help $PSCommandPath | Out-String | Write-Host
-    Write-Host 'Platforms: ios android macos linux windows blazor blazor-webkit blazor-firefox blazor-publish'
+    Write-Host 'Platforms: ios android macos linux windows blazor blazor-webkit blazor-firefox blazor-publish blazor-mobile blazor-android'
     Write-Host 'Groups:    mobile (ios android)  desktop (this OS''s desktop head)  all'
     exit $code
 }
@@ -47,7 +47,7 @@ for ($i = 0; $i -lt $args.Count; $i++) {
             if ($IsMacOS) { $platforms.Add('ios') }
             $platforms.Add('android'); $platforms.Add((Get-DesktopHead)); $platforms.Add('blazor')
         }
-        { $_ -in 'ios', 'android', 'macos', 'linux', 'windows', 'blazor', 'blazor-webkit', 'blazor-firefox', 'blazor-publish' } { $platforms.Add($_) }
+        { $_ -in 'ios', 'android', 'macos', 'linux', 'windows', 'blazor', 'blazor-webkit', 'blazor-firefox', 'blazor-publish', 'blazor-mobile', 'blazor-android' } { $platforms.Add($_) }
         default { Write-Host "Unknown argument: $_"; Show-Usage 1 }
     }
 }
@@ -83,7 +83,7 @@ function Invoke-Build([string] $project) {
 if ($platforms | Where-Object { -not $_.StartsWith('blazor') }) { Invoke-Build 'Sample.UITests' }
 if ($platforms | Where-Object { $_.StartsWith('blazor') }) { Invoke-Build 'Sample.Blazor.UITests' }
 
-$envNames = 'SHINY_UITEST_PLATFORM', 'SHINY_UITEST_NOBUILD', 'SHINY_UITEST_ATTACH', 'SHINY_UITEST_PORT', 'SHINY_BLAZOR_BROWSER', 'SHINY_BLAZOR_MODE'
+$envNames = 'SHINY_UITEST_PLATFORM', 'SHINY_UITEST_NOBUILD', 'SHINY_UITEST_ATTACH', 'SHINY_UITEST_PORT', 'SHINY_BLAZOR_BROWSER', 'SHINY_BLAZOR_MODE', 'SHINY_BLAZOR_DEVICE'
 $summary = @()
 $failedAny = $false
 
@@ -96,6 +96,8 @@ foreach ($platform in $platforms) {
             'blazor-webkit' { $env:SHINY_BLAZOR_BROWSER = 'webkit' }
             'blazor-firefox' { $env:SHINY_BLAZOR_BROWSER = 'firefox' }
             'blazor-publish' { $env:SHINY_BLAZOR_MODE = 'publish' }
+            'blazor-mobile' { $env:SHINY_BLAZOR_BROWSER = 'webkit'; $env:SHINY_BLAZOR_DEVICE = 'iphone' }
+            'blazor-android' { $env:SHINY_BLAZOR_DEVICE = 'android' }
         }
     }
     else {

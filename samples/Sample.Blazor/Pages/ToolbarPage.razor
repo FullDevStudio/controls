@@ -10,7 +10,7 @@
 
 <section class="demo-section">
     <h2>Frosted top toolbar — content scrolls under (scroll the panel)</h2>
-    <div class="scroll-demo">
+    <div class="scroll-demo demo-frame">
         <ShinyToolbar Dock="ToolbarDock.Top"
                       Frosted="true"
                       Title="Inbox"
@@ -29,7 +29,7 @@
 
 <section class="demo-section">
     <h2>Solid colors &amp; a title</h2>
-    <div class="scroll-demo">
+    <div class="scroll-demo demo-frame">
         <ShinyToolbar Dock="ToolbarDock.Top"
                       BackgroundColor="#7C3AED"
                       TextColor="#FFFFFF"
@@ -50,7 +50,7 @@
     <p>When the action buttons can't all fit, the ones that don't are tucked into a dropdown behind the
        overflow button. Drag the bottom-right corner of the box to watch items collapse into &mdash; and
        pop back out of &mdash; the menu.</p>
-    <div class="scroll-demo scroll-demo--resizable">
+    <div class="scroll-demo scroll-demo--resizable demo-frame">
         <ShinyToolbar Dock="ToolbarDock.Top"
                       Title="Editor"
                       Items="@manyItems"
@@ -70,7 +70,7 @@
     <p>Give a <code>ToolbarItem</code> <code>Children</code> and it stops raising clicks and opens a dropdown
        instead. Children can have children of their own, which fly out as submenus (and flip to the other side
        when they'd run off the screen). <code>IsSeparator</code> draws a divider between groups.</p>
-    <div class="scroll-demo scroll-demo--resizable">
+    <div class="scroll-demo scroll-demo--resizable demo-frame">
         <ShinyToolbar Dock="ToolbarDock.Top"
                       Title="Document"
                       Items="@menuItems"
@@ -89,7 +89,7 @@
     <h2>Items beside pinned EndContent</h2>
     <p><code>EndContent</code> is pinned and never collapses - the <code>Items</code> next to it still fold into
        the overflow menu as the bar narrows, submenus and all.</p>
-    <div class="scroll-demo scroll-demo--resizable">
+    <div class="scroll-demo scroll-demo--resizable demo-frame">
         <ShinyToolbar Dock="ToolbarDock.Top"
                       Title="Reports"
                       Items="@menuItems"
@@ -109,7 +109,7 @@
 
 <section class="demo-section">
     <h2>Custom content (StartContent / ChildContent / EndContent)</h2>
-    <div class="scroll-demo">
+    <div class="scroll-demo demo-frame">
         <ShinyToolbar Dock="ToolbarDock.Top" BackgroundColor="#0F172A" TextColor="#E2E8F0">
             <StartContent>
                 <button class="ghost-btn" @onclick="@(() => lastAction = "Back")">&#x2190;</button>
@@ -131,7 +131,7 @@
 <section class="demo-section">
     <h2>Bottom-docked action bar</h2>
     <p>A dropdown on a bottom bar opens upwards.</p>
-    <div class="scroll-demo">
+    <div class="scroll-demo demo-frame">
         <div class="scroll-body">
             @for (var i = 1; i <= 10; i++)
             {

@@ -158,6 +158,7 @@ public class DocumentViewerTests : BlazorTest
     }
 
     [Test]
+    [SkipOnPhone("the sample hides the outline pane below 700px")]
     public async Task Outline_Lists_The_Documents_Headings()
     {
         await Open("document-viewer");
@@ -345,6 +346,7 @@ public class DocumentEditorTests : BlazorTest
     }
 
     [Test]
+    [SkipOnPhone("the Office shell goes compact on a phone and drops the view-mode buttons by design")]
     public async Task Status_Bar_View_And_Zoom()
     {
         await Open("document-editor");
@@ -398,6 +400,7 @@ public class SlideEditorTests : BlazorTest
     }
 
     [Test]
+    [SkipOnPhone("the Office shell goes compact on a phone and drops the view-mode buttons by design")]
     public async Task View_Mode_Flows_Back_To_The_Bound_ViewMode()
     {
         await Open("slide-editor");
@@ -496,6 +499,7 @@ public class NotebookTests : BlazorTest
     {
         await Open("notebook");
         var canvas = Page.Locator(".shiny-notebook-editor-canvas");
+        await canvas.ScrollIntoViewIfNeededAsync();
         var box = (await canvas.BoundingBoxAsync())!;
 
         // Double-click empty canvas (bottom right, away from the sample's content) to start writing.
@@ -521,6 +525,7 @@ public class NotebookTests : BlazorTest
         await Expect(select).ToHaveAttributeAsync("aria-pressed", "false");
 
         // A mouse drag with the pen down is an ink stroke, and one undo step.
+        await Page.Locator(".shiny-notebook-editor-canvas").ScrollIntoViewIfNeededAsync();
         var box = (await Page.Locator(".shiny-notebook-editor-canvas").BoundingBoxAsync())!;
         var x = box.X + box.Width - 200;
         var y = box.Y + box.Height - 80;

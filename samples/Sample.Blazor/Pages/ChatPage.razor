@@ -10,10 +10,12 @@
     React, edit, delete, and scroll up to page history.
 </p>
 
-<div style="height:600px;border:1px solid var(--shiny-color-outline-variant, #ccc);border-radius:12px;overflow:hidden;">
+<div class="demo-fill">
+<div class="demo-fill-body" style="border:1px solid var(--shiny-color-outline-variant, #ccc);border-radius:12px;overflow:hidden;">
     @* No bubble colours: both follow the theme now, which is what a chat dropped into a dark app
        should look like. Set them to pin the classic messenger green/white. *@
     <ChatView Provider="ChatProvider"
               SessionId="@InMemoryChatSessionProvider.DemoSessionId"
               PlaceholderText="How can I help you today?" />
+</div>
 </div>

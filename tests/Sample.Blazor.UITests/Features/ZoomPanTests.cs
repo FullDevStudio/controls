@@ -47,6 +47,7 @@ public class ZoomPanTests : BlazorTest
     }
 
     [Test]
+    [SkipOnPhone("zooms with Ctrl+wheel; a phone pinches, and mobile WebKit has no wheel to synthesise")]
     public async Task Content_Button_Still_Clicks_While_Zoomed()
     {
         await Open("/zoompan");
@@ -61,6 +62,7 @@ public class ZoomPanTests : BlazorTest
     }
 
     [Test]
+    [SkipOnPhone("zooms with Ctrl+wheel; a phone pinches, and mobile WebKit has no wheel to synthesise")]
     public async Task Content_Input_Takes_Text_While_Zoomed()
     {
         await Open("/zoompan");
@@ -75,6 +77,7 @@ public class ZoomPanTests : BlazorTest
     }
 
     [Test]
+    [SkipOnPhone("zooms with Ctrl+wheel; a phone pinches, and mobile WebKit has no wheel to synthesise")]
     public async Task Ctrl_Wheel_Zooms_In()
     {
         await Open("/zoompan");

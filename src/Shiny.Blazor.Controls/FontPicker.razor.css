@@ -3,9 +3,11 @@
     flex-direction: column;
     overflow-y: auto;
 
-    /* Tall enough to show a handful of faces at once - a list that shows two is a dropdown with extra
-       steps - and short enough to stay on a phone screen. */
-    max-height: 320px;
+    /* Uncapped inline, so a picker placed on a page sizes to its fonts and the page does the
+       scrolling - a capped one is a scroller inside the page's (CLAUDE.md, Jon rule 1). The
+       button's popover sets the cap: tall enough to show a handful of faces at once - a list that
+       shows two is a dropdown with extra steps - and short enough to stay on a phone screen. */
+    max-height: var(--shiny-fontpicker-max-height, none);
 }
 
 .shiny-fontpicker-item {

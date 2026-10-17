@@ -10,7 +10,11 @@
 
     <Grid>
 
-        <!-- Main page content -->
+        <!--
+            Main page content. The bottom margin on the last label only has to clear the closed
+            floating FABs (56 + 24 margin + a little): the old 140 made the page a few points taller
+            than the screen, so it scrolled by 7px for nothing. On a shorter screen it still scrolls.
+        -->
         <ScrollView>
             <VerticalStackLayout Padding="24" Spacing="20">
 
@@ -58,7 +62,7 @@
                 <Label Text="The floating Fab &amp; FabMenu are pinned to the bottom-right. Tap the main FAB to open the menu."
                        FontSize="14"
                        TextColor="Gray"
-                       Margin="0,0,0,140" />
+                       Margin="0,0,0,88" />
 
             </VerticalStackLayout>
         </ScrollView>

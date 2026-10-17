@@ -9,7 +9,7 @@
     the left panel compacts to its rail; opening it there floats it over the content.
 </p>
 
-<section class="demo-section">
+<section class="demo-section demo-fill">
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
         <button @onclick="() => Cycle(l => leftState = l, leftState)">Left: @leftState</button>
         <button @onclick="() => Cycle(r => rightState = r, rightState)">Right: @rightState</button>
@@ -29,7 +29,7 @@
         </span>
     </div>
 
-    <div style="height:520px;border-radius:12px;overflow:hidden;border:1px solid var(--shiny-color-outline-variant);">
+    <div class="demo-fill-body" style="border-radius:12px;overflow:hidden;border:1px solid var(--shiny-color-outline-variant);">
         <AppLayout HeaderSpan="@headerSpan"
                    BorderWidth="@(borders ? 1 : 0)"
                    Background="var(--shiny-color-surface)">

@@ -5,11 +5,13 @@
 
 <h1>Scheduler — Calendar List</h1>
 
-<div class="demo-section" style="height:560px;display:flex;flex-direction:column;">
+<div class="demo-section demo-fill">
     <h2>Grouped by day</h2>
-    <SchedulerCalendarListView Provider="provider"
-                               @bind-SelectedDate="selectedDate"
-                               DaysPerPage="30" />
+    <div class="demo-fill-body">
+        <SchedulerCalendarListView Provider="provider"
+                                   @bind-SelectedDate="selectedDate"
+                                   DaysPerPage="30" />
+    </div>
 </div>
 
 <div class="demo-section">

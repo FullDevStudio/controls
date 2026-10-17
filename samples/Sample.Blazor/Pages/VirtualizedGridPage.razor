@@ -37,7 +37,8 @@
 <section class="demo-section">
     <h2>Grouped Grid with Sticky Headers</h2>
 
-    <div style="height:360px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px;padding:0 8px;">
+    @* No box of its own to scroll: the headers pin against the page, which is the one scroller here. *@
+    <div style="border:1px solid #e2e8f0;border-radius:8px;padding:0 8px;">
         <VirtualizedGrid TItem="GridItem" Items="@(groupedData.SelectMany(g => g.Items).ToList())"
                          IsGroupingEnabled="true" GroupedItems="@groupedData"
                          HasStickyHeaders="true" ColumnCount="3" ItemSpacing="8"
@@ -55,23 +56,7 @@
             </ItemTemplate>
         </VirtualizedGrid>
     </div>
-    <p style="margin-top:4px;font-size:13px;color:#718096;">Scroll within the box — group headers pin to the top until the next group pushes them out</p>
-</section>
-
-<section class="demo-section">
-    <h2>Virtualized (Large Dataset)</h2>
-    <div style="height:400px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px;">
-        <VirtualizedGrid TItem="GridItem" Items="@largeDataset" EnableVirtualization="true"
-                         ColumnCount="4" ItemSpacing="6"
-                         CellPaddingLeft="4" CellPaddingRight="4" CellPaddingTop="4" CellPaddingBottom="4">
-            <ItemTemplate Context="item">
-                <div style="padding:10px;border-radius:6px;background:@item.Color;color:white;text-align:center;font-size:13px;">
-                    @item.Icon @item.Name
-                </div>
-            </ItemTemplate>
-        </VirtualizedGrid>
-    </div>
-    <p style="margin-top:4px;font-size:13px;color:#718096;">@largeDataset.Count items with virtualization</p>
+    <p style="margin-top:4px;font-size:13px;color:#718096;">Scroll the page — group headers pin to the top until the next group pushes them out</p>
 </section>
 
 <section class="demo-section">
@@ -98,6 +83,24 @@
             </div>
         </FooterTemplate>
     </VirtualizedGrid>
+</section>
+
+<section class="demo-section">
+    <h2>Virtualized (Large Dataset)</h2>
+    @* Virtualize windows against the page scroller - a capped box around it would be a second
+       scroller on the same axis. Last on the page, since 500 items make it long. *@
+    <div style="border:1px solid #e2e8f0;border-radius:8px;">
+        <VirtualizedGrid TItem="GridItem" Items="@largeDataset" EnableVirtualization="true"
+                         ColumnCount="4" ItemSpacing="6"
+                         CellPaddingLeft="4" CellPaddingRight="4" CellPaddingTop="4" CellPaddingBottom="4">
+            <ItemTemplate Context="item">
+                <div style="padding:10px;border-radius:6px;background:@item.Color;color:white;text-align:center;font-size:13px;">
+                    @item.Icon @item.Name
+                </div>
+            </ItemTemplate>
+        </VirtualizedGrid>
+    </div>
+    <p style="margin-top:4px;font-size:13px;color:#718096;">@largeDataset.Count items with virtualization</p>
 </section>
 
 @code {

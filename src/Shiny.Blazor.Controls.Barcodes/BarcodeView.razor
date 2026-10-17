@@ -33,8 +33,13 @@ else
         get
         {
             var w = string.IsNullOrEmpty(CssWidth) ? $"{PixelWidth}px" : CssWidth!;
-            var h = string.IsNullOrEmpty(CssHeight) ? $"{PixelHeight}px" : CssHeight!;
-            return $"display:inline-block;width:{w};height:{h};";
+
+            // max-width keeps a 400px barcode inside a 360px phone; with no explicit CSS height the
+            // height follows the width through aspect-ratio, so a capped code shrinks rather than squashes
+            var h = string.IsNullOrEmpty(CssHeight)
+                ? $"height:auto;aspect-ratio:{PixelWidth}/{PixelHeight};"
+                : $"height:{CssHeight};";
+            return $"display:inline-block;width:{w};max-width:100%;{h}";
         }
     }
 

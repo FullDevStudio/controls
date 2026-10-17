@@ -22,6 +22,11 @@ public class AutoCompleteEntry : ContentView
     bool suppressTextChanged;
     IList? currentFilteredItems;
 
+    // Where the dropdown is floating while open, and the scrollers it is tracking.
+    PageOverlay.AutoCompleteLayer? dropDownLayer;
+    PageOverlay.ShinyOverlayRoot? dropDownRoot;
+    readonly List<ScrollView> trackedScrolls = [];
+
     /// <remarks>
     /// An implicit Style targeting this type is applied by MAUI *before this constructor body
     /// runs at all* - StyleableElement's own constructor creates a MergedStyle, whose ctor
@@ -102,6 +107,11 @@ public class AutoCompleteEntry : ContentView
         .WithStrokeThickness(ShinyThemeKeys.Border.Thin)
         .WithElevation(ShinyThemeKeys.Elevation.Level2);
 
+        // The suggestion list is NOT a row of this grid. Laid out inline it was a ScrollView inside
+        // whatever ScrollView the form sits in (two scrollers on one axis) and it shoved the rest of
+        // the form down every time it opened. It floats in the page's overlay layer instead, placed
+        // under the field - see ShowDropDown. The second row is only the fallback for a control that
+        // is not on a ContentPage at all, where there is no overlay to float in.
         rootGrid = new Grid
         {
             RowDefinitions =
@@ -111,9 +121,19 @@ public class AutoCompleteEntry : ContentView
             }
         };
         rootGrid.Add(entryGrid, 0, 0);
-        rootGrid.Add(dropDownBorder, 0, 1);
 
         Content = rootGrid;
+
+        // Install the page's overlay root up front. Doing it the first time the dropdown opens would
+        // re-parent the page content while the entry has focus - which rebuilds every native view,
+        // drops the keyboard, and so closes the dropdown it was opening.
+        Loaded += (_, _) => Dispatcher.Dispatch(() =>
+        {
+            if (IsLoaded)
+                PageOverlay.GetOrCreateRoot(this);
+        });
+        Unloaded += (_, _) => HideDropDown();
+        SizeChanged += (_, _) => PlaceDropDown();
 
         // Theme defaults for anything the consumer left unset.
         ApplySpinnerColor();
@@ -633,15 +653,153 @@ public class AutoCompleteEntry : ContentView
         ItemSelected?.Invoke(this, item);
     }
 
+    /// <summary>Whether the suggestion list is open. Test seam.</summary>
+    internal bool IsDropDownOpen { get; private set; }
+
+    /// <summary>The suggestion list's card. Test seam.</summary>
+    internal View DropDown => dropDownBorder;
+
+    /// <summary>Runs a search as if the debounce had just elapsed on <paramref name="text"/>. Test seam.</summary>
+    internal void SearchNow(string text) => PerformSearch(text);
+
     void ShowDropDown()
     {
-        if (currentFilteredItems != null && currentFilteredItems.Count > 0)
+        if (currentFilteredItems == null || currentFilteredItems.Count == 0)
+            return;
+
+        IsDropDownOpen = true;
+
+        var root = PageOverlay.GetOrCreateRoot(this);
+        if (root is null)
+        {
+            // Not on a ContentPage: nothing to float over, so fall back to the inline row.
+            Reparent(rootGrid, inline: true);
             dropDownBorder.IsVisible = true;
+            return;
+        }
+
+        var layer = PageOverlay.GetOrCreateLayer<PageOverlay.AutoCompleteLayer>(root, PageOverlay.Layers.AutoComplete);
+        Reparent(layer, inline: false);
+        dropDownLayer = layer;
+
+        if (!ReferenceEquals(dropDownRoot, root))
+        {
+            if (dropDownRoot is not null)
+                dropDownRoot.SizeChanged -= OnOverlaySizeChanged;
+            dropDownRoot = root;
+            root.SizeChanged += OnOverlaySizeChanged;
+        }
+
+        // The field moves when any scroller above it does; follow it rather than hang in mid-air.
+        UntrackScrolls();
+        for (var parent = Parent; parent is not null && !ReferenceEquals(parent, root); parent = parent.Parent)
+        {
+            if (parent is ScrollView scroll)
+            {
+                scroll.Scrolled += OnAncestorScrolled;
+                trackedScrolls.Add(scroll);
+            }
+        }
+
+        // The automation id follows the field's, so a UI test can still find the suggestions now that
+        // they are not underneath it. AutomationId is set-once in MAUI, hence the guard.
+        if (dropDownBorder.AutomationId is null && AutomationId is { Length: > 0 } id)
+            dropDownBorder.AutomationId = id + "_DropDown";
+
+        PlaceDropDown();
     }
 
     void HideDropDown()
     {
+        IsDropDownOpen = false;
         dropDownBorder.IsVisible = false;
+        UntrackScrolls();
+
+        if (dropDownRoot is not null)
+        {
+            dropDownRoot.SizeChanged -= OnOverlaySizeChanged;
+            dropDownRoot = null;
+        }
+
+        // Out of the layer entirely, so a closed dropdown is not left in another page's tree.
+        if (dropDownBorder.Parent is Layout layout && !ReferenceEquals(layout, rootGrid))
+            layout.Remove(dropDownBorder);
+        dropDownLayer = null;
+    }
+
+    void Reparent(Layout target, bool inline)
+    {
+        if (ReferenceEquals(dropDownBorder.Parent, target))
+            return;
+
+        if (dropDownBorder.Parent is Layout current)
+            current.Remove(dropDownBorder);
+
+        if (inline)
+        {
+            dropDownBorder.Margin = 0;
+            dropDownBorder.WidthRequest = -1;
+            dropDownBorder.MaximumHeightRequest = MaxDropDownHeight;
+            dropDownBorder.HorizontalOptions = LayoutOptions.Fill;
+            dropDownBorder.VerticalOptions = LayoutOptions.Start;
+            rootGrid.Add(dropDownBorder, 0, 1);
+        }
+        else
+        {
+            dropDownBorder.HorizontalOptions = LayoutOptions.Start;
+            dropDownBorder.VerticalOptions = LayoutOptions.Start;
+            target.Add(dropDownBorder);
+        }
+    }
+
+    void UntrackScrolls()
+    {
+        foreach (var scroll in trackedScrolls)
+            scroll.Scrolled -= OnAncestorScrolled;
+        trackedScrolls.Clear();
+    }
+
+    void OnAncestorScrolled(object? sender, ScrolledEventArgs e) => PlaceDropDown();
+
+    void OnOverlaySizeChanged(object? sender, EventArgs e) => PlaceDropDown();
+
+    /// <summary>
+    /// Puts the floating list directly under the field at the field's width, or above it when there is
+    /// more room there - the bottom of a form, or a field low on a short screen.
+    /// </summary>
+    void PlaceDropDown()
+    {
+        if (!IsDropDownOpen || dropDownRoot is not { } root || dropDownLayer is null)
+            return;
+
+        if (ViewGeometry.BoundsIn(this, root) is not { } field)
+        {
+            // Not laid out yet (the next SizeChanged comes back here) or scrolled out of the tree.
+            dropDownBorder.IsVisible = false;
+            return;
+        }
+
+        const double gap = 2;
+        const double edge = 8;
+
+        dropDownBorder.WidthRequest = field.Width;
+
+        var desired = ((IView)dropDownBorder).Measure(field.Width, double.PositiveInfinity).Height
+            - dropDownBorder.Margin.VerticalThickness;
+        var height = Math.Min(MaxDropDownHeight, double.IsFinite(desired) && desired > 0 ? desired : MaxDropDownHeight);
+
+        var below = root.Height > 0 ? root.Height - field.Bottom - gap - edge : double.PositiveInfinity;
+        var above = field.Top - gap - edge;
+        var flip = below < height && above > below;
+
+        // Never taller than the side it opens on, so a flipped list cannot cover its own field.
+        var room = Math.Max(0, flip ? above : below);
+        var shown = Math.Min(height, room);
+        dropDownBorder.MaximumHeightRequest = Math.Min(MaxDropDownHeight, room);
+
+        var y = flip ? field.Top - gap - shown : field.Bottom + gap;
+        dropDownBorder.Margin = new Thickness(field.X, y, 0, 0);
+        dropDownBorder.IsVisible = true;
     }
 
     protected override void OnPropertyChanged(string? propertyName = null)

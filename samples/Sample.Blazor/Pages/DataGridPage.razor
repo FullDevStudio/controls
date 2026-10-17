@@ -38,7 +38,6 @@
               EditMode="editMode"
               Dense="dense" Striped="striped" Bordered="bordered" Hover="hover"
               Loading="loading"
-              FixedHeader="true" Height="420px"
               ColumnResizeMode="DataGridColumnResizeMode.Column"
               DragDropColumnReordering="true"
               CommittedItemChanges="OnSaved">
@@ -87,35 +86,39 @@
         </label>
         <label class="toggle-row"><span>Multi-select</span><input type="checkbox" @bind="frozenMultiSelect" /></label>
     </div>
-    <DataGrid TItem="Person"
-              Items="people"
-              SelectionMode="@(frozenMultiSelect ? DataGridSelectionMode.Multiple : DataGridSelectionMode.None)"
-              SortMode="DataGridSortMode.Single"
-              Striped="true" Bordered="true" Hover="true"
-              FixedHeader="true" Height="300px"
-              FrozenColumns="frozenStart"
-              FrozenEndColumns="frozenEnd">
-        <Columns>
-            <PropertyColumn Property="x => x.FirstName" Title="First" Width="160px" />
-            <PropertyColumn Property="x => x.LastName" Title="Last" Width="160px" />
-            <PropertyColumn Property="x => x.Age" Format="N0" Width="120px" />
-            <PropertyColumn Property="x => x.Department" Width="200px" />
-            <PropertyColumn Property="x => x.Salary" Format="C0" Width="180px" />
-            <PropertyColumn Property="x => x.Location" Width="180px" />
-            <PropertyColumn Property="x => x.CostCentre" Title="Cost centre" Width="180px" />
-            <PropertyColumn Property="x => x.Manager" Width="180px" />
-            <PropertyColumn Property="x => x.Email" Width="240px" />
-            <PropertyColumn Property="x => x.StartDate" Title="Started" Format="d" Width="140px" />
-            <PropertyColumn Property="x => x.Region" Width="160px" />
-            <PropertyColumn Property="x => x.Extension" Title="Ext." Width="110px" />
-            <TemplateColumn Title="Status" Sortable="false" Filterable="false" Width="140px">
-                <CellTemplate>
-                    <Pill Text="@(context.Item.Active ? "Active" : "Inactive")"
-                          Type="@(context.Item.Active ? PillType.Success : PillType.Caution)" />
-                </CellTemplate>
-            </TemplateColumn>
-        </Columns>
-    </DataGrid>
+    @* A grid the size of a pane, on purpose: the header pinning while the rows scroll under it is
+       the feature, so this one keeps its own scroller - framed, with overscroll contained. *@
+    <div class="demo-frame">
+        <DataGrid TItem="Person"
+                  Items="people"
+                  SelectionMode="@(frozenMultiSelect ? DataGridSelectionMode.Multiple : DataGridSelectionMode.None)"
+                  SortMode="DataGridSortMode.Single"
+                  Striped="true" Bordered="true" Hover="true"
+                  FixedHeader="true" Height="300px"
+                  FrozenColumns="frozenStart"
+                  FrozenEndColumns="frozenEnd">
+            <Columns>
+                <PropertyColumn Property="x => x.FirstName" Title="First" Width="160px" />
+                <PropertyColumn Property="x => x.LastName" Title="Last" Width="160px" />
+                <PropertyColumn Property="x => x.Age" Format="N0" Width="120px" />
+                <PropertyColumn Property="x => x.Department" Width="200px" />
+                <PropertyColumn Property="x => x.Salary" Format="C0" Width="180px" />
+                <PropertyColumn Property="x => x.Location" Width="180px" />
+                <PropertyColumn Property="x => x.CostCentre" Title="Cost centre" Width="180px" />
+                <PropertyColumn Property="x => x.Manager" Width="180px" />
+                <PropertyColumn Property="x => x.Email" Width="240px" />
+                <PropertyColumn Property="x => x.StartDate" Title="Started" Format="d" Width="140px" />
+                <PropertyColumn Property="x => x.Region" Width="160px" />
+                <PropertyColumn Property="x => x.Extension" Title="Ext." Width="110px" />
+                <TemplateColumn Title="Status" Sortable="false" Filterable="false" Width="140px">
+                    <CellTemplate>
+                        <Pill Text="@(context.Item.Active ? "Active" : "Inactive")"
+                              Type="@(context.Item.Active ? PillType.Success : PillType.Caution)" />
+                    </CellTemplate>
+                </TemplateColumn>
+            </Columns>
+        </DataGrid>
+    </div>
 </section>
 
 <section class="demo-section">

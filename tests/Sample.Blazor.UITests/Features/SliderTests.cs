@@ -19,6 +19,7 @@ public class SliderTests : BlazorTest
     /// <summary>Presses a thumb and drags it, in steps, to a fraction of the track's width.</summary>
     async Task DragThumbTo(ILocator thumb, ILocator track, double fraction)
     {
+        await thumb.ScrollIntoViewIfNeededAsync();
         var thumbBox = (await thumb.BoundingBoxAsync())!;
         var trackBox = (await track.BoundingBoxAsync())!;
         var y = thumbBox.Y + thumbBox.Height / 2;

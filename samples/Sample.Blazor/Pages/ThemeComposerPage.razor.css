@@ -126,9 +126,11 @@
 
 .dock-actions {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem;
-    flex: 0 0 auto;
+    flex: 0 1 auto;
+    min-width: 0;
 }
 
 .dock-code {
@@ -142,6 +144,20 @@
 
 .composer-code {
     margin-bottom: 8rem;
+}
+
+/* On a phone the gallery's tab bar owns the bottom edge, and a viewport-fixed dock sat on top of it.
+   Stuck to the bottom of the scrolling content instead, it rides just above the tab bar. */
+@media (max-width: 820px) {
+    .composer-dock {
+        position: sticky;
+        margin-inline: -16px;
+        gap: 0.75rem;
+    }
+
+    .composer-code {
+        margin-bottom: 1rem;
+    }
 }
 
 .composer-code pre {

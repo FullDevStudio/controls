@@ -13,6 +13,9 @@ nested as deep as you like with `IsSeparator` dividers between groups. Every pan
 **top layer** (the popover API), so a bar living inside a panel, a card or a scroller is never clipped by
 that ancestor's `overflow`.
 
+When the bar is too narrow, the leading region (`Title` / `StartContent`) gives up space first: a long title
+ends in an ellipsis rather than pushing `EndContent` and the trailing actions off-screen on a phone.
+
 The top toolbar uses `position: sticky`, so it reserves its own height (content never starts *underneath*
 it) yet page content scrolls *under* it as you scroll — the classic translucent-header effect. The tab bar
 uses `position: fixed` so it stays pinned regardless of scroll.

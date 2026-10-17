@@ -41,6 +41,7 @@ public class ColorPickerTests : BlazorTest
     {
         await Open("colorpicker");
         var spectrum = InlinePicker.Locator(".shiny-colorpicker-spectrum");
+        await spectrum.ScrollIntoViewIfNeededAsync();
         var box = await spectrum.BoundingBoxAsync();
 
         // bottom-left of the saturation/brightness field is black whatever the hue. The canvas's
@@ -63,6 +64,7 @@ public class ColorPickerTests : BlazorTest
     {
         await Open("colorpicker");
         var hue = InlinePicker.Locator(".shiny-colorpicker-hue");
+        await hue.ScrollIntoViewIfNeededAsync();
         var box = await hue.BoundingBoxAsync();
 
         // retried for the same reason as the spectrum: the listeners arrive with a JS module
@@ -124,8 +126,11 @@ public class ColorPickerTests : BlazorTest
         await Expect(Popover).ToBeVisibleAsync();
 
         // a click anywhere outside the panel lands on the full-window backdrop
-        var panel = await Popover.BoundingBoxAsync();
-        await Page.Mouse.ClickAsync(panel!.X + panel.Width + 200, panel.Y + 20);
+        // (just under the panel, over the page content: a fixed offset to its right is off a phone
+        // screen, and a viewport corner is the app bar, which sits above the backdrop)
+        var panel = (await Popover.BoundingBoxAsync())!;
+        var view = Page.ViewportSize!;
+        await Page.Mouse.ClickAsync(panel.X + 20, Math.Min(panel.Y + panel.Height + 40, view.Height - 80));
         await Expect(Popover).ToHaveCountAsync(0);
         await AssertNoConsoleErrors();
     }

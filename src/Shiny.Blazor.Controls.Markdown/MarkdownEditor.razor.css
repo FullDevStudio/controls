@@ -9,16 +9,34 @@
     background: var(--shiny-color-surface, #F6FAFE);
 }
 
-.shiny-md-editor.is-split { flex-direction: row; }
+/* Side by side while each pane gets 260px; below that (a phone) the preview wraps under the source
+   instead of both being crushed into slivers. The container query moves the divider to match. */
+.shiny-md-editor.is-split {
+    flex-direction: row;
+    flex-wrap: wrap;
+    container-type: inline-size;
+}
 
 .shiny-md-editor-pane {
     flex: 1 1 0;
     display: flex;
+    min-width: 0;
     min-height: 0;
+}
+
+.shiny-md-editor.is-split .shiny-md-editor-pane {
+    flex: 1 1 260px;
 }
 
 .shiny-md-editor.is-split .shiny-md-editor-input {
     border-right: var(--shiny-border-thin, 1px) solid var(--shiny-color-outline-variant, #BBC7DF);
+}
+
+@container (max-width: 519.98px) {
+    .shiny-md-editor.is-split .shiny-md-editor-input {
+        border-right: 0;
+        border-bottom: var(--shiny-border-thin, 1px) solid var(--shiny-color-outline-variant, #BBC7DF);
+    }
 }
 
 .shiny-md-editor-textarea {

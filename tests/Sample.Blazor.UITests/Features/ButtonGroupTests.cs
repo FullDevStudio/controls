@@ -123,4 +123,18 @@ public class ButtonGroupTests : BlazorTest
         await Expect(Status).ToHaveTextAsync(new System.Text.RegularExpressions.Regex("^More follow options at "));
         await AssertNoConsoleErrors();
     }
+
+
+    [Test]
+    public async Task Nested_Groups_Become_A_Cluster()
+    {
+        await Open("buttongroup");
+        var outer = Section("Nested groups").Locator(".shiny-btn-group").First;
+
+        // the outer group only learns it holds groups while rendering them, so the class comes from a
+        // second render - which, on WASM, never used to happen
+        await Expect(outer).ToHaveClassAsync(new System.Text.RegularExpressions.Regex(@"\bshiny-btn-group--cluster\b"));
+        await Expect(outer).Not.ToHaveClassAsync(new System.Text.RegularExpressions.Regex(@"\bshiny-btn-group--collapse\b"));
+        await AssertNoConsoleErrors();
+    }
 }

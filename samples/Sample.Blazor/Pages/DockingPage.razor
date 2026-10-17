@@ -5,7 +5,7 @@
 
 <PageTitle>Docking</PageTitle>
 
-<div style="padding: 16px;">
+<div class="demo-fill" style="padding: 16px;">
     <h2>Docking</h2>
     <p style="color: gray; font-size: 13px;">
         Visual-Studio-style docking host. Drag a tab out and it becomes a translucent floating window:
@@ -26,7 +26,7 @@
         </label>
     </div>
 
-    <div style="height: 560px; border: 1px solid #ddd; border-radius: 6px; overflow: hidden;">
+    <div class="demo-fill-body" style="border: 1px solid #ddd; border-radius: 6px; overflow: hidden;">
         <DockHost @ref="host" InitialLayout="@initialLayout" IsLocked="@locked" LayoutStore="@store" />
     </div>
 

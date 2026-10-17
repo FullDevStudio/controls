@@ -51,6 +51,8 @@ A text input with debounced search, dropdown suggestions, busy indicator, and cu
 | DropDownClass | string? | null | Dropdown CSS class (Blazor only) |
 | AdditionalAttributes | IDictionary | null | Unmatched HTML attributes (Blazor only) |
 
+**Dropdown placement (MAUI):** the suggestion list floats in the page's overlay layer, directly under the field and at the field's width (or above it when there is more room above). It is not a row of the control, so a form inside a `ScrollView` gets no nested scroller and nothing below the field is pushed down when it opens. It follows the field while the page scrolls. Off a `ContentPage` (no overlay to float in) it falls back to an inline row. The floating card's `AutomationId` is the control's plus `_DropDown`, for UI tests.
+
 Events: `ItemSelected` fires when a suggestion is chosen.
 
 **Blazor CSS Custom Properties** — Override these on a parent element or the component itself to theme without parameters:

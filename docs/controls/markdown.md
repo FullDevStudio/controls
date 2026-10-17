@@ -22,6 +22,10 @@ Render and edit markdown content using native MAUI controls — no WebView requi
 | Theme | MarkdownTheme? | Rendering theme (auto Light/Dark if null) |
 | IsScrollEnabled | bool | Enable/disable scrolling (default: true) |
 
+On Blazor a long unbroken word in the content (a namespace in a heading, a bare URL) wraps instead of
+widening the view, so the view never turns into a sideways scroller that moves only a few pixels. Code
+blocks still scroll sideways on their own.
+
 Events: `LinkTapped` — fired when a link is tapped; set `Handled = true` to prevent default browser launch.
 
 **MarkdownEditor** — Editor with formatting toolbar and live preview:
@@ -61,8 +65,10 @@ out, or set `Accessory` to supply your own bar.
 - Formatting toolbar: bold, italic, headings, lists, code, links, blockquotes
 - The same toolbar on the keyboard accessory bar (iOS/Android)
 - Live preview toggle
+- Blazor side-by-side mode (`IsSplit`, on by default): when each pane would be narrower than 260px the preview wraps under the source, so it stays usable on a phone
 - Auto-growing editor
 - Full Markdig support: tables, task lists, strikethrough, fenced code blocks
+- Tables (MAUI) draw one rounded outer border in `TableBorderColor` and single 1px dividers between rows and columns — no per-cell boxes, so inner lines are never doubled; the header row is shaded with `TableHeaderBackgroundColor`
 - Customizable themes with colors, font sizes, and spacing
 - Custom toolbar item support
 

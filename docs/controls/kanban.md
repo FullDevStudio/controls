@@ -184,6 +184,13 @@ means reading element rectangles, and routing that through interop would put a r
 the pointer moving and the insertion line following it. C# is consulted once, at drag start, for the
 set of lanes that will accept the card.
 
+On touch, a card is picked up by **press-and-hold** (about 350 ms — the card lifts slightly and the
+device gives a short vibration where it can); a finger that moves first scrolls the board as normal.
+Once held, the drag owns the gesture, so the browser never scrolls under it. A mouse or pen still
+starts a drag after 5px of movement. While dragging, the board auto-scrolls whenever the pointer rests
+near an edge — faster the deeper into the edge zone it is, and never past the board's real extent —
+and dragging past the board's edge targets the edge lane.
+
 The column headers are a `position: sticky` row inside the same scroller as the lanes, so they follow
 a horizontal scroll for free and pin on a vertical one.
 

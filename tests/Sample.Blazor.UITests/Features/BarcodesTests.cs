@@ -52,11 +52,14 @@ public class BarcodesTests : BlazorTest
 
         await SizeSlider.FillAsync("400");
         await Expect(Page.GetByText("Size: 400 px")).ToBeVisibleAsync();
-        await Expect(QrHost).ToHaveAttributeAsync("style", new Regex("width:400px;height:400px"));
+        await Expect(QrHost).ToHaveAttributeAsync("style", new Regex("width:400px;max-width:100%;height:auto;aspect-ratio:400/400"));
         await Expect(QrSvg).ToHaveAttributeAsync("viewBox", "0 0 400 400");
 
         var box = (await QrHost.BoundingBoxAsync())!;
-        await Assert.That(Math.Round(box.Width)).IsEqualTo(400d);
+        // 400px, unless its container is narrower (a phone): max-width:100% scales it down, square
+        var room = await QrHost.EvaluateAsync<double>("e => e.parentElement.clientWidth - parseFloat(getComputedStyle(e.parentElement).paddingLeft) - parseFloat(getComputedStyle(e.parentElement).paddingRight)");
+        await Assert.That(Math.Round(box.Width)).IsEqualTo(Math.Round(Math.Min(400d, room)));
+        await Assert.That(Math.Abs(box.Height - box.Width)).IsLessThan(1.5f);
         await AssertNoConsoleErrors();
     }
 

@@ -216,7 +216,7 @@ builder.Services
           IsLocked="@locked" />
 ```
 
-The component itself implements `IDockHost` — grab it with `@ref` to call `ShowPanelAsync` / `ResetLayoutAsync` / `Snapshot` and subscribe to `Events`. CSS custom properties (e.g. `--shiny-dock-host-bg`) provide theming hooks without recompiling.
+The component itself implements `IDockHost` — grab it with `@ref` to call `ShowPanelAsync` / `ResetLayoutAsync` / `Snapshot` and subscribe to `Events`. CSS custom properties (e.g. `--shiny-dock-host-bg`) provide theming hooks without recompiling. The left and right rails are each capped at 40% of the host's width, so on a phone two side rails never overrun the document area or lie on top of each other's tabs and resize strips.
 
 ## On-Screen Keyboard
 

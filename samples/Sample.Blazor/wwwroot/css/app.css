@@ -42,6 +42,9 @@ code {
     border-radius: 4px;
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 13px;
+    /* a long attribute like SelectionMode="ChipSelectionMode.Multiple" has no space to break at and
+       pushed the page sideways on a phone */
+    overflow-wrap: anywhere;
 }
 
 pre {
@@ -63,6 +66,16 @@ pre {
 }
 
 /* Demo sections */
+/* A miniature app inside a gallery page - a phone mock-up with a tab bar over its rows, a toolbar
+   pinned in its own viewport, a grid the size of a pane. These scroll on purpose, because what they
+   show is chrome over a scrolling region, so they contain their overscroll: a wheel or swipe that
+   reaches their end stops there instead of jerking the page (CLAUDE.md, Jon rule 1). Everything
+   else on a page sizes to its content or fills the page (.demo-fill). */
+.demo-frame,
+.demo-frame .shiny-dg-scroll {
+    overscroll-behavior: contain;
+}
+
 .demo-section {
     background: var(--shiny-color-surface-container-low, white);
     color: var(--shiny-color-on-surface, #1E1B4B);

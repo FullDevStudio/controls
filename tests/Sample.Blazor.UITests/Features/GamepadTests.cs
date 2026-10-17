@@ -20,6 +20,7 @@ public class GamepadTests : BlazorTest
 
     async Task<(float X, float Y)> CenterOf(ILocator locator)
     {
+        await locator.ScrollIntoViewIfNeededAsync();
         var box = (await locator.BoundingBoxAsync())!;
         return (box.X + box.Width / 2, box.Y + box.Height / 2);
     }
@@ -114,6 +115,7 @@ public class GamepadTests : BlazorTest
         await Expect(taps).ToHaveTextAsync("0");
 
         // The middle of the stage, well clear of every control.
+        await Page.Locator(".gp-stage").ScrollIntoViewIfNeededAsync();
         var stage = (await Page.Locator(".gp-stage").BoundingBoxAsync())!;
         await Page.Mouse.ClickAsync(stage.X + stage.Width / 2, stage.Y + stage.Height * 0.3f);
 

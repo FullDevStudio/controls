@@ -37,6 +37,7 @@ public class ThemeTests : BlazorTest
     }
 
     [Test]
+    [SkipOnPhone("the gallery hides the Dark toggle from the phone app bar")]
     public async Task Dark_Toggle_Switches_The_Scheme_Class_And_Surface()
     {
         await Open("/theming");

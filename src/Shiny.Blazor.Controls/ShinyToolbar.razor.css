@@ -33,6 +33,14 @@
     box-sizing: border-box;
 }
 
+/* When the bar is too narrow (a phone), the title/start region gives up its space first: with equal
+   shrink factors the trailing region shrank too, below the non-shrinking end content it holds, and
+   pushed the last action off the screen. */
+.shiny-toolbar-title,
+.shiny-toolbar-start {
+    flex-shrink: 100;
+}
+
 .shiny-toolbar-title {
     font-size: calc(17px * var(--shiny-type-scale, 1));
     font-weight: 600;

@@ -21,6 +21,8 @@ From the repo root (`./uitest.ps1` takes the same arguments on Windows):
 ./uitest mobile                     # ios + android
 ./uitest all                        # every head this OS can run, plus Blazor
 ./uitest blazor                     # Chromium; also blazor-webkit, blazor-firefox, blazor-publish
+./uitest blazor-mobile              # the whole Blazor suite as an iPhone 13 (WebKit, touch, 390px)
+./uitest blazor-android             # ...as a 360px Android phone (Chromium, touch)
 ./uitest android --filter Slider    # one class; Slider,Ribbon for several, or a raw /*/*/X/* filter
 ./uitest ios --no-build             # reuse the last build/install
 ./uitest ios --attach --port 9223   # drive an app that is already running
@@ -76,7 +78,33 @@ SHINY_BLAZOR_BROWSER=webkit  dotnet run --project tests/Sample.Blazor.UITests   
 SHINY_BLAZOR_BROWSER=firefox dotnet run --project tests/Sample.Blazor.UITests
 SHINY_BLAZOR_MODE=publish    dotnet run --project tests/Sample.Blazor.UITests     # trimmed Release build
 SHINY_BLAZOR_URL=https://… dotnet run --project tests/Sample.Blazor.UITests       # an already-served app
+SHINY_BLAZOR_DEVICE=iphone   dotnet run --project tests/Sample.Blazor.UITests     # as a phone: iphone | android | any Playwright device
 ```
+
+### Phones
+
+Three layers keep the controls honest on mobile browsers:
+
+- **`MobileFitTests`** runs in *every* Blazor run. It opens each gallery page on a 360px phone and fails
+  when the page scrolls sideways, something hangs off either edge, a button is cut off where nothing can
+  scroll it back, or text is sliced by a clipping container. Content a control scrolls on purpose (a
+  grid, a code block) or clips by design (marquee, carousel, cover flow, or anything marked
+  `data-fit-clip`) is left alone. Screenshots land in `uitest-results/<browser>/screenshots/phone/`.
+- **`TouchGestureTests`** drives every drag-based control with a real finger — Chromium's CDP touch
+  input, through `Touch` on `BlazorTest`. A mouse never meets the two things that break touch: the
+  browser deciding at touch-down that the gesture is a scroll (`touch-action`), and the `pointercancel`
+  it fires mid-drag. Use `TouchInput.VisibleCentreOf` to aim: on a phone an element's centre is often
+  under another pane. Chromium only (`[RequiresTouchInput]`).
+- **`SHINY_BLAZOR_DEVICE`** (`./uitest blazor-mobile` / `blazor-android`) runs the whole suite as a
+  phone. Tests that only make sense at desktop width — a ribbon that folds its groups on a phone, a
+  panel that collapses below 900px, a mouse-wheel gesture — say so with `[SkipOnPhone("why")]`. A skip
+  that hides a real mobile bug is worse than a failure, so the reason has to be a design decision.
+
+Writing a test that should also pass on a phone: scroll before you measure
+(`ScrollIntoViewIfNeededAsync`, or `TouchInput.BoxOf`) — raw `Page.Mouse` coordinates below the fold
+land on nothing, or on the gallery's bottom tab bar. Scroll with `ScrollContentAsync`, not
+`Mouse.WheelAsync`, which mobile WebKit cannot synthesise. Every context runs in `en-US`, so dates and
+times format the same everywhere.
 
 `SHINY_BLAZOR_MODE=publish` matters: interop DTOs that lose constructors under trimming and similar failures
 only show up in a published build. `SHINY_BLAZOR_HEADED=1` shows the browser; `SHINY_BLAZOR_PARALLEL` sets

@@ -50,15 +50,23 @@ public class VirtualizedGridTests : BlazorTest
     {
         await Open("virtualizedgrid");
         var section = Section("Virtualized (Large Dataset)");
-        var scroller = section.Locator("div[style*='overflow-y']").First;
         var cells = section.Locator(".shiny-vgrid-cell");
 
+        // the grid windows against the page scroller - it has no box of its own
+        await section.ScrollIntoViewIfNeededAsync();
         await Expect(cells.First).ToContainTextAsync("#1");
         var rendered = await cells.CountAsync();
-        await Assert.That(rendered).IsLessThan(200);           // 500 items, a 400px window
+        await Assert.That(rendered).IsLessThan(200);           // 500 items, one screen of them
         await Expect(section.GetByText("#500", new() { Exact = false })).ToHaveCountAsync(0);
 
-        await scroller.EvaluateAsync("el => el.scrollTop = el.scrollHeight");
+        // bring the grid's end into view; Virtualize re-measures as rows render, so walk it there
+        var last = section.Locator(".shiny-vgrid-cell", new() { HasTextRegex = new Regex(@"#500$") });
+        for (var i = 0; i < 20 && await last.CountAsync() == 0; i++)
+        {
+            await section.EvaluateAsync(
+                "s => { const c = document.querySelector('.shiny-applayout-content') ?? document.scrollingElement; c.scrollBy(0, s.getBoundingClientRect().bottom - c.getBoundingClientRect().bottom + 40); }");
+            await Page.WaitForTimeoutAsync(150);
+        }
         await Expect(section.Locator(".shiny-vgrid-cell", new() { HasTextRegex = new Regex(@"#500$") })).ToBeVisibleAsync();
         await Expect(section.Locator(".shiny-vgrid-cell", new() { HasTextRegex = new Regex(@"#1$") })).ToHaveCountAsync(0);
         await AssertNoConsoleErrors();
@@ -96,13 +104,16 @@ public class VirtualizedGridTests : BlazorTest
     {
         await Open("virtualizedgrid");
         var section = Section("Grouped Grid with Sticky Headers");
-        var scroller = section.Locator("div[style*='overflow-y']").First;
+        var scroller = Page.Locator(".shiny-applayout-content").First;
         var fruits = section.Locator(".shiny-vgrid-group-header", new() { HasTextString = "Fruits" });
 
         await Expect(section.Locator(".shiny-vgrid-group-header")).ToHaveCountAsync(3);
-        await scroller.EvaluateAsync("el => el.scrollTop = 200");
+        // The page is the scroller: put the grid's top 200px above the top of the content region,
+        // which is 200px into an ~18-item group.
+        await section.Locator(".shiny-vgrid").First.EvaluateAsync(
+            "g => { const c = document.querySelector('.shiny-applayout-content'); c.scrollBy(0, g.getBoundingClientRect().top - c.getBoundingClientRect().top + 200); }");
 
-        // Scrolled 200px into an ~18-item group: its header is still pinned at the top of the box.
+        // its header is still pinned at the top of the scroller
         var deadline = DateTime.UtcNow.AddSeconds(5);
         float delta = float.MaxValue;
         while (DateTime.UtcNow < deadline)

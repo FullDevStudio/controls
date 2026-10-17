@@ -1,8 +1,17 @@
+/* minmax(0, …) rather than 1fr: a plain 1fr track never shrinks below its widest code block, which
+   pushed the preview off the side of a phone */
 .md-host {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 16px;
     align-items: start;
+}
+
+/* on a phone the source sits above the preview instead of crushing both into slivers */
+@media (max-width: 700px) {
+    .md-host {
+        grid-template-columns: minmax(0, 1fr);
+    }
 }
 
 .md-input {

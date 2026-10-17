@@ -112,7 +112,7 @@ Only `ShinyButton`s are selectable — a text segment or separator is chrome, an
 
 `Orientation` stacks the segments into a rail, with the rounding and the collapse turning with it.
 
-A group of groups is a **cluster** rather than one control: each inner group keeps its own merged edges and the two are spaced apart, which is what makes an undo/redo pair beside a bold/italic/underline trio read as two things rather than five.
+A group of groups is a **cluster** rather than one control: each inner group keeps its own merged edges and the two are spaced apart, which is what makes an undo/redo pair beside a bold/italic/underline trio read as two things rather than five. On Blazor a cluster wraps its groups onto a second row when the screen is too narrow, and each group stays whole.
 
 ```xml
 <shiny:ButtonGroup>

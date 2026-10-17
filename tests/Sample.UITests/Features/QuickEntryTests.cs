@@ -10,7 +10,7 @@ public class QuickEntryTests : UITest
 {
     Task OpenPage() => Open("quickentry", "QuickEntryPage");
 
-    /// <summary>The page logs every event to a CollectionView as "HH:mm:ss  message".</summary>
+    /// <summary>The page logs every event (last 20) to a stack of labels as "HH:mm:ss  message".</summary>
     Task WaitForLog(string message, int timeoutSeconds = 10)
         => Driver.WaitUntil(async () => (await Driver.Query(type: "Label", text: message)).Count > 0, $"'{message}' in the event log", timeoutSeconds);
 

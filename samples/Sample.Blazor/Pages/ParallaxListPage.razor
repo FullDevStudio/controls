@@ -5,7 +5,7 @@
 <h1>Parallax List</h1>
 <p style="margin-bottom:12px;color:#475569;">@status</p>
 
-<section class="demo-section">
+<section class="demo-section demo-fill">
     <h2>Hero header that translates on scroll</h2>
 
     <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
@@ -22,7 +22,7 @@
         </label>
     </div>
 
-    <div style="height:600px;border:1px solid var(--shiny-color-outline-variant, #e2e8f0);border-radius:14px;overflow:hidden;background:var(--shiny-color-surface, #fff);">
+    <div class="demo-fill-body" style="border:1px solid var(--shiny-color-outline-variant, #e2e8f0);border-radius:14px;overflow:hidden;background:var(--shiny-color-surface, #fff);">
         <ParallaxList TItem="DestinationItem"
                       Items="@items"
                       HeaderHeight="260"

@@ -68,6 +68,7 @@
     left: 0;
     z-index: 41;
     min-width: 280px;
+    --shiny-fontpicker-max-height: 320px;
     border: 1px solid var(--shiny-color-outline-variant, #BBC7DF);
     border-radius: var(--shiny-shape-corner-medium, 8px);
     background: var(--shiny-color-surface, #F6FAFE);

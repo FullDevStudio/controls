@@ -26,8 +26,9 @@
     justify-content: space-between;
     align-items: baseline;
     padding: var(--shiny-spacing-2, 8px) var(--shiny-spacing-3, 12px);
+    /* bottom only: above it is either the list's own top border or the previous day's last
+       event line, and a top border would double either of them */
     border-bottom: var(--shiny-border-thin, 1px) solid var(--shiny-color-outline-variant, #BBC7DF);
-    border-top: var(--shiny-border-thin, 1px) solid var(--shiny-color-outline-variant, #BBC7DF);
     position: sticky;
     top: 0;
     z-index: 1;
@@ -39,6 +40,9 @@
 .shiny-cal-list-count { font-size: var(--shiny-type-body-small-size, 12px); color: var(--shiny-color-on-surface-variant, #3B475B); }
 
 .shiny-cal-list-events { display: flex; flex-direction: column; }
+
+/* the very last line would sit on the list's bottom border once scrolled to the end */
+.shiny-cal-list-day:last-child .shiny-cal-list-event:last-child { border-bottom: 0; }
 
 .shiny-cal-list-event {
     display: flex;

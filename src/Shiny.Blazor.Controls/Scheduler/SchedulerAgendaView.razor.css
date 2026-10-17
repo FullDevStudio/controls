@@ -185,6 +185,11 @@
     min-width: 0;
 }
 
+/* The agenda's own border is the outer edge, so the last day column draws no right line against
+   it, and neither does the last hour against the bottom when the timeline is scrolled to its end. */
+.shiny-agenda-daycol:last-child { border-right: 0; }
+.shiny-agenda-hourcell:nth-child(24) { border-bottom: 0; }
+
 .shiny-agenda-hourcell {
     border-bottom: var(--shiny-border-thin, 1px) solid var(--shiny-color-outline-variant, #BBC7DF);
     box-sizing: border-box;

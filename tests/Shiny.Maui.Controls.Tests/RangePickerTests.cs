@@ -199,4 +199,35 @@ public class RangePickerTests
         picker.Cancel();
         PageOverlay.GetOrCreateRoot(page).Children.OfType<PageOverlay.RangePickerLayer>().Single().Children.ShouldBeEmpty();
     }
+
+
+    [Fact]
+    public void TheTimeColumnsAreThePopupsOnlyVerticalScrollers()
+    {
+        var picker = new TimeRangePicker { StartTime = TimeSpan.FromHours(9), EndTime = TimeSpan.FromHours(10) };
+        _ = new ContentPage { Content = new VerticalStackLayout { Children = { picker } } };
+
+        picker.Open();
+
+        // One owner per axis: the card must not wrap the two self-scrolling columns in a scroller of
+        // its own, or on a short screen both scroll.
+        var card = picker.PopupCard.ShouldBeOfType<Border>();
+        card.Content.ShouldNotBeOfType<ScrollView>();
+        card.GetVisualTreeDescendants().OfType<ScrollView>().Count().ShouldBe(2);
+        picker.Cancel();
+    }
+
+
+    [Fact]
+    public void TheDatePopupStillScrollsAsAWhole()
+    {
+        var picker = new DateRangePicker();
+        _ = new ContentPage { Content = new VerticalStackLayout { Children = { picker } } };
+
+        picker.Open();
+
+        // The calendar does not scroll vertically, so the card does - for a short or landscape screen.
+        picker.PopupCard.ShouldBeOfType<Border>().Content.ShouldBeOfType<ScrollView>();
+        picker.Cancel();
+    }
 }

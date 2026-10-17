@@ -29,6 +29,32 @@ public sealed class BlazorAppFixture : IAsyncInitializer, IAsyncDisposable
     /// </summary>
     public IBrowserContext Context { get; private set; } = null!;
 
+    readonly SemaphoreSlim phoneLock = new(1, 1);
+    IBrowserContext? phoneContext;
+
+    /// <summary>The narrowest phone the fit sweep holds every page to (Galaxy S8, 360 CSS px).</summary>
+    public const string FitDevice = "Galaxy S8";
+
+    /// <summary>
+    /// A phone-sized context for tests that must run as a phone even in a desktop run. When the whole
+    /// session is already a phone (SHINY_BLAZOR_DEVICE) that context is reused.
+    /// </summary>
+    public async Task<IBrowserContext> GetPhoneContextAsync()
+    {
+        if (BlazorTestSettings.Device != null)
+            return Context;
+
+        await phoneLock.WaitAsync();
+        try
+        {
+            return phoneContext ??= await Browser.NewContextAsync(DeviceOptions(FitDevice));
+        }
+        finally
+        {
+            phoneLock.Release();
+        }
+    }
+
     public async Task InitializeAsync()
     {
         Directory.CreateDirectory(BlazorTestSettings.ResultsDirectory);
@@ -53,11 +79,30 @@ public sealed class BlazorAppFixture : IAsyncInitializer, IAsyncDisposable
             _ => playwright.Chromium
         };
         Browser = await browserType.LaunchAsync(new() { Headless = !BlazorTestSettings.Headed });
-        Context = await Browser.NewContextAsync(new()
+        Context = await Browser.NewContextAsync(
+            BlazorTestSettings.Device is string device
+                ? DeviceOptions(device)
+                : new() { BaseURL = BaseUrl, Locale = "en-US", ViewportSize = new() { Width = 1366, Height = 900 } }
+        );
+    }
+
+    /// <summary>
+    /// A phone: its viewport, pixel ratio, touch and user agent. Firefox can't emulate a mobile
+    /// viewport (IsMobile throws there), so it gets the size and touch without the meta-viewport handling.
+    /// </summary>
+    public BrowserNewContextOptions DeviceOptions(string device)
+    {
+        if (!playwright!.Devices.TryGetValue(device, out var descriptor))
+            throw new InvalidOperationException($"Unknown Playwright device '{device}'");
+
+        return new BrowserNewContextOptions(descriptor)
         {
             BaseURL = BaseUrl,
-            ViewportSize = new() { Width = 1366, Height = 900 }
-        });
+            // a device descriptor brings no locale, and mobile WebKit then follows the host's region -
+            // en-CA here, which turned every date into 2026-10-17 and every time into "9:30 a.m."
+            Locale = "en-US",
+            IsMobile = BlazorTestSettings.Browser == "firefox" ? null : descriptor.IsMobile
+        };
     }
 
     async Task<string> StartDevServerAsync()
@@ -182,6 +227,8 @@ public sealed class BlazorAppFixture : IAsyncInitializer, IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        if (phoneContext != null)
+            await phoneContext.DisposeAsync();
         if (Context != null)
             await Context.DisposeAsync();
         if (Browser != null)

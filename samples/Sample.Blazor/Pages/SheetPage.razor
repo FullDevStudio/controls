@@ -41,7 +41,9 @@
            SheetCornerRadius="20">
     <SheetContent>
         <h3 style="text-align:center;margin:0 0 12px;">Select a Country</h3>
-        <div style="max-height:400px;overflow-y:auto;">
+        @* No scroller of its own: the sheet already scrolls its content, and a capped list inside it
+           would be a second one on the same axis. *@
+        <div>
             @foreach (var item in countries)
             {
                 <div class="selector-item" @onclick="() => SelectCountry(item)">@item</div>

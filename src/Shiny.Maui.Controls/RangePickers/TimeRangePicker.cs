@@ -47,6 +47,30 @@ public partial class TimeRangePicker : RangePickerBase
 
     protected override double PopupMaxWidth => 360;
 
+    /// <summary>The columns' height when the screen has room for it.</summary>
+    const double ColumnHeight = 280;
+
+    /// <summary>Shorter than this and a column shows too few times to pick from.</summary>
+    const double MinColumnHeight = 96;
+
+    // The columns are the only vertical scrollers in the popup: the card does not scroll around them.
+    protected override bool PopupContentScrolls => true;
+
+    protected override void OnPopupContentRoom(double height)
+    {
+        if (this.startScroll is null || this.endScroll is null)
+            return;
+
+        // The content is the header row plus the columns; keep the header and give the columns the rest.
+        var header = Math.Max(0, (this.startScroll.Parent as View)?.Height - this.startScroll.Height ?? 0);
+        var columns = Math.Clamp(height - header, MinColumnHeight, ColumnHeight);
+        if (Math.Abs(this.startScroll.HeightRequest - columns) < 0.5)
+            return;
+
+        this.startScroll.HeightRequest = columns;
+        this.endScroll.HeightRequest = columns;
+    }
+
     internal TimeRangeConstraints Constraints => new()
     {
         Interval = this.Interval,
@@ -97,8 +121,8 @@ public partial class TimeRangePicker : RangePickerBase
     {
         this.startColumn = new VerticalStackLayout { Spacing = 2 };
         this.endColumn = new VerticalStackLayout { Spacing = 2 };
-        this.startScroll = new ScrollView { Content = this.startColumn, HeightRequest = 280 };
-        this.endScroll = new ScrollView { Content = this.endColumn, HeightRequest = 280 };
+        this.startScroll = new ScrollView { Content = this.startColumn, HeightRequest = ColumnHeight };
+        this.endScroll = new ScrollView { Content = this.endColumn, HeightRequest = ColumnHeight };
 
         var grid = new Grid
         {

@@ -227,7 +227,8 @@ Below 600px (`OfficeShellLayout.CompactWidth`) the title bar's search collapses 
 status hides, rulers and side panes step away (their open state is kept), the ribbon should go
 Simplified, `OfficeRibbonActions` draws Comments / mode / Share as icons only (so the tab strip keeps
 room on a phone; `Compact` overrides it), and the status bar drops Focus, the view modes and the slider.
-Below 900px the zoom slider goes on its own.
+Below 900px the zoom slider goes on its own. On Blazor, status segments that still don't fit drop whole
+from the end rather than being sliced mid-word, and a single over-long segment ends in an ellipsis.
 
 On Android the back button closes what is open before it leaves the page: a ribbon dropdown, an
 `OfficeDialog` (as Cancel), the backstage, then focus mode. `UseShinyControls()` registers the hook.

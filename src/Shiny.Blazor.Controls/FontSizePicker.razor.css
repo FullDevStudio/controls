@@ -2,7 +2,11 @@
     display: flex;
     flex-direction: column;
     overflow-y: auto;
-    max-height: 320px;
+
+    /* Uncapped inline, so a picker placed on a page sizes to its sizes and the page does the
+       scrolling - a capped one is a scroller inside the page's (CLAUDE.md, Jon rule 1). The
+       button's popover, which has no page to lean on, sets the cap. */
+    max-height: var(--shiny-fontsizepicker-max-height, none);
 }
 
 .shiny-fontsizepicker-item {

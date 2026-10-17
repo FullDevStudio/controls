@@ -3,7 +3,8 @@ namespace Sample.UITests.Features;
 /// <summary>
 /// AutoCompleteEntry: local filtering, picking a suggestion (string and TextMemberPath objects),
 /// typing again clearing the selection, and the SearchCommand path that fills ItemsSource later.
-/// Suggestions are the Labels (or template roots) inside the control's dropdown ScrollView; their
+/// Suggestions are the Labels (or template roots) inside the dropdown, which floats in the page overlay
+/// (not under the control) and carries the control's AutomationId plus "_DropDown"; their
 /// tap gesture is what a finger would hit.
 /// </summary>
 public class AutoCompleteTests : UITest
@@ -14,7 +15,7 @@ public class AutoCompleteTests : UITest
     static readonly string[] Berries = ["Blackberry", "Blueberry", "Cranberry", "Raspberry", "Strawberry"];
 
     async Task<string[]> Suggestions(string autoCompleteId)
-        => (await Driver.CssNow($"#{autoCompleteId} ScrollView Label"))
+        => (await Driver.CssNow($"#{autoCompleteId}_DropDown ScrollView Label"))
             .Select(l => l.Text ?? "")
             .ToArray();
 
@@ -27,12 +28,12 @@ public class AutoCompleteTests : UITest
 
     async Task TapSuggestion(string autoCompleteId, string text)
     {
-        var items = await Driver.Css($"#{autoCompleteId} ScrollView Label");
+        var items = await Driver.Css($"#{autoCompleteId}_DropDown ScrollView Label");
         var index = items.FindIndex(l => l.Text == text);
         if (index < 0)
             throw new InvalidOperationException($"'{text}' is not among the suggestions of {autoCompleteId}");
 
-        await Driver.TapCss($"#{autoCompleteId} ScrollView Label", index);
+        await Driver.TapCss($"#{autoCompleteId}_DropDown ScrollView Label", index);
     }
 
     [Test]

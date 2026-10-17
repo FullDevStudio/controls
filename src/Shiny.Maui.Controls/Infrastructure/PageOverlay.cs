@@ -108,6 +108,19 @@ static class PageOverlay
     internal sealed class NavMenuLayer : Grid, IOverlayLayer;
 
     /// <summary>
+    /// Where an <see cref="AutoCompleteEntry"/> floats its suggestion list. Grid-based for the reason
+    /// quick entry's is: alignment plus a margin is arranged reliably on every head.
+    /// </summary>
+    /// <remarks>
+    /// Edge-to-edge: the list is placed at the field's position in the overlay root's coordinates, and
+    /// a safe-area inset here would shift it down by the status bar on a page that reaches under it.
+    /// </remarks>
+    internal sealed class AutoCompleteLayer : Grid, IOverlayLayer
+    {
+        public AutoCompleteLayer() => this.SafeAreaEdges = SafeAreaEdges.None;
+    }
+
+    /// <summary>
     /// Where an <see cref="ImageViewer"/> puts its lightbox when it is not inside an explicit
     /// <see cref="OverlayHost"/>. Grid-based, so the overlay fills the page: the layer it replaced
     /// was "whatever Grid happens to be the page's root content", which drops a full-screen overlay
@@ -139,6 +152,12 @@ static class PageOverlay
 
         /// <summary>The nav bar's overflow menu, above the tab bar's and below anything annotating the page.</summary>
         public const int NavMenu = 8_600;
+
+        /// <summary>
+        /// An autocomplete's suggestion list. Above the bars' menus - it belongs to the field the user
+        /// is typing in - and below anything annotating the page.
+        /// </summary>
+        public const int AutoComplete = 8_650;
 
         /// <summary>
         /// A ribbon's dropdowns and the popup a collapsed group opens. Above the other bars' menus

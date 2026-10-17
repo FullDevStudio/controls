@@ -4,7 +4,14 @@
                        xmlns:shiny="http://shiny.net/maui/controls"
                        x:Class="Sample.Features.Flyout.FlyoutDemoPage"
                        Title="Flyout"
+                       PushMode="Resize"
                        AutomationId="FlyoutDemoPage">
+
+    <!--
+        Resize, not the default Shift: this page's start panel rests as a rail, which is permanent
+        chrome. Shift keeps the content at full width and slides it, so a resting rail pushed the
+        detail ScrollView 64pt off the right edge for good. The Shift button below still demos it.
+    -->
 
     <!-- Start: a navigation panel that collapses to an icon rail -->
     <shiny:ShinyFlyoutPage.Start>
@@ -80,8 +87,10 @@
     </shiny:ShinyFlyoutPage.End>
 
     <!-- Detail: the page body the panels sit beside -->
+    <!-- Sized to fit a phone without scrolling (it overflowed by a few points before); a shorter
+         screen still scrolls, and only this ScrollView does. -->
     <ScrollView>
-        <VerticalStackLayout Padding="24" Spacing="16">
+        <VerticalStackLayout Padding="20,16" Spacing="12">
             <Label Text="Flyout" FontSize="28" FontAttributes="Bold" />
             <Label Text="A start panel that collapses to a rail, and an end panel that floats over the content. Resize the window (or rotate) to watch Auto switch between pushing and floating."
                    Opacity="0.75" />

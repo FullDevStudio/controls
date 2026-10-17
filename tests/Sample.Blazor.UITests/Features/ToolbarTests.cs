@@ -161,6 +161,7 @@ public class ToolbarTests : BlazorTest
     }
 
     [Test]
+    [SkipOnPhone("counts the items that fit a desktop-width bar")]
     public async Task Items_That_Do_Not_Fit_Move_Into_The_Overflow_Menu()
     {
         await Open("toolbar");
