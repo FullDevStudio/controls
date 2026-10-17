@@ -1,6 +1,7 @@
 using AppKit;
 using CoreAnimation;
 using CoreGraphics;
+using Foundation;
 using Shiny.Maui.Controls.Desktop.TrayIcon;
 
 namespace Shiny.Maui.Controls.Desktop.Notch;
@@ -113,6 +114,60 @@ static class NotchWindowPlatform
     }
 
     public static void Teardown(object platformWindow) => Hide(platformWindow);
+
+    /// <summary>
+    /// Reports the pointer moving on and off the window. Event monitors rather than a tracking area: a
+    /// tracking area needs an NSResponder of our own to receive mouseEntered, and the content view is
+    /// MAUI's. A global monitor sees movement over other apps and a local one over ours; mouse-moved
+    /// events need no accessibility permission (only key events do).
+    /// </summary>
+    public static IDisposable TrackPointer(object platformWindow, Action<bool> changed)
+    {
+        if (platformWindow is not NSWindow window)
+            return new PointerTracking(null, null);
+
+        const NSEventMask mask = NSEventMask.MouseMoved | NSEventMask.LeftMouseDragged | NSEventMask.RightMouseDragged | NSEventMask.OtherMouseDragged;
+        var last = false;
+
+        void Check()
+        {
+            if (!window.IsVisible)
+                return;
+
+            // Inflated a little: the window touches the top of the screen, and a pointer pushed against
+            // that edge reports a y on the frame's max edge, which Contains() excludes.
+            var frame = window.Frame.Inset(-2, -2);
+            var over = frame.Contains(NSEvent.CurrentMouseLocation);
+            if (over == last)
+                return;
+
+            last = over;
+            changed(over);
+        }
+
+        return MacMainThread.Invoke(() =>
+        {
+            var global = NSEvent.AddGlobalMonitorForEventsMatchingMask(mask, _ => MacMainThread.Invoke(Check));
+            var local = NSEvent.AddLocalMonitorForEventsMatchingMask(mask, e =>
+            {
+                Check();
+                return e;
+            });
+            Check();
+            return new PointerTracking(global, local);
+        });
+    }
+
+    sealed class PointerTracking(NSObject? global, NSObject? local) : IDisposable
+    {
+        public void Dispose() => MacMainThread.Invoke(() =>
+        {
+            if (global != null)
+                NSEvent.RemoveMonitor(global);
+            if (local != null)
+                NSEvent.RemoveMonitor(local);
+        });
+    }
 
     /// <summary>
     /// Top-centre of the notch screen. Hugging the notch, the top edge is the screen's own top edge —

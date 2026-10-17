@@ -29,6 +29,7 @@ Notch.Content = null; // back to the minimum size
 ```
 
 ```razor
+<!-- Overlays the top-centre of the screen by default, flush with the top edge -->
 <NotchView ContentKey="@state" OnClick="Expand" OnNotchSizeChanged="s => size = s">
     @if (state == "recording")
     {
@@ -45,7 +46,8 @@ Notch.Content = null; // back to the minimum size
 |---|---|---|---|
 | Content / ChildContent | View / RenderFragment | null | Anything. The notch sizes itself to it |
 | ContentKey | — / object | null | Blazor only. Change it when you swap content and the new content fades in (MAUI fades on any `Content` swap) |
-| Shape | NotchShape | Island | `Island` rounds every corner; `Notch` squares the top corners so it hangs from the top edge |
+| Inline | — / bool | false | Blazor only. `false` overlays the top of the screen in the browser's top layer; `true` lays it out in the page flow |
+| Shape | NotchShape | Island (MAUI) / Notch (Blazor) | `Island` rounds every corner; `Notch` squares the top corners so it hangs from the top edge |
 | SurfaceColor | Color / string | Black | The fill. Black on every theme (it imitates a hole in the screen), so give the content light text. Blazor: `--shiny-notch-surface` |
 | Stroke / StrokeThickness | Color? / string, double | none | Optional outline |
 | ContentPadding | Thickness / string | 14,8 / "8px 14px" | Space between the edge and the content |
@@ -66,7 +68,9 @@ Notch.Content = null; // back to the minimum size
 
 MAUI also has `Refresh()`, for a size change that does not invalidate measure (a font loaded late).
 
-**Placement.** It positions like any other view: `HorizontalOptions="Center"` and `VerticalOptions="Start"` by default on MAUI, `margin-inline: auto` on Blazor. It sizes to its content and never scrolls, so put it next to the page's scroller (same Grid cell), not inside a fixed-height box.
+**Placement.** On Blazor the notch overlays the **very top of the screen** wherever the component sits in the tree: it opens as a manual popover, so it lives in the browser's top layer, flush with the top edge of the viewport and centred, above the page, its scroll, every `z-index` and every parent's `overflow`/`transform`. Its width cap is the viewport. An `Island` floats 8px below the top edge (plus `env(safe-area-inset-top)`); `--shiny-notch-offset` moves either shape down. `Inline="true"` puts it back in the page flow, centred in its parent and capped by the parent's width, for a notch inside a card or a device mock-up. Browsers without popover support fall back to `position: fixed` with a very high `z-index`.
+
+On MAUI it positions like any other view: `HorizontalOptions="Center"` and `VerticalOptions="Start"` by default. It sizes to its content and never scrolls, so put it next to the page's scroller (same Grid cell), not inside a fixed-height box.
 
 **Accessibility.** Blazor turns the morph and the fade off under `prefers-reduced-motion`.
 

@@ -25,6 +25,25 @@ public interface INotchWindowService
     /// <summary>True when the screen the notch is shown on has a camera notch.</summary>
     bool HasHardwareNotch { get; }
 
+    /// <summary>
+    /// The camera cut-out, in points (<see cref="Size.Zero"/> without one). Content that should sit
+    /// <em>beside</em> the camera rather than below it — a "live activity" peeking out either side — lays
+    /// itself out around this width at this height.
+    /// </summary>
+    Size HardwareNotchSize { get; }
+
+    /// <summary>Whether the mouse pointer is over the notch window right now.</summary>
+    bool IsPointerOver { get; }
+
+    /// <summary>
+    /// The pointer moved onto the notch. Raised for pointer movement anywhere on screen, without
+    /// accessibility permission, so a notch that expands on hover can be built on it.
+    /// </summary>
+    event EventHandler? PointerEntered;
+
+    /// <summary>The pointer left the notch (or the notch was hidden while the pointer was over it).</summary>
+    event EventHandler? PointerExited;
+
     /// <summary>Whether the notch window is on screen.</summary>
     bool IsVisible { get; }
 
@@ -35,13 +54,21 @@ public interface INotchWindowService
     event EventHandler? Tapped;
 
     /// <summary>Shows the notch, optionally with new content. Showing with no content shows the empty notch.</summary>
-    Task ShowAsync(View? content = null);
+    /// <param name="content">The content, or null to keep what is there.</param>
+    /// <param name="configure">Styles the notch for this content only. See <see cref="SetContentAsync"/>.</param>
+    Task ShowAsync(View? content = null, Action<NotchView>? configure = null);
 
     /// <summary>
     /// Replaces the content and morphs to fit it. Content that only changes its own size needs no call —
     /// the notch follows it.
     /// </summary>
-    Task SetContentAsync(View? content);
+    /// <param name="content">The new content, or null for the empty notch.</param>
+    /// <param name="configure">
+    /// Styles the notch for this content only — padding, minimum height, shape — after the service's own
+    /// geometry and <see cref="NotchWindowOptions.Configure"/>, so it wins. Each content gets a fresh
+    /// notch, so nothing set here carries over to the next.
+    /// </param>
+    Task SetContentAsync(View? content, Action<NotchView>? configure = null);
 
     /// <summary>Takes the notch off screen. The window is kept, so the next show is instant.</summary>
     void Hide();

@@ -64,6 +64,7 @@ public class NotchTests : BlazorTest
         await Assert.That(longText[0]).IsGreaterThan(shortText[0]);
 
         // never wider than the stage it sits in: the last phrase wraps instead
+        await Page.GetByTestId("notch-inline").CheckAsync();
         await Page.GetByTestId("notch-longer").ClickAsync();
         var wrapped = await SettledBox();
         var stage = await Notch.EvaluateAsync<double>("el => el.parentElement.clientWidth");
@@ -71,15 +72,41 @@ public class NotchTests : BlazorTest
     }
 
     [Test]
-    public async Task Notch_Shape_Squares_The_Top_Corners()
+    public async Task Notch_Shape_Squares_The_Top_Corners_And_Island_Rounds_Them()
     {
         await Open("notch");
-        await Page.GetByTestId("notch-shape").CheckAsync();
         await Expect(Notch).ToHaveClassAsync(new Regex("shiny-notch--notch"));
         await SettledBox();
+        var square = await Notch.EvaluateAsync<string>("el => getComputedStyle(el).borderTopLeftRadius");
+        await Assert.That(square).IsEqualTo("0px");
 
-        var topLeft = await Notch.EvaluateAsync<string>("el => getComputedStyle(el).borderTopLeftRadius");
-        await Assert.That(topLeft).IsEqualTo("0px");
+        await Page.GetByTestId("notch-shape").CheckAsync();
+        await Expect(Notch).ToHaveClassAsync(new Regex("shiny-notch--island"));
+        await SettledBox();
+        var round = await Notch.EvaluateAsync<string>("el => getComputedStyle(el).borderTopLeftRadius");
+        await Assert.That(round).IsNotEqualTo("0px");
+    }
+
+    [Test]
+    public async Task Overlays_The_Top_Of_The_Screen_Unless_Inline()
+    {
+        await Open("notch");
+        await SettledBox();
+
+        // top layer, flush with the viewport's top edge, centred
+        await Assert.That(await Notch.EvaluateAsync<bool>("el => el.matches(':popover-open')")).IsTrue();
+        var rect = await Notch.EvaluateAsync<double[]>("el => { const r = el.getBoundingClientRect(); return [r.top, r.left + r.width / 2, document.documentElement.clientWidth / 2]; }");
+        await Assert.That(Math.Abs(rect[0])).IsLessThan(1);
+        await Assert.That(Math.Abs(rect[1] - rect[2])).IsLessThan(2);
+
+        // and it stays there when the page scrolls
+        await Page.EvaluateAsync("() => window.scrollTo(0, 400)");
+        await Assert.That(Math.Abs(await Notch.EvaluateAsync<double>("el => el.getBoundingClientRect().top"))).IsLessThan(1);
+
+        await Page.GetByTestId("notch-inline").CheckAsync();
+        await Expect(Notch).ToHaveClassAsync(new Regex("shiny-notch--inline"));
+        await Assert.That(await Notch.EvaluateAsync<bool>("el => el.matches(':popover-open')")).IsFalse();
+        await AssertNoConsoleErrors();
     }
 
     [Test]

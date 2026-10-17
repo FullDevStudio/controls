@@ -10,7 +10,8 @@ A Dynamic Island / camera-notch style surface that holds **any** content and mor
 - Place it beside the page's scroller (same `Grid` cell) to float it over the page. Never put it inside a `ScrollView` of its own; it never scrolls.
 - On Blazor, set `ContentKey` when the content is a different "state" so the new content fades in. A `@switch` on a state string with `ContentKey="@state"` is the idiomatic pattern.
 - MAUI tap: `Tapped` event or `Command`/`CommandParameter`. Blazor: `OnClick`, and inner buttons need `@onclick:stopPropagation` if they should not count as a notch click.
-- `Shape="Notch"` squares the top corners (flush with the top edge); `Island` (default) rounds every corner.
+- `Shape="Notch"` squares the top corners (flush with the top edge); `Island` rounds every corner. Default is `Island` on MAUI, `Notch` on Blazor.
+- **Blazor overlays the top of the screen by default.** It opens in the browser top layer (manual popover), flush with the viewport's top edge, wherever the component is placed — so put it once in a page or layout, don't wrap it in a positioned container, and don't add your own `position: fixed`/`z-index`. Use `Inline="true"` only for a notch shown inside the page flow (a card, a device mock-up).
 
 ## MAUI
 
@@ -57,7 +58,7 @@ Properties: `Content`, `Shape` (Island/Notch), `SurfaceColor` (Black), `Stroke`,
 </NotchView>
 ```
 
-Parameters: `ChildContent`, `ContentKey`, `Shape`, `SurfaceColor` (string?, null = black via `--shiny-notch-surface`), `Stroke`, `StrokeThickness`, `ContentPadding` ("8px 14px"), `MinNotchWidth`, `MinNotchHeight`, `MaxNotchWidth?`, `MaxNotchHeight?`, `CornerRadius`, `MorphDuration` (int ms), `HasShadow`, `OnClick`, `OnNotchSizeChanged` (`EventCallback<NotchSize>`), `CssClass`, plus splatted attributes (a `style` is merged, not swapped). Read-only `Size`. Honours `prefers-reduced-motion`.
+Parameters: `ChildContent`, `ContentKey`, `Inline` (false = top of the screen), `Shape` (Notch), `SurfaceColor` (string?, null = black via `--shiny-notch-surface`), `Stroke`, `StrokeThickness`, `ContentPadding` ("8px 14px"), `MinNotchWidth`, `MinNotchHeight`, `MaxNotchWidth?`, `MaxNotchHeight?`, `CornerRadius`, `MorphDuration` (int ms), `HasShadow`, `OnClick`, `OnNotchSizeChanged` (`EventCallback<NotchSize>`), `CssClass`, plus splatted attributes (a `style` is merged, not swapped). Read-only `Size`. Honours `prefers-reduced-motion`.
 
 ## macOS hardware notch (Desktop add-on)
 
@@ -81,6 +82,18 @@ await notchWindow.SetContentAsync(null);                  // back into the notch
 notchWindow.Hide();
 notchWindow.Tapped += (_, _) => { /* ... */ };
 bool notched = notchWindow.HasHardwareNotch;
+Size cutout = notchWindow.HardwareNotchSize;   // Size.Zero without a notch
+
+// per-content styling (runs after options.Configure; each content gets a fresh NotchView)
+await notchWindow.SetContentAsync(new PeekView(cutout.Width), n =>
+{
+    n.ContentPadding = new Thickness(10, 0);   // beside the camera, not below it
+    n.MinNotchHeight = cutout.Height;
+});
+
+// hover-to-expand: mouse monitors, no accessibility permission needed
+notchWindow.PointerEntered += (_, _) => Expand();
+notchWindow.PointerExited += (_, _) => Collapse();   // also bool notchWindow.IsPointerOver
 #endif
 ```
 

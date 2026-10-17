@@ -6,10 +6,11 @@
 
 <section class="demo-section">
     <h2>Put anything inside</h2>
+    <p>The notch overlays the very top of the screen, above everything on the page &mdash; look up. Tick <em>Inline</em> to lay it out in the box below instead.</p>
     <p><code>NotchView</code> has no compact or expanded states. Swap its content and it springs to the new size; the content keeps its own size and the surface clips it while it moves. Set <code>ContentKey</code> on a swap and the new content fades in.</p>
 
     <div class="notch-stage">
-        <NotchView ContentKey="@state" Shape="@(notchShape ? NotchShape.Notch : NotchShape.Island)"
+        <NotchView ContentKey="@state" Shape="@(islandShape ? NotchShape.Island : NotchShape.Notch)" Inline="@inline"
                    OnClick="OnNotchClick" OnNotchSizeChanged="OnSize" data-testid="demo-notch">
             @switch (state)
             {
@@ -61,9 +62,11 @@
 </section>
 
 <section class="demo-section">
-    <h2>Shape</h2>
-    <p><code>Island</code> floats with every corner rounded. <code>Notch</code> squares the top corners so it hangs from the top edge.</p>
-    <label><input type="checkbox" data-testid="notch-shape" @bind="notchShape" /> Notch shape</label>
+    <h2>Placement and shape</h2>
+    <p>By default the notch sits in the browser's top layer, flush with the top of the viewport, so no parent can clip or cover it. <code>Inline="true"</code> puts it back in the page flow.</p>
+    <p><code>Notch</code> (default) squares the top corners so it hangs from the top edge. <code>Island</code> rounds every corner and floats just below it.</p>
+    <label style="display:block;"><input type="checkbox" data-testid="notch-inline" @bind="inline" /> Inline</label>
+    <label style="display:block;"><input type="checkbox" data-testid="notch-shape" @bind="islandShape" /> Island shape</label>
 </section>
 
 <section class="demo-section">
@@ -77,6 +80,8 @@
         justify-content: center;
         align-items: flex-start;
         min-height: 160px;
+        border: 1px dashed color-mix(in srgb, currentColor 25%, transparent);
+        border-radius: 12px;
         padding-top: 12px;
     }
 </style>
@@ -92,7 +97,8 @@
 
     string state = "recording";
     int phrase;
-    bool notchShape;
+    bool islandShape;
+    bool inline;
     NotchSize size;
     string clickStatus = "Click the notch.";
 

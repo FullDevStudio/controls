@@ -29,6 +29,7 @@ sealed class DesktopNotchWindowService : INotchWindowService, IDisposable
     object? platformWindow;
     NotchView? notch;
     NotchGeometry geometry = NotchGeometry.None;
+    IDisposable? pointerTracking;
 
     public DesktopNotchWindowService(NotchWindowOptions options, ILogger<DesktopNotchWindowService>? logger = null)
     {
@@ -38,16 +39,31 @@ sealed class DesktopNotchWindowService : INotchWindowService, IDisposable
 
     public bool HasHardwareNotch => NotchWindowPlatform.GetGeometry().HasNotch;
 
+    public Size HardwareNotchSize
+    {
+        get
+        {
+            var g = NotchWindowPlatform.GetGeometry();
+            return g.HasNotch ? new Size(g.Width, g.Height) : Size.Zero;
+        }
+    }
+
+    public bool IsPointerOver { get; private set; }
+
+    public event EventHandler? PointerEntered;
+
+    public event EventHandler? PointerExited;
+
     public bool IsVisible { get; private set; }
 
     public View? Content { get; private set; }
 
     public event EventHandler? Tapped;
 
-    public async Task ShowAsync(View? content = null)
+    public async Task ShowAsync(View? content = null, Action<NotchView>? configure = null)
     {
         if (content != null || this.window == null)
-            await this.SetContentAsync(content ?? this.Content).ConfigureAwait(true);
+            await this.SetContentAsync(content ?? this.Content, configure).ConfigureAwait(true);
 
         if (this.platformWindow == null || this.notch == null)
             return;
@@ -55,9 +71,10 @@ sealed class DesktopNotchWindowService : INotchWindowService, IDisposable
         this.Place(this.notch.NotchSize, animate: false);
         NotchWindowPlatform.Show(this.platformWindow);
         this.IsVisible = true;
+        this.pointerTracking ??= NotchWindowPlatform.TrackPointer(this.platformWindow, this.OnPointerChanged);
     }
 
-    public async Task SetContentAsync(View? content)
+    public async Task SetContentAsync(View? content, Action<NotchView>? configure = null)
     {
         await this.gate.WaitAsync().ConfigureAwait(true);
         try
@@ -73,7 +90,7 @@ sealed class DesktopNotchWindowService : INotchWindowService, IDisposable
 
             this.Content = content;
             this.geometry = this.options.UseHardwareNotch ? NotchWindowPlatform.GetGeometry() : NotchGeometry.None;
-            this.notch = this.CreateNotch(content);
+            this.notch = this.CreateNotch(content, configure);
 
             var page = new ContentPage
             {
@@ -106,9 +123,22 @@ sealed class DesktopNotchWindowService : INotchWindowService, IDisposable
         if (this.platformWindow != null)
             NotchWindowPlatform.Hide(this.platformWindow);
         this.IsVisible = false;
+
+        this.pointerTracking?.Dispose();
+        this.pointerTracking = null;
+        this.OnPointerChanged(false);
     }
 
-    NotchView CreateNotch(View? content)
+    void OnPointerChanged(bool over)
+    {
+        if (over == this.IsPointerOver)
+            return;
+
+        this.IsPointerOver = over;
+        (over ? this.PointerEntered : this.PointerExited)?.Invoke(this, EventArgs.Empty);
+    }
+
+    NotchView CreateNotch(View? content, Action<NotchView>? configure)
     {
         var view = new NotchView
         {
@@ -134,6 +164,7 @@ sealed class DesktopNotchWindowService : INotchWindowService, IDisposable
         }
 
         this.options.Configure?.Invoke(view);
+        configure?.Invoke(view);
 
         view.NotchSizeChanged += this.OnNotchSizeChanged;
         view.Tapped += this.OnNotchTapped;
@@ -207,6 +238,9 @@ sealed class DesktopNotchWindowService : INotchWindowService, IDisposable
 
     public void Dispose()
     {
+        this.pointerTracking?.Dispose();
+        this.pointerTracking = null;
+
         var native = this.platformWindow;
         this.platformWindow = null;
         if (native != null)

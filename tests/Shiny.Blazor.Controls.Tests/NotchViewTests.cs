@@ -49,18 +49,38 @@ public class NotchViewTests
     {
         var html = await RenderAsync(("ChildContent", Text("Now playing")));
 
-        html.ShouldContain("class=\"shiny-notch shiny-notch--island");
+        html.ShouldContain("class=\"shiny-notch shiny-notch--notch shiny-notch--screen");
         html.ShouldContain("shiny-notch__content");
         html.ShouldContain("Now playing");
     }
 
 
     [Fact]
-    public async Task NotchShapeGetsItsOwnClass()
+    public async Task IslandShapeGetsItsOwnClass()
     {
-        var html = await RenderAsync(("Shape", NotchShape.Notch));
+        var html = await RenderAsync(("Shape", NotchShape.Island));
 
-        html.ShouldContain("shiny-notch--notch");
+        html.ShouldContain("shiny-notch--island");
+    }
+
+
+    [Fact]
+    public async Task OverlaysTheScreenAsAManualPopoverByDefault()
+    {
+        var html = await RenderAsync();
+
+        html.ShouldContain("popover=\"manual\"");
+        html.ShouldContain("shiny-notch--screen");
+    }
+
+
+    [Fact]
+    public async Task InlineIsNotAPopover()
+    {
+        var html = await RenderAsync(("Inline", true));
+
+        html.ShouldNotContain("popover");
+        html.ShouldContain("shiny-notch--inline");
     }
 
 

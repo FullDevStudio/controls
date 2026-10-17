@@ -4,6 +4,10 @@
 // pixels, and the stylesheet's transition does the animating. The content is laid out at its own
 // natural size (width: max-content, capped to the space available) and never at the surface's, so it
 // does not re-wrap while the surface springs around it. Mirrors NotchView.ComputeNotchSize on MAUI.
+//
+// Screen placement (the default) opens the root as a manual popover, putting it in the top layer above
+// the whole page regardless of where the component sits in the tree. Its width cap is then the
+// viewport, not the parent.
 
 const states = new WeakMap();
 const AUTO_RADIUS_CAP = 28;
@@ -17,14 +21,17 @@ export function init(root, dotnet, opts) {
         update(root, opts);
         return;
     }
-    const state = { dotnet, opts, observer: null, raf: 0, width: -1, height: -1, observed: null };
+    const state = { dotnet, opts, observer: null, raf: 0, width: -1, height: -1, observed: null, onResize: null };
 
     if (typeof ResizeObserver === 'function') {
         state.observer = new ResizeObserver(() => schedule(root, state));
         if (root.parentElement) state.observer.observe(root.parentElement);
     }
+    state.onResize = () => schedule(root, state);
+    window.addEventListener('resize', state.onResize);
 
     states.set(root, state);
+    place(root, opts);
 
     // First placement is instant: a notch that is there when the page opens should not grow into place.
     root.classList.add('is-instant');
@@ -37,6 +44,7 @@ export function update(root, opts) {
     const state = states.get(root);
     if (!state) return;
     state.opts = opts;
+    place(root, opts);
     schedule(root, state);
 }
 
@@ -49,8 +57,29 @@ export function dispose(root) {
     const state = states.get(root);
     if (!state) return;
     state.observer?.disconnect();
+    window.removeEventListener('resize', state.onResize);
     cancelAnimationFrame(state.raf);
+    closePopover(root);
     states.delete(root);
+}
+
+// Blazor renders the popover attribute (or not) from Inline; this only opens or closes it to match.
+function place(root, opts) {
+    if (opts?.screen) {
+        if (typeof root.showPopover === 'function' && root.hasAttribute('popover')) {
+            try {
+                if (!root.matches(':popover-open')) root.showPopover();
+            } catch { /* not connected yet, or no popover support: the fixed-position fallback applies */ }
+        }
+    } else {
+        closePopover(root);
+    }
+}
+
+function closePopover(root) {
+    try {
+        if (typeof root.hidePopover === 'function' && root.matches(':popover-open')) root.hidePopover();
+    } catch { }
 }
 
 function schedule(root, state) {
@@ -81,7 +110,9 @@ function measure(root, state) {
     const insetX = px(cs.paddingLeft) + px(cs.paddingRight) + px(cs.borderLeftWidth) + px(cs.borderRightWidth);
     const insetY = px(cs.paddingTop) + px(cs.paddingBottom) + px(cs.borderTopWidth) + px(cs.borderBottomWidth);
 
-    const available = root.parentElement ? root.parentElement.clientWidth : Infinity;
+    const available = o.screen
+        ? document.documentElement.clientWidth
+        : (root.parentElement ? root.parentElement.clientWidth : Infinity);
     let widthCap = o.maxWidth > 0 ? Math.min(o.maxWidth, available || Infinity) : (available || Infinity);
     const heightCap = o.maxHeight > 0 ? o.maxHeight : Infinity;
     const minW = o.minWidth || 0;

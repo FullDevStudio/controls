@@ -203,8 +203,22 @@ await notch.ShowAsync(new Label { Text = "Recording 0:42", TextColor = Colors.Wh
 await notch.SetContentAsync(new NowPlayingView());   // grows out of the notch
 await notch.SetContentAsync(null);                   // back into the notch
 notch.Hide();
+
+// a "live activity" beside the camera rather than below it
+var cutout = notch.HardwareNotchSize;               // Size.Zero without a notch
+await notch.SetContentAsync(new PeekView(cutout.Width), n =>
+{
+    n.ContentPadding = new Thickness(10, 0);
+    n.MinNotchHeight = cutout.Height;
+});
+
+// expand on hover
+notch.PointerEntered += (_, _) => ShowPanel();
+notch.PointerExited += (_, _) => ShowPeek();
 #endif
 ```
+
+`SetContentAsync`/`ShowAsync` take an optional `Action<NotchView>` that styles the notch for that content only, after `NotchWindowOptions.Configure`. `PointerEntered`/`PointerExited` (and `IsPointerOver`) report the mouse over the notch window from anywhere on screen. They come from mouse event monitors, which need no accessibility permission.
 
 | `NotchWindowOptions` | Default | |
 |---|---|---|
