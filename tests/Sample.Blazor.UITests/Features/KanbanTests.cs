@@ -244,11 +244,35 @@ public class KanbanTests : BlazorTest
         await Page.Mouse.MoveAsync(startX + 12, startY + 12, new() { Steps = 3 });
         await Page.WaitForTimeoutAsync(250);
 
-        var to = await Cell(toColumnId).BoundingBoxAsync() ?? throw new InvalidOperationException("cell has no box");
-        var endX = to.X + to.Width / 2;
-        var endY = to.Y + Math.Min(to.Height - 10, 60);
+        // On a phone the target lane is usually off the side of the screen. Rest the pointer at that
+        // edge so the board auto-scrolls, as a user would, until the lane is in view; then drop on it.
+        var width = Page.ViewportSize!.Width;
+        float endX = 0, endY = 0;
+        for (var i = 0; i < 60; i++)
+        {
+            var to = await Cell(toColumnId).BoundingBoxAsync() ?? throw new InvalidOperationException("cell has no box");
+            endX = to.X + to.Width / 2;
+            endY = to.Y + Math.Min(to.Height - 10, 60);
+            if (endX >= 24 && endX <= width - 24)
+                break;
+            await Page.Mouse.MoveAsync(endX > width ? width - 6 : 6, endY, new() { Steps = 4 });
+            await Page.WaitForTimeoutAsync(100);
+        }
         await Page.Mouse.MoveAsync(endX, endY, new() { Steps = 12 });
         await Page.WaitForTimeoutAsync(150);
+        // auto-scroll can still be carrying the board while the pointer travels; follow the lane until
+        // the pointer is resting on its middle
+        for (var i = 0; i < 8; i++)
+        {
+            var to = (await Cell(toColumnId).BoundingBoxAsync())!;
+            var x = to.X + to.Width / 2;
+            if (Math.Abs(x - endX) < 4)
+                break;
+            endX = x;
+            endY = to.Y + Math.Min(to.Height - 10, 60);
+            await Page.Mouse.MoveAsync(endX, endY, new() { Steps = 4 });
+            await Page.WaitForTimeoutAsync(150);
+        }
         await Page.Mouse.MoveAsync(endX + 2, endY + 2);
         await Page.Mouse.UpAsync();
     }

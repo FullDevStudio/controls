@@ -29,7 +29,7 @@
         <SingleProject>true</SingleProject>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <RootNamespace>Shiny.Maui.Controls.Desktop</RootNamespace>
-        <Description>Desktop-only .NET MAUI controls — system tray / status bar icon (Windows, macOS AppKit + Catalyst, Linux ayatana-appindicator), Visual-Studio-style docking (dockable tool windows, tabbed groups, splitters, auto-hide rails, tear-off floating windows), global hotkeys, the native key sources for in-app keyboard shortcuts on AppKit, GTK4 and Catalyst, and the desktop-window presentation of Shiny's quick entry popup and screen-edge glow.</Description>
+        <Description>Desktop-only .NET MAUI controls — system tray / status bar icon (Windows, macOS AppKit + Catalyst, Linux ayatana-appindicator), Visual-Studio-style docking (dockable tool windows, tabbed groups, splitters, auto-hide rails, tear-off floating windows), global hotkeys, the native key sources for in-app keyboard shortcuts on AppKit, GTK4 and Catalyst, and the desktop-window presentation of Shiny's quick entry popup and screen-edge glow, and a NotchView that lives in the MacBook camera notch (macOS).</Description>
     </PropertyGroup>
 
     <ItemGroup>

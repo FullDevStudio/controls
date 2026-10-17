@@ -60,6 +60,7 @@
                   xmlns:kbshortcuts="clr-namespace:Sample.Features.KeyboardShortcuts"
                   xmlns:progressbar="clr-namespace:Sample.Features.ProgressBar"
                   xmlns:progressline="clr-namespace:Sample.Features.ProgressLine"
+                  xmlns:notch="clr-namespace:Sample.Features.Notch"
                   xmlns:marquee="clr-namespace:Sample.Features.Marquee"
                   xmlns:borderanimations="clr-namespace:Sample.Features.BorderAnimations"
                   xmlns:animatedbackgrounds="clr-namespace:Sample.Features.AnimatedBackgrounds"
@@ -944,6 +945,14 @@
                              Color="{AppThemeBinding Light=#DB2777, Dark=#F472B6}" />
         </FlyoutItem.FlyoutIcon>
         <ShellContent ContentTemplate="{DataTemplate feedback:FeedbackPage}" Route="feedback" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Notch">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x25AC;" Size="20"
+                             Color="{AppThemeBinding Light=#DB2777, Dark=#F472B6}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate notch:NotchPage}" Route="notch" />
     </FlyoutItem>
 
     <FlyoutItem Title="Progress Bar">

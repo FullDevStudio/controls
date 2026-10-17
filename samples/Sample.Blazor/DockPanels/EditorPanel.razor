@@ -1,4 +1,4 @@
-<pre style="margin:0;padding:12px;font-family:ui-monospace,monospace;font-size:12px;line-height:1.7;background:transparent;color:var(--shiny-color-on-surface, #1f2937);"><span style="color:var(--shiny-color-tertiary, #7c3aed);">var</span> builder = WebAssemblyHostBuilder.CreateDefault(args);
+<pre style="margin:0;padding:12px;overflow-x:auto;font-family:ui-monospace,monospace;font-size:12px;line-height:1.7;background:transparent;color:var(--shiny-color-on-surface, #1f2937);"><span style="color:var(--shiny-color-tertiary, #7c3aed);">var</span> builder = WebAssemblyHostBuilder.CreateDefault(args);
 
 builder.Services.AddShinyDocking();
 builder.Services.AddDockPanel&lt;ExplorerPanel&gt;(<span style="color:#16a34a;">"explorer"</span>, <span style="color:#16a34a;">"Explorer"</span>);
@@ -6,7 +6,7 @@ builder.Services.AddDockPanel&lt;OutputPanel&gt;(<span style="color:#16a34a;">"o
 
 <span style="color:var(--shiny-color-on-surface-variant, #9ca3af);">// counter below proves keep-alive: switch tabs and it keeps its value</span>
 </pre>
-<div style="padding:0 12px 12px;display:flex;gap:10px;align-items:center;font-size:12px;">
+<div style="padding:0 12px 12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:12px;">
     <button style="padding:4px 10px;" @onclick="() => count++">Click me</button>
     <span>Clicks: <strong id="editor-counter">@count</strong></span>
 </div>

@@ -13,6 +13,13 @@ public partial class TrayIconViewModel : ObservableObject
     readonly ITrayIconFactory? factory;
     Shiny.Maui.Controls.Desktop.TrayIcon.ITrayIcon? icon;
 
+    // Live rows in the tray menu, driven from a background timer to show they move while the
+    // menu is open — the same shape as a usage meter against a limit.
+    readonly TrayProgressItem sessionUsage = new("Session usage", 0.18, "Resets in 4 hr 12 min");
+    readonly TrayProgressItem syncProgress = new("Syncing library", 0) { Tone = TrayTone.Success };
+    Timer? usageTimer;
+    int usageTicks;
+
     [ObservableProperty] string status = "Not running";
     [ObservableProperty] string tooltip = "Shiny Controls Sample";
     [ObservableProperty] string title = string.Empty;
@@ -68,6 +75,7 @@ public partial class TrayIconViewModel : ObservableObject
             if (!string.IsNullOrWhiteSpace(this.Badge))
                 this.icon.Badge = this.Badge;
             this.icon.SetMenu(this.BuildMenu());
+            this.usageTimer = new Timer(_ => this.TickUsage(), null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
             this.icon.PrimaryClick += (_, e) => this.LogEvent($"Primary click @ {e.X},{e.Y}");
             this.icon.SecondaryClick += (_, e) => this.LogEvent($"Secondary click @ {e.X},{e.Y}");
             this.icon.DoubleClick += (_, e) => this.LogEvent($"Double click @ {e.X},{e.Y}");
@@ -86,6 +94,8 @@ public partial class TrayIconViewModel : ObservableObject
     void Stop()
     {
         if (this.icon == null) return;
+        this.usageTimer?.Dispose();
+        this.usageTimer = null;
         this.icon.Dispose();
         this.icon = null;
         this.IsAnimating = false;
@@ -162,6 +172,21 @@ public partial class TrayIconViewModel : ObservableObject
     [RelayCommand]
     void ClearLog() => this.EventLog.Clear();
 
+    void TickUsage()
+    {
+        // runs on a thread-pool thread; the tray repaints the rows itself
+        this.usageTicks++;
+        var usage = Math.Min(1, this.sessionUsage.Value + 0.03);
+        if (usage >= 1) usage = 0.05;
+        this.sessionUsage.Value = usage;
+        this.sessionUsage.Tone = usage >= 0.9 ? TrayTone.Danger : usage >= 0.75 ? TrayTone.Warning : TrayTone.Accent;
+        this.sessionUsage.Caption = $"Resets in 4 hr {Math.Max(0, 12 - this.usageTicks / 5)} min";
+
+        var sync = this.syncProgress.Value + 0.1;
+        this.syncProgress.Value = sync > 1 ? 0 : sync;
+        this.syncProgress.Detail = $"{(int)Math.Round(this.syncProgress.Value * 40)} of 40";
+    }
+
     TrayMenu BuildMenu() => TrayMenu.Build(b => b
         .Item(new TrayMenuItem("Increment counter", this.Increment) { Accelerator = "Ctrl+I", Icon = OpenLogoStream })
         .Item(new TrayMenuItem("Send notification", () => this.SendNotification()) { Accelerator = "Ctrl+N", Icon = OpenLogoStream })
@@ -170,6 +195,12 @@ public partial class TrayIconViewModel : ObservableObject
             this.NotificationsEnabled = v;
             this.LogEvent("Notifications " + (v ? "enabled" : "disabled"));
         })
+        .Separator()
+        .Progress(this.sessionUsage)
+        .Progress(this.syncProgress)
+        .Separator()
+        .Item(new TrayMenuItem("Upgrade plan", () => this.LogEvent("Upgrade clicked")) { Pill = new TrayPill("Pro", TrayTone.Accent) })
+        .Item(new TrayMenuItem("What's new", () => this.LogEvent("What's new clicked")) { Pill = new TrayPill("New", TrayTone.Success) })
         .Separator()
         .Submenu("Status", s => s
             .Item("Available", () => this.LogEvent("Status → Available"))

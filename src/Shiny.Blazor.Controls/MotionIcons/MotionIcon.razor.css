@@ -10,7 +10,7 @@
     vertical-align: middle;
 }
 
-.shiny-motion-icon svg {
+.shiny-motion-icon ::deep svg {
     display: block;
     overflow: visible;
 }

@@ -44,6 +44,7 @@ public static class MauiProgram
             .UseTrayIcon()
             .UseFileDrop()
             .UseDesktopQuickEntry()
+            .UseDesktopNotch()
             // AppKit, GTK4 and Catalyst key sources for keyboard shortcuts (Windows/iOS/Android need nothing)
             .UseDesktopKeyboardShortcuts()
             .UseShinyMediaElement()

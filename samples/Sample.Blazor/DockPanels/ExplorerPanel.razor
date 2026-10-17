@@ -14,6 +14,8 @@
 <style>
     .dock-demo-panel { padding: 10px; font-size: 12px; }
     .dock-demo-tree { list-style: none; margin: 0; padding: 0; line-height: 1.9; }
+    /* a file name in a narrow pane ends in "…" rather than making the pane scroll sideways */
+    .dock-demo-tree li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .dock-demo-tree .indent-1 { padding-left: 16px; }
     .dock-demo-tree .indent-2 { padding-left: 32px; }
 </style>

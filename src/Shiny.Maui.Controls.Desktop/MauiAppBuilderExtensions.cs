@@ -4,7 +4,11 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Hosting;
+using Shiny.Maui.Controls;
 using Shiny.Maui.Controls.Desktop.Docking;
+#if MACOS
+using Shiny.Maui.Controls.Desktop.Notch;
+#endif
 using Shiny.Maui.Controls.Desktop.QuickEntry;
 using Shiny.Maui.Controls.QuickEntry;
 using Shiny.Maui.Controls.Desktop.TrayIcon;
@@ -106,6 +110,38 @@ public static class DesktopMauiAppBuilderExtensions
         PromptEntryPolish.Handler = QuickEntryPlatform.PolishEntry;
         return builder;
     }
+
+#if MACOS
+    /// <summary>
+    /// Registers <see cref="INotchWindowService"/>: a <see cref="NotchView"/> in the MacBook camera notch,
+    /// above the menu bar and every other application, that grows out of the notch to fit its content.
+    /// </summary>
+    /// <example>
+    /// <code>
+    /// builder
+    ///     .UseShinyControls()
+    ///     .UseDesktopNotch(o => o.Configure = notch => notch.SurfaceColor = Colors.Black);
+    ///
+    /// // later
+    /// await notchService.ShowAsync(new Label { Text = "Recording 0:42", TextColor = Colors.White });
+    /// </code>
+    /// </example>
+    /// <remarks>
+    /// macOS AppKit (<c>net10.0-macos</c>) only, so call it inside <c>#if MACOS</c>. On a display without a
+    /// notch it floats as an island below the menu bar.
+    /// </remarks>
+    public static MauiAppBuilder UseDesktopNotch(this MauiAppBuilder builder, Action<NotchWindowOptions>? configure = null)
+    {
+        var options = new NotchWindowOptions();
+        configure?.Invoke(options);
+        builder.Services.TryAddSingleton(options);
+        builder.Services.TryAddSingleton<INotchWindowService>(sp => new DesktopNotchWindowService(
+            sp.GetRequiredService<NotchWindowOptions>(),
+            sp.GetService<ILogger<DesktopNotchWindowService>>()
+        ));
+        return builder;
+    }
+#endif
 
     /// <summary>
     /// Supplies the native key sources that make Shiny's keyboard shortcuts work on macOS (AppKit),

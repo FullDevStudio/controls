@@ -377,6 +377,7 @@ colour, and why appearance properties default to `-1` rather than a real value.
 | **[ProgressLine](docs/controls/progressline.md)** | The thin page-edge loading line, docked clear of the nav and tab bars |
 | **[Confetti](docs/controls/confetti.md)** | Magic UI-style confetti bursts on any tap or click, or from code, with five presets |
 | **[BadgeView](docs/controls/badge.md)** | Content-wrapping corner badge with text, dot, count overflow and pulse |
+| **[NotchView](docs/controls/notch.md)** | Dynamic Island / camera-notch surface that morphs to fit any content, and grows out of the MacBook notch on macOS |
 | **[Avatar & AvatarGroup](docs/controls/avatar.md)** | Picture → initials → silhouette with a presence dot; overlapping facepile with a +N chip |
 | **[PillView](docs/controls/pillview.md)** | Status pills and chips with preset themes and accessible contrast |
 | **[SplashScreen](docs/controls/splash-screen.md)** | A boot splash that paints before Blazor starts (Blazor) |

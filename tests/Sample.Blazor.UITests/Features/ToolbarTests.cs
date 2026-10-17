@@ -23,6 +23,23 @@ public class ToolbarTests : BlazorTest
 
     ILocator LastTapped => Page.Locator("p.state strong").First;
 
+    /// <summary>
+    /// Opens a top-level dropdown by name: straight off the bar, or - on a phone, where it has folded
+    /// away - from the overflow menu, where it is a submenu with the same entries.
+    /// </summary>
+    static async Task OpenDropdown(ILocator section, string name)
+    {
+        // by accessible name: an icon-only item carries its text as a title, not as visible text
+        var item = Items(section).And(section.GetByRole(AriaRole.Button, new() { Name = name, Exact = true }));
+        if (await item.CountAsync() > 0)
+        {
+            await item.First.ClickAsync();
+            return;
+        }
+        await More(section).ClickAsync();
+        await section.GetByRole(AriaRole.Menuitem, new() { Name = name, Exact = true }).ClickAsync();
+    }
+
     [Test]
     public async Task Clicking_An_Item_Raises_ItemClicked()
     {
@@ -117,7 +134,7 @@ public class ToolbarTests : BlazorTest
         await Open("toolbar");
 
         var section = Section("Dropdown buttons");
-        await Items(section).Nth(1).ClickAsync(); // View
+        await OpenDropdown(section, "View");
 
         var presenter = section.GetByRole(AriaRole.Menuitem, new() { Name = "Presenter mode" });
         await Expect(presenter).ToBeDisabledAsync();

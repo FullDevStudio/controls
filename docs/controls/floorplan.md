@@ -235,7 +235,7 @@ bindable properties: they all need the surface size, and a view model has no bus
 On MAUI, `ZoomToFit()` is safe to call before the view has ever painted — which is the usual case,
 since the natural place to call it is the page's constructor. The surface has no size until the first
 frame, so the request is held and applied there. On Blazor the same thing happens automatically:
-`FitOnLoad` (on by default) fits the plan on the first painted frame.
+`FitOnLoad` (on by default) fits the plan on the first painted frame, and on Blazor fits it again whenever the canvas changes size, until the user takes the view over (a press, the wheel, or `ZoomIn`/`ZoomOut`/`ZoomToFit`/`ScrollTo`). After that a resize leaves their view alone.
 
 ## Selection
 

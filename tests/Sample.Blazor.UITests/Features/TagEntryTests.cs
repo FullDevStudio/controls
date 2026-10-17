@@ -151,7 +151,10 @@ public class TagEntryTests : BlazorTest
         await Expect(Input("Read-only...")).Not.ToBeEditableAsync();
         await Expect(Box("Read-only...").Locator(".shiny-tags__chip-remove")).ToHaveCountAsync(0);
         await Input("Read-only...").FocusAsync();
-        await Page.Keyboard.PressAsync("Backspace");
+        // Not in WebKit: Playwright's WebKit build still treats Backspace in a read-only field as the
+        // browser's Back (old Safari did, Safari 12+ does not), which leaves the page altogether.
+        if (BlazorTestSettings.Browser != "webkit")
+            await Page.Keyboard.PressAsync("Backspace");
         await Page.Keyboard.TypeAsync("nope,");
         await Expect(Chips("Read-only...")).ToHaveTextAsync(["look", "no touching"]);
 

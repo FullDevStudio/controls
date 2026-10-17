@@ -63,11 +63,52 @@ static partial class AppKitInterop
     [return: MarshalAs(UnmanagedType.U1)]
     public static partial bool MsgSendBoolReturn(IntPtr receiver, IntPtr selector);
 
+    [LibraryImport(Libobjc, EntryPoint = "objc_msgSend")]
+    public static partial IntPtr MsgSendRect(IntPtr receiver, IntPtr selector, NSRect rect);
+
+    [LibraryImport(Libobjc, EntryPoint = "objc_msgSend")]
+    public static partial IntPtr MsgSendPtrSize(IntPtr receiver, IntPtr selector, IntPtr arg1, NSSize size);
+
+    [LibraryImport(Libobjc, EntryPoint = "objc_msgSend")]
+    private static partial NSRect MsgSendRectReturn(IntPtr receiver, IntPtr selector);
+
+    // x86_64 returns a struct this size through a hidden pointer, so it needs the _stret entry;
+    // arm64 has no _stret variant and returns it in registers through plain objc_msgSend.
+    [LibraryImport(Libobjc, EntryPoint = "objc_msgSend_stret")]
+    private static partial void MsgSendRectStret(out NSRect result, IntPtr receiver, IntPtr selector);
+
+    public static NSRect GetRect(IntPtr receiver, IntPtr selector)
+    {
+        if (RuntimeInformation.ProcessArchitecture == Architecture.X64)
+        {
+            MsgSendRectStret(out var r, receiver, selector);
+            return r;
+        }
+        return MsgSendRectReturn(receiver, selector);
+    }
+
     [StructLayout(LayoutKind.Sequential)]
     public struct NSSize
     {
         public double Width;
         public double Height;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct NSRect
+    {
+        public double X;
+        public double Y;
+        public double Width;
+        public double Height;
+
+        public NSRect(double x, double y, double width, double height)
+        {
+            this.X = x;
+            this.Y = y;
+            this.Width = width;
+            this.Height = height;
+        }
     }
 
     static bool initialized;

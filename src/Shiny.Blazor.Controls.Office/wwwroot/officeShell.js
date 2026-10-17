@@ -19,7 +19,15 @@ export function observe(el, dotnet) {
         dotnet.invokeMethodAsync('OnShellResized', width).catch(() => { });
     };
 
-    const observer = new ResizeObserver(report);
+    // Deferred a frame and coalesced: the report re-renders the shell, and on WebAssembly that
+    // render runs inside this callback, so laying out again in the same observer pass is what
+    // WebKit reports as "ResizeObserver loop completed with undelivered notifications" (as the
+    // ribbon did).
+    let frame = 0;
+    const observer = new ResizeObserver(() => {
+        if (frame) return;
+        frame = requestAnimationFrame(() => { frame = 0; report(); });
+    });
     observer.observe(el);
     observers.set(el, observer);
     report();

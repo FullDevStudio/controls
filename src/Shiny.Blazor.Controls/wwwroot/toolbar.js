@@ -16,7 +16,12 @@ export function init(root, dotnet) {
     const state = { root, inner, dotnet, lastCount: -1 };
     states.set(root, state);
 
-    const ro = new ResizeObserver(() => measure(state));
+    // a frame later, coalesced: measure() can re-render the bar, which on WebAssembly happens inside
+    // this callback - a layout in the same observer pass is WebKit's "ResizeObserver loop" error
+    const ro = new ResizeObserver(() => {
+        if (state.roFrame) return;
+        state.roFrame = requestAnimationFrame(() => { state.roFrame = 0; measure(state); });
+    });
     ro.observe(inner);
     state.ro = ro;
 
@@ -41,6 +46,7 @@ export function dispose(root) {
     const state = states.get(root);
     if (!state) return;
     state.ro?.disconnect();
+    if (state.roFrame) cancelAnimationFrame(state.roFrame);
     states.delete(root);
 }
 
@@ -58,6 +64,15 @@ const SUB_GAP = 4;
  */
 export function placeMenus(root, backdrop) {
     hook(root, backdrop);
+
+    // Escape is handled on the bar's root, so focus has to be inside it. A click focuses the button
+    // that opened the menu in Chromium, but Safari never focuses a clicked button, so there the
+    // keydown went to <body> and Escape did nothing. Moving focus to the first entry is also what the
+    // ARIA menu-button pattern asks for.
+    if (!root.contains(document.activeElement)) {
+        const first = root.querySelector('.shiny-toolbar-menu [role=menuitem]:not([disabled]):not([aria-disabled=true])');
+        first?.focus({ preventScroll: true });
+    }
 
     // the scrim is shown first so it sits under the panels in the top layer's paint order
     if (backdrop) raise(backdrop);

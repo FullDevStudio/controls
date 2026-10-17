@@ -17,10 +17,28 @@ public class DiagramTests : BlazorTest
     ILocator Button(string name) => Page.GetByRole(AriaRole.Button, new() { Name = name, Exact = true });
 
     /// <summary>Labels don't take pointer events (the shape under them does), so click at the label's centre.</summary>
+    /// <summary>
+    /// The label's centre from the browser's own getBoundingClientRect. Playwright's BoundingBoxAsync
+    /// is wrong for SVG text in WebKit (it put "Platform" 60px left and 280px above where it is drawn),
+    /// so every click there landed on empty canvas.
+    /// </summary>
+    static async Task<(float X, float Y)> CentreOf(ILocator label)
+    {
+        var c = await label.EvaluateAsync<float[]>("e => { const r = e.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }");
+        return (c[0], c[1]);
+    }
+
     async Task ClickNode(string text)
     {
-        var box = (await Label(text).BoundingBoxAsync())!;
-        await Page.Mouse.ClickAsync(box.X + box.Width / 2, box.Y + box.Height / 2);
+        // on a phone the surface starts below the fold; mouse input only lands on screen
+        // centred, not merely "in view": on a phone the gallery's bottom tab bar covers the last
+        // strip of the screen, and a label parked there took the click to another page
+        await Label(text).EvaluateAsync("e => e.scrollIntoView({ block: 'center' })");
+        // the surface re-reads its screen origin from the scroll event, asynchronously; a press in the
+        // same instant as the scroll would hit-test against the old origin
+        await Page.WaitForTimeoutAsync(250);
+        var (x, y) = await CentreOf(Label(text));
+        await Page.Mouse.ClickAsync(x, y);
     }
 
     [Test]
@@ -111,9 +129,9 @@ public class DiagramTests : BlazorTest
         await Open("diagram");
         var label = Label("Platform");
         var before = await label.GetAttributeAsync("x");
-        var box = (await label.BoundingBoxAsync())!;
-        var x = box.X + box.Width / 2;
-        var y = box.Y + box.Height / 2;
+        await label.EvaluateAsync("e => e.scrollIntoView({ block: 'center' })");
+        await Page.WaitForTimeoutAsync(250); // see ClickNode
+        var (x, y) = await CentreOf(label);
 
         await Page.Mouse.MoveAsync(x, y);
         await Page.Mouse.DownAsync();

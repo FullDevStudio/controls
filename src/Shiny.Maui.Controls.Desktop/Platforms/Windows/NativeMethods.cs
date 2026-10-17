@@ -195,5 +195,128 @@ static partial class NativeMethods
     public const int SM_CXMENUCHECK = 71;
     public const int SM_CYMENUCHECK = 72;
 
+    // ── owner-drawn menu items (tray pills and progress rows) ──
+    public const uint MF_OWNERDRAW = 0x00000100;
+    public const uint MF_DISABLED = 0x00000002;
+    public const uint WM_DRAWITEM = 0x002B;
+    public const uint WM_MEASUREITEM = 0x002C;
+    public const uint ODT_MENU = 1;
+    public const uint ODS_SELECTED = 0x0001;
+    public const uint ODS_GRAYED = 0x0002;
+    public const uint ODS_DISABLED = 0x0004;
+
+    public const int MENU_POPUPBACKGROUND = 9;
+    public const int MENU_POPUPITEM = 14;
+    public const int MPI_NORMAL = 1;
+    public const int MPI_HOT = 2;
+    public const int MPI_DISABLED = 3;
+    public const int MPI_DISABLEDHOT = 4;
+    public const int TMT_TEXTCOLOR = 3803;
+
+    public const int COLOR_MENU = 4;
+    public const int COLOR_MENUTEXT = 7;
+    public const int COLOR_HIGHLIGHT = 13;
+    public const int COLOR_HIGHLIGHTTEXT = 14;
+    public const int COLOR_GRAYTEXT = 17;
+
+    public const uint DT_LEFT = 0x0000;
+    public const uint DT_RIGHT = 0x0002;
+    public const uint DT_VCENTER = 0x0004;
+    public const uint DT_SINGLELINE = 0x0020;
+    public const uint DT_CALCRECT = 0x0400;
+    public const uint DT_NOPREFIX = 0x0800;
+    public const uint DT_END_ELLIPSIS = 0x8000;
+    public const int TRANSPARENT = 1;
+    public const int LOGPIXELSY = 90;
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct RECT { public int Left; public int Top; public int Right; public int Bottom; }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct MEASUREITEMSTRUCT
+    {
+        public uint CtlType;
+        public uint CtlID;
+        public uint itemID;
+        public uint itemWidth;
+        public uint itemHeight;
+        public UIntPtr itemData;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct DRAWITEMSTRUCT
+    {
+        public uint CtlType;
+        public uint CtlID;
+        public uint itemID;
+        public uint itemAction;
+        public uint itemState;
+        public IntPtr hwndItem;
+        public IntPtr hDC;
+        public RECT rcItem;
+        public UIntPtr itemData;
+    }
+
+    /// <summary>AppendMenu with MF_OWNERDRAW, where the last argument is item data rather than text.</summary>
+    [LibraryImport("user32.dll", EntryPoint = "AppendMenuW")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool AppendMenuOwnerDraw(IntPtr hMenu, uint uFlags, UIntPtr uIDNewItem, IntPtr itemData);
+
+    [LibraryImport("uxtheme.dll", StringMarshalling = StringMarshalling.Utf16)]
+    public static partial IntPtr OpenThemeData(IntPtr hwnd, string classList);
+
+    [LibraryImport("uxtheme.dll")]
+    public static partial int CloseThemeData(IntPtr hTheme);
+
+    [LibraryImport("uxtheme.dll")]
+    public static partial int DrawThemeBackground(IntPtr hTheme, IntPtr hdc, int partId, int stateId, ref RECT rect, IntPtr clipRect);
+
+    [LibraryImport("uxtheme.dll")]
+    public static partial int GetThemeColor(IntPtr hTheme, int partId, int stateId, int propId, out int color);
+
+    [LibraryImport("user32.dll")]
+    public static partial int GetSysColor(int index);
+
+    [LibraryImport("user32.dll")]
+    public static partial IntPtr GetSysColorBrush(int index);
+
+    [LibraryImport("user32.dll")]
+    public static partial int FillRect(IntPtr hdc, ref RECT rect, IntPtr brush);
+
+    [LibraryImport("user32.dll", EntryPoint = "DrawTextW", StringMarshalling = StringMarshalling.Utf16)]
+    public static partial int DrawText(IntPtr hdc, string text, int count, ref RECT rect, uint format);
+
+    [LibraryImport("gdi32.dll")]
+    public static partial IntPtr SelectObject(IntPtr hdc, IntPtr obj);
+
+    [LibraryImport("gdi32.dll")]
+    public static partial int SetTextColor(IntPtr hdc, int color);
+
+    [LibraryImport("gdi32.dll")]
+    public static partial int SetBkMode(IntPtr hdc, int mode);
+
+    [LibraryImport("gdi32.dll")]
+    public static partial int GetDeviceCaps(IntPtr hdc, int index);
+
+    [LibraryImport("user32.dll")]
+    public static partial IntPtr GetDC(IntPtr hwnd);
+
+    [LibraryImport("user32.dll")]
+    public static partial int ReleaseDC(IntPtr hwnd, IntPtr hdc);
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool InvalidateRect(IntPtr hwnd, IntPtr rect, [MarshalAs(UnmanagedType.Bool)] bool erase);
+
+    [LibraryImport("user32.dll")]
+    public static partial uint GetWindowThreadProcessId(IntPtr hwnd, IntPtr processId);
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool EnumThreadWindows(uint threadId, IntPtr callback, IntPtr lParam);
+
+    [LibraryImport("user32.dll", EntryPoint = "GetClassNameW")]
+    public static unsafe partial int GetClassName(IntPtr hwnd, char* className, int maxCount);
+
     public delegate IntPtr WndProcDelegate(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
 }

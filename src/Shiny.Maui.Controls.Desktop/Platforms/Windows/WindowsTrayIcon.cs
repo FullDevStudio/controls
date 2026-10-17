@@ -38,6 +38,9 @@ sealed class WindowsTrayIcon : TrayIconBase
     bool disposed;
     Dictionary<int, Action>? menuActions;
     readonly List<IntPtr> menuBitmaps = new();
+    readonly List<WindowsTrayOwnerDraw.Row> ownerDrawRows = new();
+    IntPtr menuTheme = IntPtr.Zero;
+    volatile bool menuOpen;
     readonly Dictionary<int, Action> hotKeyActions = new();
 
     public WindowsTrayIcon()
@@ -114,6 +117,11 @@ sealed class WindowsTrayIcon : TrayIconBase
                 }
                 return IntPtr.Zero;
             }
+            if (msg == WM_MEASUREITEM || msg == WM_DRAWITEM)
+            {
+                if (icon.HandleOwnerDraw(msg, lParam))
+                    return (IntPtr)1;
+            }
             if (msg == WM_HOTKEY)
             {
                 var hkId = wParam.ToInt32();
@@ -124,6 +132,64 @@ sealed class WindowsTrayIcon : TrayIconBase
             }
         }
         return DefWindowProc(hWnd, msg, wParam, lParam);
+    }
+
+    unsafe bool HandleOwnerDraw(uint msg, IntPtr lParam)
+    {
+        if (msg == WM_MEASUREITEM)
+        {
+            ref var mis = ref *(MEASUREITEMSTRUCT*)lParam;
+            var row = this.OwnerDrawRow(mis.CtlType, mis.itemData);
+            if (row == null) return false;
+            WindowsTrayOwnerDraw.Measure(row, ref mis);
+            return true;
+        }
+        else
+        {
+            ref var dis = ref *(DRAWITEMSTRUCT*)lParam;
+            var row = this.OwnerDrawRow(dis.CtlType, dis.itemData);
+            if (row == null) return false;
+            WindowsTrayOwnerDraw.Draw(row, this.menuTheme, ref dis);
+            return true;
+        }
+    }
+
+    /// <summary>Item data is the row's index + 1, so a zero (a menu we did not build) never matches.</summary>
+    WindowsTrayOwnerDraw.Row? OwnerDrawRow(uint ctlType, UIntPtr itemData)
+    {
+        if (ctlType != ODT_MENU) return null;
+        var index = (long)(ulong)itemData - 1;
+        return index >= 0 && index < this.ownerDrawRows.Count ? this.ownerDrawRows[(int)index] : null;
+    }
+
+    protected override void OnMenuItemUpdated(TrayMenuItemBase item)
+    {
+        if (item is not TrayProgressItem)
+        {
+            base.OnMenuItemUpdated(item);
+            return;
+        }
+        // Owner-drawn rows read their item on every paint, so a closed menu needs nothing. An open
+        // one is a modal popup window of class #32768 on the tray thread; invalidating it repaints
+        // the rows with the new value (InvalidateRect is safe to call from any thread).
+        if (this.menuOpen)
+            RepaintOpenMenus(this.hwnd);
+    }
+
+    static unsafe void RepaintOpenMenus(IntPtr owner)
+    {
+        var thread = GetWindowThreadProcessId(owner, IntPtr.Zero);
+        EnumThreadWindows(thread, (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, int>)&InvalidateIfMenu, IntPtr.Zero);
+    }
+
+    [UnmanagedCallersOnly]
+    static unsafe int InvalidateIfMenu(IntPtr hwnd, IntPtr lParam)
+    {
+        var buffer = stackalloc char[16];
+        var length = GetClassName(hwnd, buffer, 16);
+        if (new ReadOnlySpan<char>(buffer, Math.Max(0, length)).SequenceEqual("#32768"))
+            InvalidateRect(hwnd, IntPtr.Zero, false);
+        return 1;
     }
 
     protected override void OnIconChanged(Func<Stream> factory)
@@ -317,6 +383,9 @@ sealed class WindowsTrayIcon : TrayIconBase
         foreach (var hb in this.menuBitmaps)
             DeleteObject(hb);
         this.menuBitmaps.Clear();
+        foreach (var row in this.ownerDrawRows)
+            row.Dispose();
+        this.ownerDrawRows.Clear();
     }
 
     void UnregisterAllHotKeys()
@@ -336,9 +405,21 @@ sealed class WindowsTrayIcon : TrayIconBase
             this.BuildPopupMenu();
         if (this.popupMenu == IntPtr.Zero) return;
 
+        if (this.menuTheme == IntPtr.Zero)
+            this.menuTheme = OpenThemeData(this.hwnd, "MENU");
+
         GetCursorPos(out var pt);
         SetForegroundWindow(this.hwnd);
-        var cmd = TrackPopupMenuEx(this.popupMenu, TPM_RIGHTBUTTON | TPM_RETURNCMD, pt.X, pt.Y, this.hwnd, IntPtr.Zero);
+        this.menuOpen = true;
+        int cmd;
+        try
+        {
+            cmd = TrackPopupMenuEx(this.popupMenu, TPM_RIGHTBUTTON | TPM_RETURNCMD, pt.X, pt.Y, this.hwnd, IntPtr.Zero);
+        }
+        finally
+        {
+            this.menuOpen = false;
+        }
         if (cmd != 0 && this.menuActions != null && this.menuActions.TryGetValue(cmd, out var action))
             action();
         PostMessageW(this.hwnd, 0, IntPtr.Zero, IntPtr.Zero);
@@ -377,6 +458,40 @@ sealed class WindowsTrayIcon : TrayIconBase
                     var flags = MF_STRING | (check.IsEnabled ? 0 : MF_GRAYED) | (check.IsChecked ? MF_CHECKED : 0);
                     AppendMenu(menu, flags, (UIntPtr)id, FormatLabel(check.Label, null));
                     actions[id] = () => check.RaiseToggled(!check.IsChecked);
+                    break;
+                }
+                case TrayProgressItem progress:
+                {
+                    // informational: disabled so it can't be chosen, drawn in full colour regardless
+                    var id = nextId++;
+                    this.ownerDrawRows.Add(new WindowsTrayOwnerDraw.Row(progress, null));
+                    AppendMenuOwnerDraw(menu, MF_OWNERDRAW | MF_DISABLED, (UIntPtr)id, (IntPtr)this.ownerDrawRows.Count);
+                    break;
+                }
+                case TrayMenuItem { Pill: not null } pilled:
+                {
+                    // Win32 has no way to put anything after a menu label, so the whole row is drawn
+                    var id = nextId++;
+                    System.Drawing.Image? rowIcon = null;
+                    if (pilled.Icon != null)
+                    {
+                        try
+                        {
+                            using var src = pilled.Icon();
+                            using var ms = new MemoryStream();
+                            src.CopyTo(ms);
+                            ms.Position = 0;
+                            using var decoded = SDImage.FromStream(ms);
+                            rowIcon = new SDBitmap(decoded);
+                        }
+                        catch { /* best-effort */ }
+                    }
+                    this.ownerDrawRows.Add(new WindowsTrayOwnerDraw.Row(pilled, rowIcon));
+                    var flags = MF_OWNERDRAW | (pilled.IsEnabled ? 0 : MF_GRAYED);
+                    AppendMenuOwnerDraw(menu, flags, (UIntPtr)id, (IntPtr)this.ownerDrawRows.Count);
+                    actions[id] = () => pilled.RaiseClicked();
+                    if (!string.IsNullOrEmpty(pilled.Accelerator) && pilled.IsEnabled)
+                        this.TryRegisterHotKey(pilled.Accelerator, () => pilled.RaiseClicked());
                     break;
                 }
                 case TrayMenuItem mi:
@@ -481,6 +596,7 @@ sealed class WindowsTrayIcon : TrayIconBase
             Shell_NotifyIcon(NIM_DELETE, ref data);
         }
         this.ReleaseMenuResources();
+        if (this.menuTheme != IntPtr.Zero) CloseThemeData(this.menuTheme);
         if (this.hIcon != IntPtr.Zero) DestroyIcon(this.hIcon);
         lock (Instances) Instances.Remove(this.hwnd);
         DestroyWindow(this.hwnd);

@@ -1,0 +1,28 @@
+.lead { color: var(--shiny-color-on-surface-variant, #666); max-width: 62ch; }
+
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 12px 0; }
+
+.btn {
+    padding: 6px 12px;
+    border: 1px solid var(--shiny-color-outline, #ccc);
+    border-radius: 6px;
+    background: var(--shiny-color-surface, #fff);
+    color: var(--shiny-color-on-surface, #1a1a1a);
+    cursor: pointer;
+}
+
+.chk { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; cursor: pointer; }
+.status { margin-left: auto; font-size: 0.85rem; color: var(--shiny-color-on-surface-variant, #666); }
+
+/* The notebook paints to a canvas that fills its host, so the host needs a definite height. Without
+   one the canvas fell back to its own pixel size, which the high-DPI resize then changed again, and
+   Safari logged "ResizeObserver loop completed with undelivered notifications". */
+.editor-host {
+    height: min(760px, calc(100dvh - 160px));
+    min-height: 420px;
+    border: 1px solid var(--shiny-color-outline, #ccc);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.hint { margin-top: 10px; font-size: 0.85rem; color: var(--shiny-color-on-surface-variant, #666); }

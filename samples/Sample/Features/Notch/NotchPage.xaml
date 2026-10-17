@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:shiny="http://shiny.net/maui/controls"
+    x:Class="Sample.Features.Notch.NotchPage"
+    Title="Notch"
+    AutomationId="NotchPage">
+
+    <!--
+        The notch shares the page's one Grid cell with the scrolling content, so it floats over the top
+        of it. It sizes itself to whatever is inside it and never scrolls - the page does.
+    -->
+    <Grid>
+        <ScrollView>
+            <VerticalStackLayout Padding="16,120,16,16" Spacing="16">
+
+                <Label Text="Put anything inside" FontSize="18" FontAttributes="Bold" />
+                <Label Text="NotchView has no compact or expanded states. Swap its content and it springs to the new size; the content keeps its own size and the surface clips it while it moves." />
+
+                <FlexLayout Wrap="Wrap" JustifyContent="Start">
+                    <Button Text="Empty" Margin="0,0,8,8" AutomationId="NotchEmpty" Clicked="OnEmpty" />
+                    <Button Text="Recording" Margin="0,0,8,8" AutomationId="NotchRecording" Clicked="OnRecording" />
+                    <Button Text="Now playing" Margin="0,0,8,8" AutomationId="NotchPlaying" Clicked="OnPlaying" />
+                    <Button Text="Message" Margin="0,0,8,8" AutomationId="NotchMessage" Clicked="OnMessage" />
+                </FlexLayout>
+
+                <Label Text="Content that changes its own size" FontSize="18" FontAttributes="Bold" />
+                <Label Text="Nothing to call: the notch watches its content. This grows the text of the label inside it." />
+                <HorizontalStackLayout Spacing="8">
+                    <Button Text="Longer" AutomationId="NotchLonger" Clicked="OnLonger" />
+                    <Button Text="Shorter" AutomationId="NotchShorter" Clicked="OnShorter" />
+                </HorizontalStackLayout>
+
+                <Label Text="Shape" FontSize="18" FontAttributes="Bold" />
+                <Label Text="Island floats with every corner rounded. Notch squares the top corners so it hangs from the top edge." />
+                <HorizontalStackLayout Spacing="8">
+                    <Label Text="Notch shape" VerticalOptions="Center" />
+                    <Switch x:Name="ShapeSwitch" AutomationId="NotchShapeSwitch" Toggled="OnShapeToggled" />
+                </HorizontalStackLayout>
+
+                <Label Text="Tapped" FontSize="18" FontAttributes="Bold" />
+                <Label x:Name="TapStatus" Text="Tap the notch surface." AutomationId="NotchTapStatus" />
+
+                <VerticalStackLayout x:Name="DesktopSection" Spacing="8" IsVisible="False">
+                    <Label Text="In the hardware notch (macOS)" FontSize="18" FontAttributes="Bold" />
+                    <Label x:Name="DesktopStatus" Text="INotchWindowService puts a notch in the MacBook camera notch, over every app. Without a notch it floats under the menu bar." />
+                    <HorizontalStackLayout Spacing="8">
+                        <Button Text="Show" AutomationId="DesktopNotchShow" Clicked="OnDesktopShow" />
+                        <Button Text="Next content" AutomationId="DesktopNotchNext" Clicked="OnDesktopNext" />
+                        <Button Text="Hide" AutomationId="DesktopNotchHide" Clicked="OnDesktopHide" />
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <shiny:NotchView x:Name="Notch"
+                         AutomationId="DemoNotch"
+                         Margin="0,12,0,0"
+                         Tapped="OnNotchTapped" />
+    </Grid>
+</ContentPage>

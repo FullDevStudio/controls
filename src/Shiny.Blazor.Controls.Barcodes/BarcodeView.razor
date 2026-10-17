@@ -39,7 +39,9 @@ else
             var h = string.IsNullOrEmpty(CssHeight)
                 ? $"height:auto;aspect-ratio:{PixelWidth}/{PixelHeight};"
                 : $"height:{CssHeight};";
-            return $"display:inline-block;width:{w};max-width:100%;{h}";
+            // line-height:0 - the inline SVG sits on a text baseline, and the gap under it made the
+            // box a few px taller than the code (a 294px QR came out 294x300)
+            return $"display:inline-block;width:{w};max-width:100%;{h}line-height:0;";
         }
     }
 

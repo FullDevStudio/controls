@@ -1,0 +1,13 @@
+@namespace Shiny.Blazor.Controls
+@implements IAsyncDisposable
+
+<div @ref="root"
+     popover="@(Inline ? null : "manual")"
+     class="shiny-notch shiny-notch--@ShapeClass @(Inline ? "shiny-notch--inline" : "shiny-notch--screen") @(HasShadow ? "shiny-notch--shadow" : "") @(OnClick.HasDelegate ? "shiny-notch--clickable" : "") @CssClass"
+     style="@RootStyle"
+     @onclick="HandleClick"
+     @attributes="PassThroughAttributes">
+    <div class="shiny-notch__content @(fadeIn ? "shiny-notch__content--enter" : "")" @key="ContentKey">
+        @ChildContent
+    </div>
+</div>

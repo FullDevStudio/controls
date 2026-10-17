@@ -40,11 +40,12 @@
 
 .shiny-dock-rail { display: flex; min-width: 0; min-height: 0; }
 
-/* A rail keeps its stored width (230px by default), but never more than 40% of the host each: on a
-   phone two 230px rails overran the document column and the right rail's resize strip lay on top of
-   the left rail's tabs, so nothing in it could be tapped. */
+/* A rail keeps its stored width (230px by default), but never more than 30% of the host each, so
+   the document column always keeps at least 40%: on a phone two 230px rails overran the document
+   column and the right rail's resize strip lay on top of the left rail's tabs, and at 40% each the
+   document was left a sliver too narrow to show a single one of its tabs. */
 .shiny-dock-rail--left,
-.shiny-dock-rail--right { max-width: 40cqi; }
+.shiny-dock-rail--right { max-width: 30cqi; }
 
 /* rail resize handles sit between a rail and the center */
 .shiny-dock-rail-rsz { background: transparent; }

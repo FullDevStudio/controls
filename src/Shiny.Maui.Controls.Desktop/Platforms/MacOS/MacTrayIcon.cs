@@ -9,6 +9,7 @@ sealed class MacTrayIcon : TrayIconBase
 {
     NSStatusItem statusItem = null!;
     NSMenu? nsMenu;
+    readonly Dictionary<TrayProgressItem, TrayProgressView> progressViews = new();
 
     public MacTrayIcon()
     {
@@ -155,9 +156,27 @@ sealed class MacTrayIcon : TrayIconBase
             // the menu on a poll/timer leak a whole menu tree each rebuild (observed: tens of
             // GB over a long-running session). Disposing here releases it immediately.
             var previous = this.nsMenu;
-            this.nsMenu = BuildNSMenu(this.Menu.Items);
+            this.progressViews.Clear();
+            this.nsMenu = this.BuildNSMenu(this.Menu.Items);
             previous?.Dispose();
         });
+
+    protected override void OnMenuItemUpdated(TrayMenuItemBase item)
+    {
+        if (item is not TrayProgressItem progress)
+        {
+            base.OnMenuItemUpdated(item);
+            return;
+        }
+        // Repaint the one row rather than rebuilding: the popped-up menu is the one AppKit is
+        // tracking, so a rebuild would only replace a menu the user can't see. The main-thread hop
+        // is serviced in the event-tracking run-loop mode, so this lands while the menu is open.
+        MacMainThread.Invoke(() =>
+        {
+            if (this.progressViews.TryGetValue(progress, out var view))
+                view.NeedsDisplay = true;
+        });
+    }
 
     public override void ShowMenu()
         => MacMainThread.Invoke(() =>
@@ -173,7 +192,7 @@ sealed class MacTrayIcon : TrayIconBase
 #pragma warning restore CA1422
         });
 
-    static NSMenu BuildNSMenu(IEnumerable<TrayMenuItemBase> items)
+    NSMenu BuildNSMenu(IEnumerable<TrayMenuItemBase> items)
     {
         var menu = new NSMenu { AutoEnablesItems = false };
         foreach (var item in items)
@@ -186,7 +205,7 @@ sealed class MacTrayIcon : TrayIconBase
                     nsi = NSMenuItem.SeparatorItem;
                     break;
                 case TraySubmenu sub:
-                    nsi = new NSMenuItem(sub.Label) { Submenu = BuildNSMenu(sub.Items) };
+                    nsi = new NSMenuItem(sub.Label) { Submenu = this.BuildNSMenu(sub.Items) };
                     nsi.Enabled = sub.IsEnabled;
                     break;
                 case TrayCheckMenuItem check:
@@ -204,6 +223,8 @@ sealed class MacTrayIcon : TrayIconBase
                     nsi = new NSMenuItem(mi.Label, keyEq, (_, _) => mi.RaiseClicked());
                     nsi.KeyEquivalentModifierMask = mask;
                     nsi.Enabled = mi.IsEnabled;
+                    if (mi.Pill != null)
+                        nsi.AttributedTitle = PillTitle(mi.Label, mi.Pill);
                     if (mi.Icon != null)
                     {
                         try
@@ -219,12 +240,37 @@ sealed class MacTrayIcon : TrayIconBase
                     }
                     break;
                 }
+                case TrayProgressItem progress:
+                {
+                    var view = new TrayProgressView(progress);
+                    this.progressViews[progress] = view;
+                    nsi = new NSMenuItem(progress.Label) { View = view, Enabled = progress.IsEnabled };
+                    break;
+                }
                 default:
                     continue;
             }
             menu.AddItem(nsi);
         }
         return menu;
+    }
+
+    /// <summary>
+    /// The label followed by the pill as an inline image. Only the font is set, never a colour, so
+    /// AppKit still swaps the label to the highlighted text colour when the row is selected.
+    /// </summary>
+    static NSAttributedString PillTitle(string label, TrayPill pill)
+    {
+        var title = new NSMutableAttributedString(label + "  ", new NSStringAttributes { Font = NSFont.MenuFontOfSize(0) }.Dictionary);
+        var fill = AppleTrayDrawing.ToneColor(pill.Tone, NSColor.ControlAccent.CGColor);
+        var (cg, size) = AppleTrayDrawing.RenderPill(pill.Text, fill, 2);
+        var attachment = new NSTextAttachment
+        {
+            Image = new NSImage(cg, size),
+            Bounds = new CGRect(0, AppleTrayDrawing.PillBaselineOffset(), size.Width, size.Height)
+        };
+        title.Append(NSAttributedString.FromAttachment(attachment));
+        return title;
     }
 
     static (string keyEquivalent, NSEventModifierMask mask) ParseAccelerator(string? accelerator)
@@ -277,5 +323,42 @@ sealed class MacTrayIcon : TrayIconBase
             NSStatusBar.SystemStatusBar.RemoveStatusItem(this.statusItem);
         });
         base.Dispose();
+    }
+}
+
+/// <summary>
+/// A tray progress row. It reads its item on every draw, so an update is just a repaint. Width is
+/// a minimum: the menu stretches it to the widest item through the autoresizing mask.
+/// </summary>
+sealed class TrayProgressView : NSView
+{
+    /// <summary>Where a plain menu item's title starts, so the row lines up with the items around it.</summary>
+    const double Leading = 14;
+
+    readonly TrayProgressItem item;
+
+    public TrayProgressView(TrayProgressItem item)
+        : base(new CGRect(0, 0, AppleTrayDrawing.ProgressWidth, AppleTrayDrawing.ProgressHeight(item.HasCaption)))
+    {
+        this.item = item;
+        this.AutoresizingMask = NSViewResizingMask.WidthSizable;
+    }
+
+    public override bool IsFlipped => true;
+
+    public override void DrawRect(CGRect dirtyRect)
+    {
+        var ctx = NSGraphicsContext.CurrentContext?.CGContext;
+        if (ctx == null) return;
+
+        // Resolved here, inside drawing, so the dynamic colours follow light/dark mode
+        var enabled = this.item.IsEnabled;
+        var fill = AppleTrayDrawing.ToneColor(this.item.Tone, NSColor.ControlAccent.CGColor);
+        var colors = new AppleTrayDrawing.ProgressColors(
+            (enabled ? NSColor.Label : NSColor.TertiaryLabel).CGColor,
+            (enabled ? NSColor.SecondaryLabel : NSColor.TertiaryLabel).CGColor,
+            NSColor.QuaternaryLabel.CGColor,
+            enabled ? fill : new CGColor(fill, 0.4f));
+        AppleTrayDrawing.DrawProgress(ctx, this.Bounds, this.item, colors, Leading);
     }
 }

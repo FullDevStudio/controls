@@ -26,7 +26,12 @@ public class FloorPlanTests : BlazorTest
     /// <summary>Clicks a grid of canvas points until the status line matches; returns the hit point.</summary>
     async Task<(double X, double Y, string Text)?> ScanFor(Regex match)
     {
-        for (var fy = 0.15; fy <= 0.85; fy += 0.05)
+        // The plan is fitted to the canvas width, so on a phone it - and every desk - is a third of
+        // its desktop size: rows that step 5% of the height would pass straight between them.
+        await Canvas.ScrollIntoViewIfNeededAsync();
+        var width = (await Canvas.BoundingBoxAsync())!.Width;
+        var rowStep = 0.05 * Math.Min(1.0, width / 700.0);
+        for (var fy = 0.15; fy <= 0.85; fy += rowStep)
         {
             for (var fx = 0.15; fx <= 0.85; fx += 0.03)
             {

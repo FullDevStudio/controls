@@ -259,7 +259,8 @@ public class DataGridTests : BlazorTest
         x = box.X + box.Width / 2;
         await Page.Mouse.MoveAsync(x, y);
         await Page.Mouse.DownAsync();
-        await Page.Mouse.MoveAsync(x + 400, y, new() { Steps = 8 });
+        // as far right as the screen goes (on a phone that is well short of +400, but still past the cap)
+        await Page.Mouse.MoveAsync(Math.Min(x + 400, Page.ViewportSize!.Width - 4), y, new() { Steps = 8 });
         await Page.Mouse.UpAsync();
         await Expect(section.Locator(".status-message")).ToHaveTextAsync("FirstName → 260px");
         await AssertNoConsoleErrors();

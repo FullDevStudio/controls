@@ -72,7 +72,7 @@
 }
 
 .shiny-tabbar-item-icon img,
-.shiny-tabbar-item-icon svg {
+.shiny-tabbar-item-icon ::deep svg {
     width: 100%;
     height: 100%;
     object-fit: contain;

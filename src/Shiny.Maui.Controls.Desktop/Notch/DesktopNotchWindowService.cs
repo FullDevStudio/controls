@@ -1,0 +1,225 @@
+#if MACOS
+using Microsoft.Extensions.Logging;
+
+namespace Shiny.Maui.Controls.Desktop.Notch;
+
+/// <summary>
+/// Hosts a <see cref="NotchView"/> in a borderless OS window pinned to the top-centre of the screen.
+/// </summary>
+/// <remarks>
+/// <para>
+/// The notch's surface fills the window and the <em>window</em> does the morphing, with a native frame
+/// animation. A managed morph inside the window cannot work on the AppKit head: it runs no layout when
+/// a realized view changes size, so the surface would sit still and then jump, whereas every step of a
+/// window-frame animation is a resize and lays out.
+/// </para>
+/// <para>
+/// A content swap builds a fresh page rather than handing the new view to the existing notch: AppKit
+/// never creates a platform view for a child added to an already-realized layout, so swapped-in content
+/// would be blank. A new page is realized whole.
+/// </para>
+/// </remarks>
+sealed class DesktopNotchWindowService : INotchWindowService, IDisposable
+{
+    readonly NotchWindowOptions options;
+    readonly ILogger<DesktopNotchWindowService>? logger;
+    readonly SemaphoreSlim gate = new(1, 1);
+
+    Window? window;
+    object? platformWindow;
+    NotchView? notch;
+    NotchGeometry geometry = NotchGeometry.None;
+
+    public DesktopNotchWindowService(NotchWindowOptions options, ILogger<DesktopNotchWindowService>? logger = null)
+    {
+        this.options = options;
+        this.logger = logger;
+    }
+
+    public bool HasHardwareNotch => NotchWindowPlatform.GetGeometry().HasNotch;
+
+    public bool IsVisible { get; private set; }
+
+    public View? Content { get; private set; }
+
+    public event EventHandler? Tapped;
+
+    public async Task ShowAsync(View? content = null)
+    {
+        if (content != null || this.window == null)
+            await this.SetContentAsync(content ?? this.Content).ConfigureAwait(true);
+
+        if (this.platformWindow == null || this.notch == null)
+            return;
+
+        this.Place(this.notch.NotchSize, animate: false);
+        NotchWindowPlatform.Show(this.platformWindow);
+        this.IsVisible = true;
+    }
+
+    public async Task SetContentAsync(View? content)
+    {
+        await this.gate.WaitAsync().ConfigureAwait(true);
+        try
+        {
+            // Detach first: the view may be moving from the notch we are about to discard, and MAUI
+            // refuses to parent a view that still has one.
+            if (this.notch != null)
+            {
+                this.notch.NotchSizeChanged -= this.OnNotchSizeChanged;
+                this.notch.Tapped -= this.OnNotchTapped;
+                this.notch.Content = null;
+            }
+
+            this.Content = content;
+            this.geometry = this.options.UseHardwareNotch ? NotchWindowPlatform.GetGeometry() : NotchGeometry.None;
+            this.notch = this.CreateNotch(content);
+
+            var page = new ContentPage
+            {
+                BackgroundColor = Colors.Transparent,
+                Padding = 0,
+                Content = this.notch
+            };
+
+            if (this.window == null)
+            {
+                await this.OpenWindowAsync(page).ConfigureAwait(true);
+            }
+            else
+            {
+                this.window.Page = page;
+            }
+
+            this.notch.Refresh();
+            if (this.IsVisible)
+                this.Place(this.notch.NotchSize, animate: true);
+        }
+        finally
+        {
+            this.gate.Release();
+        }
+    }
+
+    public void Hide()
+    {
+        if (this.platformWindow != null)
+            NotchWindowPlatform.Hide(this.platformWindow);
+        this.IsVisible = false;
+    }
+
+    NotchView CreateNotch(View? content)
+    {
+        var view = new NotchView
+        {
+            FillsHost = true,
+            FollowsOfferedWidth = false,
+            MaxNotchWidth = this.options.MaxWidth,
+            MaxNotchHeight = this.options.MaxHeight,
+            HasShadow = false
+        };
+
+        if (this.geometry.HasNotch)
+        {
+            // Empty, the notch is exactly the hardware cut-out and vanishes into it. Content sits below
+            // the cut-out, since nothing drawn behind the camera housing can be seen.
+            view.Shape = NotchShape.Notch;
+            view.MinNotchWidth = this.geometry.Width;
+            view.MinNotchHeight = this.geometry.Height;
+            view.ContentPadding = new Thickness(16, this.geometry.Height + 6, 16, 14);
+        }
+        else
+        {
+            view.Shape = NotchShape.Island;
+        }
+
+        this.options.Configure?.Invoke(view);
+
+        view.NotchSizeChanged += this.OnNotchSizeChanged;
+        view.Tapped += this.OnNotchTapped;
+        view.Content = content;
+        return view;
+    }
+
+    async Task OpenWindowAsync(Page page)
+    {
+        var app = Application.Current
+            ?? throw new InvalidOperationException("The notch window needs a running MAUI application.");
+
+        var size = this.geometry.HasNotch ? new Size(this.geometry.Width, this.geometry.Height) : new Size(120, 36);
+        var w = new Window(page) { Title = "Notch", Width = size.Width, Height = size.Height };
+        this.window = w;
+
+        // As with the quick entry window: the native window arrives through HandlerChanged, and on some
+        // heads only after OpenWindow has returned.
+        var ready = new TaskCompletionSource();
+        void OnHandlerChanged(object? sender, EventArgs e)
+        {
+            if (w.Handler?.PlatformView is { } native)
+            {
+                w.HandlerChanged -= OnHandlerChanged;
+                this.platformWindow = native;
+                ready.TrySetResult();
+            }
+        }
+        w.HandlerChanged += OnHandlerChanged;
+
+        app.OpenWindow(w);
+        OnHandlerChanged(w, EventArgs.Empty);
+
+        try
+        {
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            await ready.Task.WaitAsync(timeout.Token).ConfigureAwait(true);
+            NotchWindowPlatform.Initialize(this.platformWindow!, this.options);
+        }
+        catch (OperationCanceledException)
+        {
+            this.logger?.LogError("Timed out waiting for the notch window handler. The notch will not show on this host.");
+            this.window = null;
+            try { app.CloseWindow(w); }
+            catch (Exception ex) { this.logger?.LogDebug(ex, "Closing the notch window failed"); }
+        }
+    }
+
+    void OnNotchSizeChanged(object? sender, NotchSizeChangedEventArgs e)
+    {
+        if (this.IsVisible)
+            this.Place(e.NewSize, animate: true);
+    }
+
+    void OnNotchTapped(object? sender, EventArgs e) => this.Tapped?.Invoke(this, EventArgs.Empty);
+
+    void Place(Size size, bool animate)
+    {
+        if (this.platformWindow == null || size.Width <= 0 || size.Height <= 0)
+            return;
+
+        NotchWindowPlatform.Place(
+            this.platformWindow,
+            size.Width,
+            size.Height,
+            this.geometry.HasNotch,
+            this.options.TopMargin,
+            animate ? this.options.MorphDuration : 0
+        );
+    }
+
+    public void Dispose()
+    {
+        var native = this.platformWindow;
+        this.platformWindow = null;
+        if (native != null)
+            NotchWindowPlatform.Teardown(native);
+
+        var w = this.window;
+        this.window = null;
+        if (w != null)
+        {
+            try { Application.Current?.CloseWindow(w); }
+            catch (Exception ex) { this.logger?.LogDebug(ex, "Closing the notch window failed"); }
+        }
+        this.gate.Dispose();
+    }
+}
+#endif

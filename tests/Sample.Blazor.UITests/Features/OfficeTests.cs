@@ -503,7 +503,9 @@ public class NotebookTests : BlazorTest
         var box = (await canvas.BoundingBoxAsync())!;
 
         // Double-click empty canvas (bottom right, away from the sample's content) to start writing.
-        await canvas.DblClickAsync(new() { Position = new() { X = box.Width - 80, Y = box.Height - 40 } });
+        // (kept on screen: on a phone the canvas runs past the bottom of the viewport)
+        var dy = Math.Min(box.Height - 40, Page.ViewportSize!.Height - 140 - box.Y);
+        await canvas.DblClickAsync(new() { Position = new() { X = box.Width - 80, Y = dy } });
         await Page.Keyboard.TypeAsync("Hi");
         await Expect(PageStatus).Not.ToContainTextAsync("0 edits");
         await Expect(PageStatus).ToContainTextAsync("unsaved");
@@ -527,8 +529,10 @@ public class NotebookTests : BlazorTest
         // A mouse drag with the pen down is an ink stroke, and one undo step.
         await Page.Locator(".shiny-notebook-editor-canvas").ScrollIntoViewIfNeededAsync();
         var box = (await Page.Locator(".shiny-notebook-editor-canvas").BoundingBoxAsync())!;
-        var x = box.X + box.Width - 200;
-        var y = box.Y + box.Height - 80;
+        // near the bottom right, away from the sample's content - but on screen: on a phone the canvas
+        // is taller than the viewport and its bottom edge is out of reach of the mouse
+        var x = box.X + Math.Max(20, box.Width - 200);
+        var y = Math.Min(box.Y + box.Height - 80, Page.ViewportSize!.Height - 140);
         await Page.Mouse.MoveAsync(x, y);
         await Page.Mouse.DownAsync();
         for (var i = 1; i <= 10; i++)

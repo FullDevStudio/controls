@@ -1,4 +1,6 @@
 using System.Runtime.InteropServices;
+using CoreGraphics;
+using ObjCRuntime;
 using static Shiny.Maui.Controls.Desktop.TrayIcon.AppKitInterop;
 
 namespace Shiny.Maui.Controls.Desktop.TrayIcon;
@@ -12,6 +14,8 @@ sealed class MacCatalystTrayIcon : TrayIconBase
     static IntPtr ActionSel;
     static IntPtr ButtonActionSel;
     static IntPtr SharedCallback;
+    static IntPtr ProgressViewClass;
+    static readonly Dictionary<IntPtr, TrayProgressItem> ProgressViewItems = new();
 
     [Flags]
     enum NSEventModifierFlagsRaw : ulong
@@ -37,6 +41,63 @@ sealed class MacCatalystTrayIcon : TrayIconBase
         RegisterClassPair(CallbackClass);
         var alloc = MsgSend(CallbackClass, Sel("alloc"));
         SharedCallback = MsgSend(alloc, Sel("init"));
+
+        // Progress rows are an NSView subclass registered at runtime, the same way as the
+        // callback target above — there is no AppKit binding to subclass from on Catalyst.
+        ProgressViewClass = AllocateClassPair(GetClass("NSView"), "ShinyTrayProgressView", IntPtr.Zero);
+        unsafe
+        {
+            AddMethod(ProgressViewClass, Sel("drawRect:"), (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, NSRect, void>)&DrawProgressView, "v@:{CGRect={CGPoint=dd}{CGSize=dd}}");
+            AddMethod(ProgressViewClass, Sel("isFlipped"), (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, byte>)&ProgressViewIsFlipped, "B@:");
+        }
+        RegisterClassPair(ProgressViewClass);
+    }
+
+    [UnmanagedCallersOnly]
+    static byte ProgressViewIsFlipped(IntPtr self, IntPtr sel) => 1;
+
+    [UnmanagedCallersOnly]
+    static void DrawProgressView(IntPtr self, IntPtr sel, NSRect dirtyRect)
+    {
+        try
+        {
+            TrayProgressItem? item;
+            lock (ProgressViewItems) ProgressViewItems.TryGetValue(self, out item);
+            if (item == null) return;
+
+            var gc = MsgSend(GetClass("NSGraphicsContext"), Sel("currentContext"));
+            if (gc == IntPtr.Zero) return;
+            var ctx = Runtime.GetINativeObject<CGContext>(MsgSend(gc, Sel("CGContext")), false);
+            if (ctx == null) return;
+
+            // Resolved inside drawRect:, where AppKit has set the drawing appearance, so the
+            // semantic colours come back as their light or dark variant
+            var enabled = item.IsEnabled;
+            var fill = AppleTrayDrawing.ToneColor(item.Tone, NSColorCG("controlAccentColor"));
+            var colors = new AppleTrayDrawing.ProgressColors(
+                NSColorCG(enabled ? "labelColor" : "tertiaryLabelColor") ?? new CGColor(0, 0, 0, 1),
+                NSColorCG(enabled ? "secondaryLabelColor" : "tertiaryLabelColor") ?? new CGColor(0.5f, 0.5f, 0.5f, 1),
+                NSColorCG("quaternaryLabelColor") ?? new CGColor(0.5f, 0.5f, 0.5f, 0.2f),
+                enabled ? fill : new CGColor(fill, 0.4f));
+
+            var b = GetRect(self, Sel("bounds"));
+            AppleTrayDrawing.DrawProgress(ctx, new CGRect(b.X, b.Y, b.Width, b.Height), item, colors, ProgressLeading);
+        }
+        catch
+        {
+            // an exception escaping an UnmanagedCallersOnly method takes the process down
+        }
+    }
+
+    /// <summary>Where a plain menu item's title starts, so the row lines up with the items around it.</summary>
+    const double ProgressLeading = 14;
+
+    static CGColor? NSColorCG(string selector)
+    {
+        var color = MsgSend(GetClass("NSColor"), Sel(selector));
+        if (color == IntPtr.Zero) return null;
+        var cg = MsgSend(color, Sel("CGColor"));
+        return cg == IntPtr.Zero ? null : Runtime.GetINativeObject<CGColor>(cg, false);
     }
 
     [UnmanagedCallersOnly]
@@ -63,6 +124,7 @@ sealed class MacCatalystTrayIcon : TrayIconBase
     readonly long buttonTag;
     IntPtr menu = IntPtr.Zero;
     readonly List<long> ownedTags = new();
+    readonly Dictionary<TrayProgressItem, IntPtr> progressViews = new();
 
     public MacCatalystTrayIcon()
     {
@@ -163,6 +225,7 @@ sealed class MacCatalystTrayIcon : TrayIconBase
     protected override void OnMenuChanged(object? sender, EventArgs e)
     {
         this.ClearOwnedTags();
+        this.ClearProgressViews();
         if (this.Menu == null) return;
 
         // BuildMenu hands back an alloc/init'd NSMenu we own a +1 on; releasing the
@@ -173,6 +236,32 @@ sealed class MacCatalystTrayIcon : TrayIconBase
         this.menu = this.BuildMenu(this.Menu.Items);
         if (previous != IntPtr.Zero)
             MsgSend(previous, Sel("release"));
+    }
+
+    protected override void OnMenuItemUpdated(TrayMenuItemBase item)
+    {
+        if (item is not TrayProgressItem progress)
+        {
+            base.OnMenuItemUpdated(item);
+            return;
+        }
+        // Repaint in place: the view draws from the item, and a rebuild would replace the menu
+        // AppKit is tracking. The main-queue hop is serviced while the menu is open.
+        void Repaint()
+        {
+            if (this.progressViews.TryGetValue(progress, out var view))
+                MsgSendBool(view, Sel("setNeedsDisplay:"), true);
+        }
+        if (Foundation.NSThread.IsMain) Repaint();
+        else Microsoft.Maui.ApplicationModel.MainThread.BeginInvokeOnMainThread(Repaint);
+    }
+
+    void ClearProgressViews()
+    {
+        lock (ProgressViewItems)
+            foreach (var view in this.progressViews.Values)
+                ProgressViewItems.Remove(view);
+        this.progressViews.Clear();
     }
 
     public override void ShowMenu()
@@ -227,6 +316,11 @@ sealed class MacCatalystTrayIcon : TrayIconBase
                     var (keyEq, mods) = ParseAccelerator(mi.Accelerator);
                     var nsi = this.NewItem(mi.Label, keyEq, mods, tag);
                     MsgSendBool(nsi, Sel("setEnabled:"), mi.IsEnabled);
+                    if (mi.Pill != null)
+                    {
+                        try { SetPillTitle(nsi, mi.Label, mi.Pill); }
+                        catch { /* best-effort: the plain title stays */ }
+                    }
                     if (mi.Icon != null)
                     {
                         try
@@ -248,9 +342,59 @@ sealed class MacCatalystTrayIcon : TrayIconBase
                     MsgSend(nsi, Sel("release"));
                     break;
                 }
+                case TrayProgressItem progress:
+                {
+                    var viewAlloc = MsgSend(ProgressViewClass, Sel("alloc"));
+                    var view = MsgSendRect(viewAlloc, Sel("initWithFrame:"),
+                        new NSRect(0, 0, AppleTrayDrawing.ProgressWidth, AppleTrayDrawing.ProgressHeight(progress.HasCaption)));
+                    MsgSendULong(view, Sel("setAutoresizingMask:"), 2); // NSViewWidthSizable
+                    lock (ProgressViewItems) ProgressViewItems[view] = progress;
+                    this.progressViews[progress] = view;
+
+                    var nsi = this.NewItem(progress.Label, string.Empty, 0, null);
+                    MsgSend(nsi, Sel("setView:"), view);
+                    MsgSendBool(nsi, Sel("setEnabled:"), progress.IsEnabled);
+                    MsgSend(m, Sel("addItem:"), nsi);
+                    // setView:/addItem: retained; the view stays alive as long as the menu does,
+                    // which is exactly as long as ProgressViewItems keeps its handle
+                    MsgSend(view, Sel("release"));
+                    MsgSend(nsi, Sel("release"));
+                    break;
+                }
             }
         }
         return m;
+    }
+
+    /// <summary>
+    /// The label followed by the pill as an inline image. Only the font is set, never a colour, so
+    /// AppKit still swaps the label to the highlighted text colour when the row is selected.
+    /// </summary>
+    static void SetPillTitle(IntPtr nsi, string label, TrayPill pill)
+    {
+        var fill = AppleTrayDrawing.ToneColor(pill.Tone, NSColorCG("controlAccentColor"));
+        var (cg, size) = AppleTrayDrawing.RenderPill(pill.Text, fill, 2);
+
+        var image = MsgSendPtrSize(MsgSend(GetClass("NSImage"), Sel("alloc")), Sel("initWithCGImage:size:"),
+            cg.Handle, new NSSize { Width = size.Width, Height = size.Height });
+        var attachment = MsgSend(MsgSend(GetClass("NSTextAttachment"), Sel("alloc")), Sel("init"));
+        MsgSend(attachment, Sel("setImage:"), image);
+        MsgSendRect(attachment, Sel("setBounds:"), new NSRect(0, AppleTrayDrawing.PillBaselineOffset(), size.Width, size.Height));
+        var pillString = MsgSend(GetClass("NSAttributedString"), Sel("attributedStringWithAttachment:"), attachment);
+
+        var font = MsgSendDouble(GetClass("NSFont"), Sel("menuFontOfSize:"), 0);
+        var attributes = MsgSend(GetClass("NSDictionary"), Sel("dictionaryWithObject:forKey:"), font, NSString("NSFont"));
+        var title = MsgSend(MsgSend(GetClass("NSMutableAttributedString"), Sel("alloc")), Sel("initWithString:attributes:"),
+            NSString(label + "  "), attributes);
+        MsgSend(title, Sel("appendAttributedString:"), pillString);
+        MsgSend(nsi, Sel("setAttributedTitle:"), title);
+
+        // setImage:/setAttributedTitle: retained what they need; release our alloc +1s
+        // (pillString, font and attributes are autoreleased)
+        MsgSend(title, Sel("release"));
+        MsgSend(attachment, Sel("release"));
+        MsgSend(image, Sel("release"));
+        cg.Dispose();
     }
 
     IntPtr NewItem(string label, string keyEquivalent, ulong modifierMask, long? tag)
@@ -319,6 +463,7 @@ sealed class MacCatalystTrayIcon : TrayIconBase
     public override void Dispose()
     {
         this.ClearOwnedTags();
+        this.ClearProgressViews();
         lock (ButtonOwners) ButtonOwners.Remove(this.buttonTag);
         if (this.menu != IntPtr.Zero)
         {

@@ -186,7 +186,7 @@
     cursor: pointer;
 }
 
-.shiny-ribbon__collapse svg { width: 16px; height: 16px; }
+.shiny-ribbon__collapse ::deep svg { width: 16px; height: 16px; }
 
 .shiny-ribbon__collapse:hover { background: var(--shiny-color-surface-container-highest, #D7DCE1); }
 

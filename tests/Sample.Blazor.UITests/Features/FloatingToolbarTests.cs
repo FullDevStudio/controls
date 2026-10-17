@@ -70,13 +70,22 @@ public class FloatingToolbarTests : BlazorTest
         var bar = Page.GetByRole(AriaRole.Toolbar).Filter(new() { Visible = true });
         await Expect(bar).ToHaveCountAsync(1);
 
+        // On a phone the bar is too narrow for Format, which folds into "More actions" - reached
+        // from there as a submenu, the same items either way.
         var format = bar.GetByRole(AriaRole.Button, new() { Name = "Format" });
+        if (await format.CountAsync() == 0)
+        {
+            var more = bar.GetByRole(AriaRole.Button, new() { Name = "More actions" });
+            await Expect(more).ToHaveAttributeAsync("aria-haspopup", "true");
+            await more.ClickAsync();
+            format = Page.GetByRole(AriaRole.Menuitem, new() { Name = "Format" }).Filter(new() { Visible = true });
+        }
         await Expect(format).ToHaveAttributeAsync("aria-haspopup", "true");
         await format.ClickAsync();
 
-        var menu = Page.GetByRole(AriaRole.Menu).Filter(new() { Visible = true });
-        await Expect(menu).ToBeVisibleAsync();
-        await menu.GetByText("Bold", new() { Exact = true }).ClickAsync();
+        var bold = Page.GetByRole(AriaRole.Menu).Filter(new() { Visible = true }).GetByText("Bold", new() { Exact = true });
+        await Expect(bold).ToBeVisibleAsync();
+        await bold.ClickAsync();
 
         await Expect(Page.Locator("p.state").First).ToHaveTextAsync(new Regex("^Bold on target #0$"));
         // DismissOnItemClick

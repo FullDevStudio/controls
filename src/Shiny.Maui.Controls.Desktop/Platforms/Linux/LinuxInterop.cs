@@ -144,6 +144,12 @@ static partial class LinuxInterop
     [LibraryImport(GObject, EntryPoint = "g_object_ref_sink")]
     public static partial IntPtr GObjectRefSink(IntPtr obj);
 
+    [LibraryImport(Gtk, EntryPoint = "gtk_menu_item_set_label", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial void GtkMenuItemSetLabel(IntPtr menuItem, string label);
+
+    [LibraryImport(GLib, EntryPoint = "g_idle_add")]
+    public static partial uint GIdleAdd(IntPtr function, IntPtr data);
+
     [LibraryImport(GObject, EntryPoint = "g_object_unref")]
     public static partial void GObjectUnref(IntPtr obj);
 

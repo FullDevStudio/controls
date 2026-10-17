@@ -109,6 +109,7 @@ public static class Catalog
         [
             new("pills", "Pills", "●", "Status badges in a range of tones"),
             new("badge", "Badge", "●", "Corner badge that wraps any content"),
+            new("notch", "Notch", "▬", "Dynamic Island style surface that morphs to fit any content"),
             new("avatar", "Avatar & Group", "◉", "Picture, initials or silhouette, presence dot, and overlapping groups"),
             new("progressbar", "Progress Bar", "▣", "Determinate and indeterminate progress"),
             new("skeleton", "Skeleton", "☰", "Shimmering placeholders while content loads"),

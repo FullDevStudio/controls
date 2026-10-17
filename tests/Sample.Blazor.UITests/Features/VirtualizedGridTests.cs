@@ -53,7 +53,9 @@ public class VirtualizedGridTests : BlazorTest
         var cells = section.Locator(".shiny-vgrid-cell");
 
         // the grid windows against the page scroller - it has no box of its own
-        await section.ScrollIntoViewIfNeededAsync();
+        // (its top, not its middle - centring a 500-item section scrolls past the first rows)
+        await section.EvaluateAsync(
+            "s => { const c = document.querySelector('.shiny-applayout-content') ?? document.scrollingElement; c.scrollBy(0, s.getBoundingClientRect().top - c.getBoundingClientRect().top); }");
         await Expect(cells.First).ToContainTextAsync("#1");
         var rendered = await cells.CountAsync();
         await Assert.That(rendered).IsLessThan(200);           // 500 items, one screen of them

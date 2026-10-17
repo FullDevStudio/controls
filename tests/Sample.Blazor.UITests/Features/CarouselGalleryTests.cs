@@ -140,6 +140,7 @@ public class CarouselGalleryTests : BlazorTest
 
 
     [Test]
+    [SkipOnPhone("a mouse drag - a phone swipes, and TouchGestureTests covers the carousel swipe with real touch input")]
     public async Task Mouse_Drag_Advances_A_Slide()
     {
         await Open("carousel-advanced");

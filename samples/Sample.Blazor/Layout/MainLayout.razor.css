@@ -233,8 +233,8 @@
         height: min(520px, calc(100dvh - 160px));
     }
 
-    .content-inner:has(.demo-fill) > ::deep .demo-fill-body,
-    .content-inner:has(.demo-fill) > ::deep .demo-fill-body * {
+    .content-inner:has(.demo-fill) ::deep .demo-fill-body,
+    .content-inner:has(.demo-fill) ::deep .demo-fill-body * {
         overscroll-behavior: contain;
     }
 

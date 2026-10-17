@@ -81,6 +81,46 @@ public class MyTrayHost
 
 `TrayMenu.Build(b => …)` supports `Item`, `Check`, `Separator`, and `Submenu`. `TrayMenuItem` exposes `IsEnabled`, `IsVisible`, `Label`, optional `Icon` (`Func<Stream>` — rendered next to the label), and `Accelerator` (e.g. `"Ctrl+S"`, `"Cmd+Q"`, `"F1"`). The accelerator string is both the visual hint *and* the dispatch trigger — see the table below for per-platform behaviour. Use the shared `TrayAccelerator.Parse(string)` helper if you need the parsed `Modifiers` + `Key` yourself.
 
+### Pills and progress rows
+
+A menu can also carry **pills** (a short coloured tag after an item's label, such as "New" or "Pro") and **progress rows** (a labelled bar for usage against a limit, a sync or a download). This is the usage-meter style of menu you see in apps like Claude Desktop.
+
+```csharp
+var session = new TrayProgressItem("Session usage", 0.18, caption: "Resets in 4 hr 12 min");
+var sync    = new TrayProgressItem("Syncing library") { Tone = TrayTone.Success, Detail = "0 of 40" };
+
+icon.SetMenu(TrayMenu.Build(b => b
+    .Progress(session)
+    .Progress(sync)
+    .Separator()
+    .Item(new TrayMenuItem("Upgrade plan", OpenBilling) { Pill = new TrayPill("Pro", TrayTone.Accent) })
+    .Item(new TrayMenuItem("What's new", OpenChangelog) { Pill = new TrayPill("New", TrayTone.Success) })));
+
+// later, from any thread (a timer is fine): the row repaints in place, even while the menu is open
+session.Value = 0.82;
+session.Tone = TrayTone.Warning;
+session.Caption = "Resets in 2 hr 3 min";
+```
+
+| Member | Description |
+|---|---|
+| `TrayMenuItem.Pill` | `TrayPill(Text, Tone)` drawn after the label. A solid pill with white text, so it stays readable on light, dark and highlighted rows. Changing it rebuilds the menu |
+| `TrayProgressItem.Label` | Text on the left of the label row |
+| `TrayProgressItem.Value` | Fraction complete, `0`–`1`. Values outside that range are clamped, and `NaN` counts as `0` |
+| `TrayProgressItem.Detail` | Text on the right of the label row. `null` (the default) shows the percentage, e.g. `62%`; `""` shows nothing |
+| `TrayProgressItem.Caption` | Optional smaller line under the bar |
+| `TrayProgressItem.Tone` | Bar colour: `Neutral`, `Accent` (default), `Success`, `Warning`, `Danger` |
+| `Progress(label, value, caption)` / `Progress(item)` | Builder methods on both `TrayMenuBuilder` and `TraySubmenuBuilder`. Keep the item's reference if you will update it |
+
+Progress rows are informational: they never highlight and can't be clicked. Changing `Value`, `Label`, `Detail`, `Tone` or the caption's text repaints only that row, without rebuilding the menu, so a timer can drive it and an open menu keeps moving. Adding or removing the caption changes the row's height, so that one does rebuild the menu. Pills are supported on `TrayMenuItem` only (not on check items or submenu headers).
+
+| Platform | Pills | Progress rows |
+|---|---|---|
+| macOS (AppKit) | Image attachment in the item's attributed title; the label still turns to the highlight colour when selected | A custom `NSView` drawn with CoreGraphics; semantic colours follow light/dark mode |
+| MacCatalyst | Same, via `objc_msgSend` | Same, through an `NSView` subclass registered at runtime |
+| Windows | Owner-drawn row (`MF_OWNERDRAW`) that keeps the visual-style background and hover highlight, the menu font, icon and accelerator | Owner-drawn. An open menu is repainted with `InvalidateRect` |
+| Linux | Text: `Upgrade plan  [Pro]` | Text: `Session usage   ▰▰▰▰▰▰▱▱▱▱  62%`, with the caption as a greyed row beneath it. The desktop shell draws app-indicator menus from DBusMenu and keeps only labels, so nothing richer can get through |
+
 **Platform notes:**
 - **Linux:** depends on `libayatana-appindicator3` and `libgtk-3` — install via your distro's package manager (`apt install libayatana-appindicator3-1 libgtk-3-0` on Debian/Ubuntu). `ShowNotification` additionally needs `libnotify` (usually pre-installed); if missing it silently no-ops
 - **MacCatalyst:** bridges to AppKit via the Objective-C runtime — your app needs permission to `dlopen` AppKit at runtime (granted by default in normal Catalyst apps)
@@ -139,6 +179,46 @@ var registration = hotKeys.Register("Ctrl+Shift+K", () => DoSomething());
 > **In-app shortcuts are a different thing.** Global hotkeys fire while your app is in the background. To react to keys while your own window has focus (`Primary+S`, `?`, `Ctrl+K, Ctrl+C`), declare [Keyboard Shortcuts](keyboard-shortcuts.md) on the page instead. `UseDesktopKeyboardShortcuts()` supplies their key sources on AppKit, GTK4 and Mac Catalyst; Windows needs nothing beyond core.
 
 > **Wayland caveats.** A Wayland client cannot position its own toplevel or raise itself above other windows, so under Wayland the desktop popup is undecorated but the compositor decides where it appears and it is an ordinary window in the stack; the whole-display glow is unavailable and the in-app one is used instead. Under X11 everything behaves as it does on Windows and macOS.
+
+## Notch window (macOS)
+
+Puts a [`NotchView`](notch.md) in the **MacBook camera notch**, in a borderless window above the menu bar and every other app. The empty notch is exactly the size of the hardware cut-out (read from `NSScreen.AuxiliaryTopLeftArea`/`AuxiliaryTopRightArea`), so it disappears into it. Give it content and it grows down out of the notch, with the content padded below the camera housing. On a display without a notch, or with `UseHardwareNotch = false`, it floats as an island under the menu bar.
+
+```csharp
+#if MACOS
+builder
+    .UseShinyControls()
+    .UseDesktopNotch(o =>
+    {
+        o.MaxWidth = 520;
+        o.Configure = notch => notch.SurfaceColor = Colors.Black;
+    });
+#endif
+```
+
+```csharp
+#if MACOS
+// INotchWindowService, injected
+await notch.ShowAsync(new Label { Text = "Recording 0:42", TextColor = Colors.White });
+await notch.SetContentAsync(new NowPlayingView());   // grows out of the notch
+await notch.SetContentAsync(null);                   // back into the notch
+notch.Hide();
+#endif
+```
+
+| `NotchWindowOptions` | Default | |
+|---|---|---|
+| `UseHardwareNotch` | true | Hug the camera notch when the screen has one |
+| `TopMargin` | 8 | Gap under the menu bar for the floating island |
+| `MaxWidth` / `MaxHeight` | 640 / 480 | Caps, in points |
+| `MorphDuration` | 300 | Window reshape time, ms |
+| `JoinAllSpaces` | true | Stay on every Space and over full-screen apps |
+| `Configure` | null | Styles each `NotchView` the service creates; runs last, so it wins |
+
+- **macOS AppKit (`net10.0-macos`) only.** `INotchWindowService`, `NotchWindowOptions` and `UseDesktopNotch` don't exist on any other target, so guard them with `#if MACOS`. Elsewhere, use an in-app `NotchView`.
+- The **window** animates the reshape with a native frame animation and the surface fills it. A managed morph inside the window can't work on the AppKit head, which runs no layout when a realized view changes size.
+- `SetContentAsync` builds a fresh page for the new content, because AppKit never creates a native view for a child added to an already-realized layout.
+- The window never takes keyboard focus (it is borderless), so it suits status, media controls, timers and progress, not typing.
 
 ## Docking
 
@@ -216,7 +296,7 @@ builder.Services
           IsLocked="@locked" />
 ```
 
-The component itself implements `IDockHost` — grab it with `@ref` to call `ShowPanelAsync` / `ResetLayoutAsync` / `Snapshot` and subscribe to `Events`. CSS custom properties (e.g. `--shiny-dock-host-bg`) provide theming hooks without recompiling. The left and right rails are each capped at 40% of the host's width, so on a phone two side rails never overrun the document area or lie on top of each other's tabs and resize strips.
+The component itself implements `IDockHost` — grab it with `@ref` to call `ShowPanelAsync` / `ResetLayoutAsync` / `Snapshot` and subscribe to `Events`. CSS custom properties (e.g. `--shiny-dock-host-bg`) provide theming hooks without recompiling. The left and right rails are each capped at 30% of the host's width, so on a phone two side rails never overrun the document area or lie on top of each other's tabs and resize strips.
 
 ## On-Screen Keyboard
 

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 using static Shiny.Maui.Controls.Desktop.TrayIcon.LinuxInterop;
 
@@ -7,6 +8,8 @@ sealed class LinuxTrayIcon : TrayIconBase
 {
     static readonly Dictionary<long, Action> Callbacks = new();
     static long NextTag = 1;
+    static readonly ConcurrentQueue<Action> IdleQueue = new();
+    static int idleScheduled;
 
     static bool gtkInitialized;
     static bool notifyInitialized;
@@ -43,6 +46,7 @@ sealed class LinuxTrayIcon : TrayIconBase
     readonly string id;
     string? iconFilePath;
     IntPtr accelGroup = IntPtr.Zero;
+    readonly Dictionary<TrayProgressItem, (IntPtr Row, IntPtr Caption)> progressWidgets = new();
 
     public LinuxTrayIcon()
     {
@@ -110,6 +114,7 @@ sealed class LinuxTrayIcon : TrayIconBase
     {
         this.ClearOwnedTags();
         this.ClearMenuIconFiles();
+        this.progressWidgets.Clear();
         if (this.Menu == null) return;
 
         // AppIndicatorSetMenu takes ownership of the new menu and drops the old one,
@@ -122,6 +127,45 @@ sealed class LinuxTrayIcon : TrayIconBase
         GtkMenuSetAccelGroup(menu, this.accelGroup);
         GtkWidgetShowAll(menu);
         AppIndicatorSetMenu(this.indicator, menu);
+    }
+
+    protected override void OnMenuItemUpdated(TrayMenuItemBase item)
+    {
+        if (item is not TrayProgressItem progress)
+        {
+            base.OnMenuItemUpdated(item);
+            return;
+        }
+        // Relabel the existing rows rather than rebuilding: DBusMenu forwards a label change to
+        // the shell as a property update, so an open menu updates too. Progress tends to be driven
+        // from a timer thread, and GTK is not thread-safe, so the change is applied on the GLib
+        // main loop — looked up there, in case the menu was rebuilt in between.
+        PostToMainLoop(() =>
+        {
+            if (!this.progressWidgets.TryGetValue(progress, out var w)) return;
+            GtkMenuItemSetLabel(w.Row, TrayMenuText.ProgressLine(progress));
+            if (w.Caption != IntPtr.Zero)
+                GtkMenuItemSetLabel(w.Caption, progress.Caption ?? string.Empty);
+        });
+    }
+
+    static unsafe void PostToMainLoop(Action action)
+    {
+        IdleQueue.Enqueue(action);
+        if (Interlocked.Exchange(ref idleScheduled, 1) == 0)
+            GIdleAdd((IntPtr)(delegate* unmanaged<IntPtr, int>)&DrainIdleQueue, IntPtr.Zero);
+    }
+
+    [UnmanagedCallersOnly]
+    static int DrainIdleQueue(IntPtr data)
+    {
+        Volatile.Write(ref idleScheduled, 0);
+        while (IdleQueue.TryDequeue(out var action))
+        {
+            try { action(); }
+            catch { /* an exception escaping into GLib takes the process down */ }
+        }
+        return 0; // G_SOURCE_REMOVE
     }
 
     public override void ShowMenu()
@@ -159,9 +203,29 @@ sealed class LinuxTrayIcon : TrayIconBase
                     this.Connect(widget, "activate", tag);
                     break;
                 }
+                case TrayProgressItem progress:
+                {
+                    // The shell draws this menu and keeps only text, so the bar is rendered as text.
+                    // The caption is its own insensitive row, which every shell greys as secondary.
+                    var row = GtkMenuItemNewWithLabel(TrayMenuText.ProgressLine(progress));
+                    GtkWidgetSetSensitive(row, progress.IsEnabled);
+                    widget = row;
+                    var caption = IntPtr.Zero;
+                    if (progress.HasCaption)
+                    {
+                        GtkMenuShellAppend(menu, row);
+                        caption = GtkMenuItemNewWithLabel(progress.Caption!);
+                        GtkWidgetSetSensitive(caption, false);
+                        widget = caption; // appended below with the rest
+                    }
+                    this.progressWidgets[progress] = (row, caption);
+                    break;
+                }
                 case TrayMenuItem mi:
                 {
                     var label = string.IsNullOrEmpty(mi.Accelerator) ? mi.Label : mi.Label + "\t" + mi.Accelerator;
+                    if (mi.Pill != null)
+                        label = TrayMenuText.PillLabel(mi.Label, mi.Pill) + (string.IsNullOrEmpty(mi.Accelerator) ? string.Empty : "\t" + mi.Accelerator);
                     if (mi.Icon != null)
                     {
                         widget = GtkImageMenuItemNewWithLabel(label);
@@ -291,6 +355,7 @@ sealed class LinuxTrayIcon : TrayIconBase
     {
         this.ClearOwnedTags();
         this.ClearMenuIconFiles();
+        this.progressWidgets.Clear();
         if (this.accelGroup != IntPtr.Zero)
         {
             GObjectUnref(this.accelGroup);

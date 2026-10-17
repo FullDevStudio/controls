@@ -22,6 +22,9 @@ public class MarqueeTests : BlazorTest
         await Open("marquee");
         await Ticker.ScrollIntoViewIfNeededAsync();
 
+        // WebKit applies animation-play-state a frame after the class lands, so it can still move a
+        // pixel; read the resting position once that frame has gone
+        await Page.WaitForTimeoutAsync(150);
         var before = await GroupOffset(Ticker);
         await Page.WaitForTimeoutAsync(600);
         var after = await GroupOffset(Ticker);

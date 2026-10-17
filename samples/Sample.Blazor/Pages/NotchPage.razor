@@ -1,0 +1,114 @@
+@page "/notch"
+
+<PageTitle>Notch</PageTitle>
+
+<h1>Notch</h1>
+
+<section class="demo-section">
+    <h2>Put anything inside</h2>
+    <p><code>NotchView</code> has no compact or expanded states. Swap its content and it springs to the new size; the content keeps its own size and the surface clips it while it moves. Set <code>ContentKey</code> on a swap and the new content fades in.</p>
+
+    <div class="notch-stage">
+        <NotchView ContentKey="@state" Shape="@(notchShape ? NotchShape.Notch : NotchShape.Island)"
+                   OnClick="OnNotchClick" OnNotchSizeChanged="OnSize" data-testid="demo-notch">
+            @switch (state)
+            {
+                case "recording":
+                    <div style="display:flex; align-items:center; gap:8px; font-weight:700;">
+                        <span style="width:10px; height:10px; border-radius:50%; background:#ef4444;"></span>
+                        0:42
+                    </div>
+                    break;
+                case "playing":
+                    <div style="display:grid; grid-template-columns:56px auto; gap:4px 12px; width:300px;">
+                        <div style="grid-row:span 2; height:56px; border-radius:10px; background:linear-gradient(135deg,#7C3AED,#06B6D4);"></div>
+                        <strong style="font-size:16px;">Midnight Drive</strong>
+                        <span style="color:#a1a1aa; font-size:13px;">The Shiny Band</span>
+                        <div style="grid-column:span 2; height:4px; margin-top:8px; border-radius:2px; background:#3f3f46;">
+                            <div style="width:40%; height:100%; border-radius:2px; background:#fff;"></div>
+                        </div>
+                    </div>
+                    break;
+                case "message":
+                    <div style="width:280px;">
+                        <strong style="font-size:15px;">Sam</strong>
+                        <div style="color:#d4d4d8; font-size:13px; margin-top:4px;">Can we get the notch control into the next release? It just needs to size to whatever I put in it.</div>
+                    </div>
+                    break;
+                case "text":
+                    <span>@Phrases[phrase]</span>
+                    break;
+            }
+        </NotchView>
+    </div>
+
+    <div style="display:flex; flex-wrap:wrap; gap:8px;">
+        <button class="btn btn-secondary" data-testid="notch-empty" @onclick='() => state = "empty"'>Empty</button>
+        <button class="btn btn-secondary" data-testid="notch-recording" @onclick='() => state = "recording"'>Recording</button>
+        <button class="btn btn-secondary" data-testid="notch-playing" @onclick='() => state = "playing"'>Now playing</button>
+        <button class="btn btn-secondary" data-testid="notch-message" @onclick='() => state = "message"'>Message</button>
+    </div>
+    <p style="margin-top:8px;" data-testid="notch-size">Size: @size.Width × @size.Height</p>
+</section>
+
+<section class="demo-section">
+    <h2>Content that changes its own size</h2>
+    <p>Nothing to call: a <code>ResizeObserver</code> watches the content. This grows the text inside the notch without changing <code>ContentKey</code>.</p>
+    <div style="display:flex; gap:8px;">
+        <button class="btn btn-primary" data-testid="notch-longer" @onclick="Longer">Longer</button>
+        <button class="btn btn-secondary" data-testid="notch-shorter" @onclick="Shorter">Shorter</button>
+    </div>
+</section>
+
+<section class="demo-section">
+    <h2>Shape</h2>
+    <p><code>Island</code> floats with every corner rounded. <code>Notch</code> squares the top corners so it hangs from the top edge.</p>
+    <label><input type="checkbox" data-testid="notch-shape" @bind="notchShape" /> Notch shape</label>
+</section>
+
+<section class="demo-section">
+    <h2>Clicked</h2>
+    <p data-testid="notch-click-status">@clickStatus</p>
+</section>
+
+<style>
+    .notch-stage {
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        min-height: 160px;
+        padding-top: 12px;
+    }
+</style>
+
+@code {
+    static readonly string[] Phrases =
+    [
+        "Hi",
+        "Hello there",
+        "Hello there, this is getting longer",
+        "Hello there, this is getting longer and will wrap once it runs out of room across the page"
+    ];
+
+    string state = "recording";
+    int phrase;
+    bool notchShape;
+    NotchSize size;
+    string clickStatus = "Click the notch.";
+
+    void Longer()
+    {
+        state = "text";
+        phrase = Math.Min(phrase + 1, Phrases.Length - 1);
+    }
+
+    void Shorter()
+    {
+        state = "text";
+        phrase = Math.Max(phrase - 1, 0);
+    }
+
+    void OnSize(NotchSize s) => size = s;
+
+    void OnNotchClick() => clickStatus = $"Clicked at {DateTime.Now:T}";
+}

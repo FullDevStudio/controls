@@ -16,11 +16,27 @@ public class MediaPickerTests : BlazorTest
 
     ILocator Option(string label) => Page.Locator(".demo-controls label", new() { HasText = label }).Locator("input");
 
+    /// <summary>
+    /// iPhone and iPad: the control skips its own chooser and goes straight to the browser's file
+    /// input, because WebKit there answers it with its own library/camera/files sheet. Same test as
+    /// media-picker.js makes.
+    /// </summary>
+    Task<bool> IsAppleTouch() => Page.EvaluateAsync<bool>(
+        "() => /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1)");
+
     async Task AddPhotoThroughChooser()
     {
-        await AddButton.ClickAsync();
-        var gallery = Picker.GetByRole(AriaRole.Button, new() { Name = "Choose from Gallery" });
-        var chooser = await Page.RunAndWaitForFileChooserAsync(() => gallery.ClickAsync());
+        IFileChooser chooser;
+        if (await IsAppleTouch())
+        {
+            chooser = await Page.RunAndWaitForFileChooserAsync(() => AddButton.ClickAsync());
+        }
+        else
+        {
+            await AddButton.ClickAsync();
+            var gallery = Picker.GetByRole(AriaRole.Button, new() { Name = "Choose from Gallery" });
+            chooser = await Page.RunAndWaitForFileChooserAsync(() => gallery.ClickAsync());
+        }
         await chooser.SetFilesAsync(new FilePayload { Name = "red.png", MimeType = "image/png", Buffer = SamplePng });
     }
 
@@ -57,8 +73,18 @@ public class MediaPickerTests : BlazorTest
     public async Task Chooser_Cancel_Closes_It()
     {
         await Open("/mediapicker");
-        await AddButton.ClickAsync();
         var sheet = Picker.Locator(".shiny-mediapicker-sheet");
+        if (await IsAppleTouch())
+        {
+            // no sheet of ours to cancel: the browser's own sheet opens instead
+            await Page.RunAndWaitForFileChooserAsync(() => AddButton.ClickAsync());
+            await Expect(sheet).ToHaveCountAsync(0);
+            await Expect(Count).ToHaveTextAsync("Photos added: 0");
+            await AssertNoConsoleErrors();
+            return;
+        }
+
+        await AddButton.ClickAsync();
         await Expect(sheet).ToBeVisibleAsync();
 
         await sheet.GetByRole(AriaRole.Button, new() { Name = "Cancel" }).ClickAsync();

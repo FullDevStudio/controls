@@ -1,10 +1,11 @@
 <div style="padding:10px;font-size:12px;">
-    <table style="width:100%;border-collapse:collapse;">
+    @* fixed layout + ellipsis: in a narrow rail a long name ends in "…" instead of scrolling the pane sideways *@
+    <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
         @foreach (var (key, value) in props)
         {
             <tr>
-                <td style="padding:4px 8px;color:var(--shiny-color-on-surface-variant, #6b7280);border-bottom:1px solid var(--shiny-color-outline-variant, #f3f4f6);">@key</td>
-                <td style="padding:4px 8px;border-bottom:1px solid var(--shiny-color-outline-variant, #f3f4f6);">@value</td>
+                <td style="padding:4px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--shiny-color-on-surface-variant, #6b7280);border-bottom:1px solid var(--shiny-color-outline-variant, #f3f4f6);">@key</td>
+                <td style="padding:4px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px solid var(--shiny-color-outline-variant, #f3f4f6);">@value</td>
             </tr>
         }
     </table>

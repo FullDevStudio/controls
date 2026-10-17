@@ -349,6 +349,14 @@
             }
         </text>;
 
+    /// <summary>
+    /// The accessible name of an item that shows no text of its own. An icon-only item wrapped in a
+    /// themed Tooltip drops its title (the bubble would double it), and that left the button with
+    /// no name at all - a screen reader announced "button".
+    /// </summary>
+    string? IconOnlyName(ToolbarItem item)
+        => ShowItemLabels && !string.IsNullOrEmpty(item.Text) ? null : (item.Text ?? item.Tooltip);
+
     RenderFragment ItemMarkup(ToolbarItem item, bool measuring, string? htmlTitle) =>
         @<text>
             @if (item.HasChildren)
@@ -358,6 +366,7 @@
                             class="shiny-toolbar-item shiny-toolbar-item--menu"
                             style="@ItemStyle(item)"
                             title="@htmlTitle"
+                            aria-label="@IconOnlyName(item)"
                             disabled="@item.IsDisabled"
                             tabindex="@(measuring ? "-1" : null)"
                             aria-haspopup="true"
@@ -384,6 +393,7 @@
                    target="@item.Target"
                    style="@ItemStyle(item)"
                    title="@htmlTitle"
+                            aria-label="@IconOnlyName(item)"
                    tabindex="@(measuring ? "-1" : null)"
                    @onclick="@(_ => OnItemClicked(item))">
                     @ItemBody(item)
@@ -395,6 +405,7 @@
                         class="shiny-toolbar-item"
                         style="@ItemStyle(item)"
                         title="@htmlTitle"
+                            aria-label="@IconOnlyName(item)"
                         disabled="@item.IsDisabled"
                         tabindex="@(measuring ? "-1" : null)"
                         @onclick="@(_ => OnItemClicked(item))"

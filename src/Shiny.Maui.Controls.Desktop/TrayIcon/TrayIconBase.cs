@@ -77,9 +77,13 @@ abstract class TrayIconBase : ITrayIcon
     public void SetMenu(TrayMenu menu)
     {
         if (this.Menu != null)
+        {
             this.Menu.Changed -= this.OnMenuChanged;
+            this.Menu.ItemUpdated -= this.OnMenuItemUpdatedCore;
+        }
         this.Menu = menu;
         menu.Changed += this.OnMenuChanged;
+        menu.ItemUpdated += this.OnMenuItemUpdatedCore;
         this.OnMenuChanged(menu, EventArgs.Empty);
     }
 
@@ -142,6 +146,15 @@ abstract class TrayIconBase : ITrayIcon
     protected abstract void OnVisibilityChanged(bool visible);
     protected abstract void OnMenuChanged(object? sender, EventArgs e);
 
+    void OnMenuItemUpdatedCore(object? sender, TrayMenuItemBase item) => this.OnMenuItemUpdated(item);
+
+    /// <summary>
+    /// One item changed without changing size. Platforms that can repaint the item in place
+    /// override this; the default rebuilds the whole menu.
+    /// </summary>
+    protected virtual void OnMenuItemUpdated(TrayMenuItemBase item)
+        => this.OnMenuChanged(this.Menu, EventArgs.Empty);
+
     /// <summary>Default implementation re-renders the current icon so platforms can composite the badge over it.</summary>
     protected virtual void OnBadgeChanged(string? value)
     {
@@ -153,7 +166,10 @@ abstract class TrayIconBase : ITrayIcon
     {
         this.StopAnimation();
         if (this.Menu != null)
+        {
             this.Menu.Changed -= this.OnMenuChanged;
+            this.Menu.ItemUpdated -= this.OnMenuItemUpdatedCore;
+        }
         GC.SuppressFinalize(this);
     }
 }

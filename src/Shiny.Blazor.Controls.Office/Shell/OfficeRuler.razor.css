@@ -50,4 +50,4 @@
     cursor: pointer;
 }
 
-.office-ruler__selector svg { width: 12px; height: 12px; fill: none; stroke: var(--shiny-color-on-surface, #161C23); stroke-width: 1.5; }
+.office-ruler__selector ::deep svg { width: 12px; height: 12px; fill: none; stroke: var(--shiny-color-on-surface, #161C23); stroke-width: 1.5; }

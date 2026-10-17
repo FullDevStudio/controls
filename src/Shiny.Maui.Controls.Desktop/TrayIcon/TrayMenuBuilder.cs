@@ -24,6 +24,16 @@ public sealed class TrayMenuBuilder
         return this;
     }
 
+    public TrayMenuBuilder Progress(string label, double value, string? caption = null)
+        => this.Progress(new TrayProgressItem(label, value, caption));
+
+    /// <summary>Adds a progress row. Keep the reference to update its value later.</summary>
+    public TrayMenuBuilder Progress(TrayProgressItem item)
+    {
+        this.menu.Items.Add(item);
+        return this;
+    }
+
     public TrayMenuBuilder Separator()
     {
         this.menu.Items.Add(new TraySeparator());
@@ -54,10 +64,26 @@ public sealed class TraySubmenuBuilder
         return this;
     }
 
+    public TraySubmenuBuilder Item(TrayMenuItem item)
+    {
+        this.submenu.Items.Add(item);
+        return this;
+    }
+
     public TraySubmenuBuilder Check(string label, bool isChecked, Action<bool> toggled)
     {
         var item = new TrayCheckMenuItem(label, isChecked);
         item.Toggled += (_, v) => toggled(v);
+        this.submenu.Items.Add(item);
+        return this;
+    }
+
+    public TraySubmenuBuilder Progress(string label, double value, string? caption = null)
+        => this.Progress(new TrayProgressItem(label, value, caption));
+
+    /// <summary>Adds a progress row. Keep the reference to update its value later.</summary>
+    public TraySubmenuBuilder Progress(TrayProgressItem item)
+    {
         this.submenu.Items.Add(item);
         return this;
     }

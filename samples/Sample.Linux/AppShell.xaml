@@ -48,6 +48,7 @@
        xmlns:pills="clr-namespace:Sample.Features.Pills;assembly=Sample.Linux"
        xmlns:progressbar="clr-namespace:Sample.Features.ProgressBar;assembly=Sample.Linux"
        xmlns:quickentry="clr-namespace:Sample.Features.QuickEntry;assembly=Sample.Linux"
+       xmlns:notch="clr-namespace:Sample.Features.Notch;assembly=Sample.Linux"
        xmlns:scheduler="clr-namespace:Sample.Features.Scheduler;assembly=Sample.Linux"
        xmlns:securitypin="clr-namespace:Sample.Features.SecurityPin;assembly=Sample.Linux"
        xmlns:pwstrength="clr-namespace:Sample.Features.PasswordStrength;assembly=Sample.Linux"
@@ -224,6 +225,9 @@
 
     <FlyoutItem Title="Pills">
         <ShellContent ContentTemplate="{DataTemplate pills:PillPage}" Route="pills" />
+    </FlyoutItem>
+    <FlyoutItem Title="Notch">
+        <ShellContent ContentTemplate="{DataTemplate notch:NotchPage}" Route="notch" />
     </FlyoutItem>
     <FlyoutItem Title="Badge">
         <ShellContent ContentTemplate="{DataTemplate badge:BadgePage}" Route="badge" />

@@ -42,7 +42,10 @@
     FloorPlanEditorMode appliedMode = FloorPlanEditorMode.Edit;
     bool appliedShowGrid = true;
     bool appliedSnapToGrid = true;
-    bool fitted;
+    // The surface size the plan was last fitted to, and whether the user has taken the view over
+    // since (pressed, wheeled, zoomed or scrolled it) - after which a resize leaves the view alone.
+    SKSizeI fittedTo;
+    bool viewTaken;
     SKSizeI surface;
     double dpr = 1;
     long capturedPointer = -1;
@@ -112,7 +115,8 @@
         {
             this.Engine.Document = this.Document;
             this.appliedDocument = this.Document;
-            this.fitted = false;
+            this.fittedTo = default;
+            this.viewTaken = false;
         }
 
         if (this.Mode != this.appliedMode)
@@ -190,19 +194,31 @@
     /// <summary>Fits the whole plan in the view.</summary>
     public void ZoomToFit()
     {
+        this.viewTaken = true;
         if (this.surface.Width > 0)
             this.Engine.ZoomToFit(this.surface.Width, this.surface.Height);
     }
 
     /// <summary>Zooms in about the middle of the view.</summary>
-    public void ZoomIn() => this.Engine.ZoomIn(this.surface.Width, this.surface.Height);
+    public void ZoomIn()
+    {
+        this.viewTaken = true;
+        this.Engine.ZoomIn(this.surface.Width, this.surface.Height);
+    }
 
     /// <summary>Zooms out about the middle of the view.</summary>
-    public void ZoomOut() => this.Engine.ZoomOut(this.surface.Width, this.surface.Height);
+    public void ZoomOut()
+    {
+        this.viewTaken = true;
+        this.Engine.ZoomOut(this.surface.Width, this.surface.Height);
+    }
 
     /// <summary>Centres the view on an element without changing the zoom.</summary>
-    public void ScrollTo(FloorPlanElement element) =>
+    public void ScrollTo(FloorPlanElement element)
+    {
+        this.viewTaken = true;
         this.Engine.ScrollTo(element, this.surface.Width, this.surface.Height);
+    }
 
     public void SetTool(IFloorPlanTool tool) => this.Engine.SetTool(tool);
 
@@ -221,15 +237,17 @@
     /// The canvas's backing store is the one honest source for how big the drawing surface is - the
     /// host's CSS box differs from it by the device pixel ratio, and it is not settled at all until
     /// the first paint. Fitting from OnAfterRenderAsync instead fitted the plan to a collapsed box
-    /// while the splash screen was still up, and left it a thumbnail in the corner afterwards.
+    /// while the splash screen was still up, and left it a thumbnail in the corner afterwards. Even the
+    /// first paint can come before the page settles (on a phone the host grew after it, and the plan
+    /// sat in the corner again), so the fit follows the surface until the user takes the view over.
     /// </remarks>
     void OnPaint(SKPaintSurfaceEventArgs e)
     {
         this.surface = e.Info.Size;
 
-        if (this.FitOnLoad && !this.fitted && e.Info.Width > 0 && e.Info.Height > 0)
+        if (this.FitOnLoad && !this.viewTaken && e.Info.Width > 0 && e.Info.Height > 0 && e.Info.Size != this.fittedTo)
         {
-            this.fitted = true;
+            this.fittedTo = e.Info.Size;
             this.Engine.ZoomToFit(e.Info.Width, e.Info.Height);
         }
 
@@ -274,6 +292,7 @@
     async Task OnPointerDown(PointerEventArgs e)
     {
         // Dispatched before the capture call, and before any await: see Canvas().
+        this.viewTaken = true;
         var (x, y) = this.Canvas(e);
         this.Engine.OnPointerPressed(x, y, ButtonOf(e.Button), e.ShiftKey, e.CtrlKey);
 
@@ -327,6 +346,7 @@
 
     void OnWheel(WheelEventArgs e)
     {
+        this.viewTaken = true;
         var (x, y) = this.Canvas(e);
         this.Engine.OnScroll(x, y, e.DeltaY > 0 ? -1f : 1f);
     }
