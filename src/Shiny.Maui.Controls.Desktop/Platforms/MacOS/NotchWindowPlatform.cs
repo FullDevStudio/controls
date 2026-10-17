@@ -52,6 +52,12 @@ static class NotchWindowPlatform
             window.BackgroundColor = NSColor.Clear;
             window.HasShadow = false;
             window.MovableByWindowBackground = false;
+
+            // Explicitly NO, not left at its default. The default lets clicks fall through any part of a
+            // non-opaque window the window server thinks is transparent, and with layer-backed MAUI
+            // content that was all of it: a click on a button in the notch landed on the app behind.
+            // The window is sized to the notch surface, so taking every click costs nothing.
+            window.IgnoresMouseEvents = false;
             window.HidesOnDeactivate = false;
 
             // Above the menu bar (MainMenu), so the notch can sit over it and reach into the cut-out.
@@ -70,9 +76,42 @@ static class NotchWindowPlatform
                     content.Layer.BackgroundColor = NSColor.Clear.CGColor;
             }
 
+            // The first click after using another app. Clicking an inactive app's window makes the window
+            // server activate the app, and AppKit spends that mouse-down on the activation: the view never
+            // sees it, so a play button took two clicks. Handing the mouse-down to the window ourselves
+            // doesn't help - the activation still happens and the view still drops it. What works is to
+            // let AppKit drop it, remember it, and replay it to the window just before its own mouse-up,
+            // by which point the app is active. Replaying at the mouse-up rather than on a timer keeps
+            // down-before-up even for an instant click.
+            NSEvent? pending = null;
+            ClickMonitors[window.Handle] = NSEvent.AddLocalMonitorForEventsMatchingMask(
+                NSEventMask.LeftMouseDown | NSEventMask.LeftMouseUp | NSEventMask.RightMouseDown | NSEventMask.RightMouseUp,
+                e =>
+                {
+                    if (e.Window != window)
+                        return e;
+
+                    var isDown = e.Type is NSEventType.LeftMouseDown or NSEventType.RightMouseDown;
+                    if (isDown)
+                    {
+                        pending = NSApplication.SharedApplication.Active ? null : e;
+                        return e;
+                    }
+
+                    if (pending != null)
+                    {
+                        var down = pending;
+                        pending = null;
+                        window.SendEvent(down);
+                    }
+                    return e;
+                });
+
             window.OrderOut(null);
         });
     }
+
+    static readonly Dictionary<IntPtr, NSObject> ClickMonitors = new();
 
     public static void Place(object platformWindow, double width, double height, bool hugNotch, double topMargin, double durationMs)
     {
@@ -113,7 +152,18 @@ static class NotchWindowPlatform
             MacMainThread.Invoke(() => window.OrderOut(null));
     }
 
-    public static void Teardown(object platformWindow) => Hide(platformWindow);
+    public static void Teardown(object platformWindow)
+    {
+        Hide(platformWindow);
+        if (platformWindow is NSWindow window)
+        {
+            MacMainThread.Invoke(() =>
+            {
+                if (ClickMonitors.Remove(window.Handle, out var monitor))
+                    NSEvent.RemoveMonitor(monitor);
+            });
+        }
+    }
 
     /// <summary>
     /// Reports the pointer moving on and off the window. Event monitors rather than a tracking area: a
