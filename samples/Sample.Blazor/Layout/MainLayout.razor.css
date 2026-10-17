@@ -213,6 +213,37 @@
     overflow-y: auto;
 }
 
+/* On a phone (or any short window) the screen cannot hold the heading, the notes and a usable
+   demo, and squeezing the demo into what is left collapsed it to nothing. There the demo gets most
+   of a screen, the column may grow past the region and the page scrolls - and the demo contains its
+   own overscroll, so a swipe that reaches the end of its list stops there instead of carrying on
+   into the page (the same terms as a .demo-frame). */
+@media (max-width: 820px), (max-height: 760px) {
+    .content-inner:has(.demo-fill) {
+        height: auto;
+        min-height: 100%;
+    }
+
+    .content-inner:has(.demo-fill) > ::deep .demo-fill {
+        flex: 1 0 auto;
+    }
+
+    .content-inner:has(.demo-fill) > ::deep .demo-fill > .demo-fill-body {
+        flex: 1 0 auto;
+        height: min(520px, calc(100dvh - 160px));
+    }
+
+    .content-inner:has(.demo-fill) > ::deep .demo-fill-body,
+    .content-inner:has(.demo-fill) > ::deep .demo-fill-body * {
+        overscroll-behavior: contain;
+    }
+
+    .content-inner:has(.demo-fill) ::deep .source-code-panel {
+        max-height: none;
+        overflow-y: visible;
+    }
+}
+
 /* The bottom tab bar is a mobile affordance — on desktop the nav panel is showing instead, so
    the whole footer row collapses. ::deep reaches the AppLayoutFooter's root element, which does
    not carry this stylesheet's scope attribute. */

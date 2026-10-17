@@ -105,7 +105,7 @@ public static class JonRules
                         out.push(`R1 pointless ${axis}-scroll of ${extra}px: ${describe(el)}`);
                     if (isPage(el)) continue;
                     // a gallery mini-app (.demo-frame) scrolls on purpose and must contain its overscroll
-                    if (el.closest('.demo-frame')) {
+                    if (el.closest('.demo-frame, .demo-fill-body')) {
                         const ob = axis === 'y' ? getComputedStyle(el).overscrollBehaviorY : getComputedStyle(el).overscrollBehaviorX;
                         if (ob === 'contain' || ob === 'none') continue;
                     }
