@@ -220,4 +220,57 @@ public class NotchViewTests
         notch.SurfaceSize.ShouldBe(new Size(-1, -1));
         completed.ShouldBe(1);
     }
+
+
+    [Theory]
+    [InlineData(double.PositiveInfinity)]
+    [InlineData(520d)]
+    public void ContentWithAFixedWidthIsMeasuredAtThatWidth(double maxWidth)
+    {
+        // A stack with WidthRequest hands its children the width IT was offered, not its own, so text
+        // inside measured as one long line and then wrapped onto lines the notch had no room for.
+        var notch = new NotchView
+        {
+            ContentPadding = new Thickness(0),
+            MaxNotchWidth = maxWidth,
+            Content = new WrappingProbe { WidthRequest = 280 }
+        };
+        notch.Refresh();
+
+        notch.NotchSize.ShouldBe(new Size(280, WrappingProbe.HeightAt(280)));
+    }
+
+
+    [Fact]
+    public void ContentMaximumWidthCapsTheMeasure()
+    {
+        var notch = new NotchView
+        {
+            ContentPadding = new Thickness(0),
+            Content = new WrappingProbe { MaximumWidthRequest = 300 }
+        };
+        notch.Refresh();
+
+        notch.NotchSize.ShouldBe(new Size(300, WrappingProbe.HeightAt(300)));
+    }
+
+
+    /// <summary>
+    /// Behaves like a stack with wrapping text in it: it sizes from the constraint it is offered and
+    /// ignores its own width request, as a layout does when it measures its children. (A real Label and
+    /// stack can't measure without a handler.)
+    /// </summary>
+    sealed class WrappingProbe : View
+    {
+        const double TextWidth = 900;
+        const double LineHeight = 20;
+
+        public static double HeightAt(double width) => Math.Ceiling(TextWidth / width) * LineHeight;
+
+        protected override Size MeasureOverride(double widthConstraint, double heightConstraint)
+        {
+            var width = Math.Min(TextWidth, widthConstraint);
+            return new Size(width, HeightAt(width));
+        }
+    }
 }

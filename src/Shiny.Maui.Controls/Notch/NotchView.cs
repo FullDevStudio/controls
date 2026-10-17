@@ -264,12 +264,27 @@ public partial class NotchView : Grid
         if (maxHeight <= 0 || Double.IsNaN(maxHeight))
             maxHeight = Double.PositiveInfinity;
 
+        // Offer the content no more than it will be laid out at. A layout with a WidthRequest measures
+        // its children against the constraint it is given, not its own width, so wrapped text inside
+        // would measure as fewer lines than it then wraps to, and the notch would clip the rest.
+        maxWidth = CapByRequest(maxWidth, this.Content.WidthRequest, this.Content.MaximumWidthRequest);
+        maxHeight = CapByRequest(maxHeight, this.Content.HeightRequest, this.Content.MaximumHeightRequest);
+
         // The content itself, not its host: the host carries the size we pinned last time, and would
         // just report that back.
         var size = content.Measure(maxWidth, maxHeight);
         var width = Math.Max(size.Width, this.Content.WidthRequest);
         var height = Math.Max(size.Height, this.Content.HeightRequest);
         return width > 0 && height > 0 ? new Size(width, height) : null;
+    }
+
+    static double CapByRequest(double constraint, double request, double maximum)
+    {
+        if (request >= 0)
+            constraint = Math.Min(constraint, request);
+        if (maximum >= 0)
+            constraint = Math.Min(constraint, maximum);
+        return constraint;
     }
 
     void MorphTo(Size target, bool animate)
