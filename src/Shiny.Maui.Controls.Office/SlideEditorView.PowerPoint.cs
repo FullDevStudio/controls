@@ -5,6 +5,7 @@ using Shiny.Controls.Office.Packaging;
 using Shiny.Controls.Office.Shapes;
 using Shiny.Controls.Office.Text;
 using Shiny.Maui.Controls.ColorPicker;
+using Shiny.Maui.Controls.Infrastructure;
 using Shiny.Maui.Controls.Ribbons;
 using TextAlignment = Shiny.Controls.Office.Text.TextAlignment;
 
@@ -547,11 +548,12 @@ public partial class SlideEditorView
         text.Items.Add(OfficeRibbonItems.Row(
             this.Menu(SlideIcon.DateTime, "Date", () => this.Editable && (this.C?.Count ?? 0) > 0, m =>
             {
+                var now = this.C?.Time.GetLocalNow().DateTime ?? ShinyTime.For(this).LocalNow();
                 foreach (var format in new[] { "d", "D", "MMMM d, yyyy", "yyyy-MM-dd", "t", "g" })
                 {
                     m.Add(new RibbonMenuEntry
                     {
-                        Text = DateTime.Now.ToString(format, CultureInfo.CurrentCulture),
+                        Text = now.ToString(format, CultureInfo.CurrentCulture),
                         Command = new Command(() =>
                         {
                             if (this.C?.IsEditingText == true)

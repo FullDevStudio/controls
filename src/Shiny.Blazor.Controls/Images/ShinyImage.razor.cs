@@ -18,6 +18,10 @@ namespace Shiny.Blazor.Controls.Images;
 /// <para>Caching is left to the browser, which already does it well and shares it across tabs and
 /// sessions. Register an <see cref="IImageDownloader"/> only when bytes must come through C# -
 /// in practice, images behind a bearer token.</para>
+///
+/// <para>Loads are shared per URL. Every image showing the same URL rides one fetch (or one
+/// <see cref="IImageDownloader"/> call) and one blob, which is released when the last of them lets
+/// go.</para>
 /// </remarks>
 public partial class ShinyImage : IAsyncDisposable
 {
@@ -45,11 +49,16 @@ public partial class ShinyImage : IAsyncDisposable
         public string? Error { get; set; }
     }
 
+    // Shared across every ShinyImage, because the JS module's map of pending loads is: a per-component
+    // counter gave two images the same id, and aborting one cancelled the other's fetch.
+    static int nextRequestId;
+
     IJSObjectReference? module;
     bool disposed;
     DotNetObjectReference<ShinyImage>? selfRef;
     CancellationTokenSource? cts;
     IImageDownloader? downloader;
+    TimeProvider time = TimeProvider.System;
 
     string? resolvedSrc;
     string? blobUrl;
@@ -184,9 +193,12 @@ public partial class ShinyImage : IAsyncDisposable
 
     /// <inheritdoc />
     protected override void OnInitialized()
+    {
         // Resolved rather than injected so the component works with nothing registered - which is the
         // normal case, since the browser handles unauthenticated images perfectly well on its own.
-        => this.downloader = this.Services.GetService<IImageDownloader>();
+        this.downloader = this.Services.GetService<IImageDownloader>();
+        this.time = this.Services.GetService<TimeProvider>() ?? TimeProvider.System;
+    }
 
 
     /// <inheritdoc />
@@ -236,8 +248,8 @@ public partial class ShinyImage : IAsyncDisposable
             return;
         }
 
-        var uri = bustCache ? AppendCacheBuster(this.Uri) : this.Uri;
-        var id = ++this.requestId;
+        var uri = bustCache ? AppendCacheBuster(this.Uri, this.time) : this.Uri;
+        var id = this.requestId = Interlocked.Increment(ref nextRequestId);
 
         this.cts = new CancellationTokenSource();
         var token = this.cts.Token;
@@ -279,17 +291,29 @@ public partial class ShinyImage : IAsyncDisposable
 
     async Task<string?> LoadViaDownloaderAsync(string uri, CancellationToken token)
     {
-        var progress = new Progress<ImageLoadProgress>(this.SetProgress);
-        var result = await this.downloader!.DownloadAsync(uri, progress, token).ConfigureAwait(true);
+        if (this.module is null)
+            return null;
 
-        if (this.module is null || result.Bytes.Length == 0)
+        // Another image already holds this one: share its blob, and send no bytes over at all.
+        this.blobUrl = await this.module.InvokeAsync<string?>("acquire", token, uri).ConfigureAwait(true);
+        if (this.blobUrl is not null)
+            return await this.DecodeAsync(this.blobUrl, token).ConfigureAwait(true);
+
+        var progress = new Progress<ImageLoadProgress>(this.SetProgress);
+        var result = await SharedImageDownloads
+            .For(this.downloader!)
+            .DownloadAsync(uri, progress, token)
+            .ConfigureAwait(true);
+
+        if (result.Bytes.Length == 0)
             return null;
 
         // The bytes exist only in .NET memory, so they need a URL the DOM can point at. A blob URL
         // beats a data: URI here - a base64 data URI is a third larger and lands in the DOM as one
-        // enormous attribute string.
+        // enormous attribute string. Keyed by URI, so the images that shared this download share the
+        // blob too (createBlobUrl reuses one an earlier image already made).
         this.blobUrl = await this.module
-            .InvokeAsync<string>("createBlobUrl", token, result.Bytes, result.ContentType)
+            .InvokeAsync<string>("createBlobUrl", token, result.Bytes, result.ContentType, uri)
             .ConfigureAwait(true);
 
         return await this.DecodeAsync(this.blobUrl, token).ConfigureAwait(true);
@@ -443,8 +467,8 @@ public partial class ShinyImage : IAsyncDisposable
            && (parsed.Scheme == System.Uri.UriSchemeHttp || parsed.Scheme == System.Uri.UriSchemeHttps);
 
 
-    static string AppendCacheBuster(string uri)
-        => uri + (uri.Contains('?') ? '&' : '?') + "_shiny=" + DateTime.UtcNow.Ticks;
+    static string AppendCacheBuster(string uri, TimeProvider time)
+        => uri + (uri.Contains('?') ? '&' : '?') + "_shiny=" + time.GetUtcNow().UtcTicks;
 
 
     /// <inheritdoc />

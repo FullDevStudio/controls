@@ -318,14 +318,16 @@ static class NotebookMapping
 
     // ---- read ----
 
-    public static NotebookPage FromDto(PageRefDto dto)
+    /// <param name="time">Stamps a page whose manifest entry carries no created/modified date.</param>
+    public static NotebookPage FromDto(PageRefDto dto, TimeProvider time)
     {
+        var now = time.GetUtcNow();
         var page = new NotebookPage(
             string.IsNullOrWhiteSpace(dto.Id) ? NotebookDocument.NewId() : dto.Id,
             dto.Title)
         {
-            Created = dto.Created == default ? DateTimeOffset.UtcNow : dto.Created,
-            Modified = dto.Modified == default ? DateTimeOffset.UtcNow : dto.Modified,
+            Created = dto.Created == default ? now : dto.Created,
+            Modified = dto.Modified == default ? now : dto.Modified,
             Rule = ParseEnum(dto.Rule, PageRule.Blank),
             RuleSpacing = dto.RuleSpacing <= 0 ? 24 : dto.RuleSpacing,
             RuleColor = ParseColor(dto.RuleColor),

@@ -1,3 +1,4 @@
+using Shiny.Maui.Controls.Infrastructure;
 using SkiaSharp;
 using SkiaSharp.Views.Maui;
 using SkiaSharp.Views.Maui.Controls;
@@ -368,6 +369,7 @@ public partial class SpreadsheetView : ContentView, IDisposable
         }
 
         this.DetachController();
+        this.ApplyClock(workbook);
         this.controller = new SpreadsheetController(workbook, sheet);
         this.controller.Changed += this.OnControllerChanged;
         this.controller.EditingChanged += this.OnEditingChanged;
@@ -852,10 +854,23 @@ public partial class SpreadsheetView : ContentView, IDisposable
     {
         base.OnHandlerChanged();
 
+        // The workbook may have been bound before there was a handler to resolve the DI clock through.
+        if (this.controller is not null)
+            this.ApplyClock(this.controller.Workbook);
+
         if (this.Handler is null)
             this.StopMarching();
         else if (this.controller?.ClipboardRange is not null)
             this.StartMarching();
+    }
+
+    /// <summary>
+    /// Hands the workbook the DI clock TODAY(), NOW() and Ctrl+; read - unless the app already gave it one.
+    /// </summary>
+    void ApplyClock(Workbook workbook)
+    {
+        if (ReferenceEquals(workbook.Time, TimeProvider.System))
+            workbook.Time = ShinyTime.For(this);
     }
 
     void DetachController()

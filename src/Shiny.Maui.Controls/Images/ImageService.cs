@@ -7,6 +7,16 @@ namespace Shiny.Maui.Controls.Images;
 /// The default <see cref="IImageService"/>: memory cache, disk cache, a bounded download queue, and
 /// de-duplication of concurrent requests for the same URI.
 /// </summary>
+/// <remarks>
+/// <para>The disk tier follows the server. <c>Cache-Control: max-age</c> or <c>Expires</c> sets how long
+/// an entry is trusted, falling back to <see cref="ImageOptions.DiskCacheDuration"/>. Once it expires
+/// it is revalidated rather than thrown away: the request carries its <c>ETag</c> /
+/// <c>Last-Modified</c>, and a 304 extends the entry without downloading the image again. If the
+/// refresh fails outright, the stale copy is shown (<see cref="ImageOptions.ServeStaleOnError"/>).</para>
+///
+/// <para>Everything past the memory tier is shared per URI. Twelve cells asking for one avatar make
+/// one disk read, or one request, and all twelve get its result.</para>
+/// </remarks>
 public class ImageService : IImageService
 {
     /// <summary>
@@ -75,15 +85,18 @@ public class ImageService : IImageService
     readonly ConcurrentDictionary<string, InFlight> inFlight = new(StringComparer.Ordinal);
     readonly SemaphoreSlim downloadGate;
     readonly IImageDownloader downloader;
+    readonly TimeProvider time;
 
     /// <summary>Creates the service.</summary>
     /// <param name="options">Cache and concurrency settings. Defaults are used when null.</param>
     /// <param name="downloader">How bytes are fetched. A plain <see cref="HttpImageDownloader"/> when null.</param>
-    public ImageService(ImageOptions? options = null, IImageDownloader? downloader = null)
+    /// <param name="time">The clock cache expiry and progress throttling run on. <see cref="TimeProvider.System"/> when null.</param>
+    public ImageService(ImageOptions? options = null, IImageDownloader? downloader = null, TimeProvider? time = null)
     {
         this.Options = options ?? new ImageOptions();
-        this.downloader = downloader ?? new HttpImageDownloader(this.Options);
-        this.DiskCache = new DiskImageCache(this.Options);
+        this.time = time ?? TimeProvider.System;
+        this.downloader = downloader ?? new HttpImageDownloader(this.Options, null, this.time);
+        this.DiskCache = new DiskImageCache(this.Options, this.time);
         this.MemoryCache = new MemoryImageCache(this.Options);
         this.downloadGate = new SemaphoreSlim(Math.Max(1, this.Options.MaxConcurrentDownloads));
     }
@@ -113,26 +126,12 @@ public class ImageService : IImageService
 
         try
         {
-            var useCache = request.CacheEnabled && !request.BypassCache;
+            // The memory tier is answered on the caller's own thread: it is a dictionary lookup, and
+            // the overwhelmingly common case when a list scrolls back over images it has shown.
+            if (UsesCache(request) && this.MemoryCache.Get(request.Uri) is { } cached)
+                return ImageResult.Ok(ImageOrigin.Memory, cached, null, cached.LongLength);
 
-            if (useCache)
-            {
-                var cached = this.MemoryCache.Get(request.Uri);
-                if (cached is not null)
-                    return ImageResult.Ok(ImageOrigin.Memory, cached, null, cached.LongLength);
-
-                var meta = await this.DiskCache.GetAsync(request.Uri, cancellationToken).ConfigureAwait(false);
-                if (meta is not null)
-                {
-                    var path = this.DiskCache.GetImagePath(request.Uri);
-                    var bytes = await this.TryHoldInMemoryAsync(request, path, meta.ContentLength, cancellationToken)
-                        .ConfigureAwait(false);
-
-                    return ImageResult.Ok(ImageOrigin.Disk, bytes, path, meta.ContentLength);
-                }
-            }
-
-            return await this.DownloadSharedAsync(request, progress, cancellationToken).ConfigureAwait(false);
+            return await this.LoadSharedAsync(request, progress, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -187,12 +186,26 @@ public class ImageService : IImageService
     }
 
 
-    async Task<ImageResult> DownloadSharedAsync(
+    static bool UsesCache(ImageRequest request) => request.CacheEnabled && !request.BypassCache;
+
+
+    /// <summary>
+    /// Requests are only shared with others that want the same thing: a forced reload must not be
+    /// handed a cache hit that a normal load is in the middle of reading, and an uncached request
+    /// must not be handed bytes a cached one wrote.
+    /// </summary>
+    static string ShareKey(ImageRequest request)
+        => (!request.CacheEnabled ? "n:" : request.BypassCache ? "b:" : "c:") + request.Uri;
+
+
+    async Task<ImageResult> LoadSharedAsync(
         ImageRequest request,
         IProgress<ImageLoadProgress>? progress,
         CancellationToken cancellationToken
     )
     {
+        var key = ShareKey(request);
+
         // The entry is created before the work starts and published with GetOrAdd's value overload,
         // so exactly one caller can win the race - and only that caller starts the download. Using
         // the factory overload instead would risk running it twice under contention and firing two
@@ -200,7 +213,7 @@ public class ImageService : IImageService
         var tcs = new TaskCompletionSource<ImageResult>(TaskCreationOptions.RunContinuationsAsynchronously);
         var candidate = new InFlight { Task = tcs.Task };
 
-        var entry = this.inFlight.GetOrAdd(request.Uri, candidate);
+        var entry = this.inFlight.GetOrAdd(key, candidate);
         var isOwner = ReferenceEquals(entry, candidate);
 
         entry.Subscribe(progress);
@@ -216,7 +229,7 @@ public class ImageService : IImageService
                 {
                     try
                     {
-                        var result = await this.DownloadCoreAsync(request, entry, CancellationToken.None)
+                        var result = await this.LoadCoreAsync(request, entry, CancellationToken.None)
                             .ConfigureAwait(false);
                         tcs.TrySetResult(result);
                     }
@@ -226,7 +239,7 @@ public class ImageService : IImageService
                     }
                     finally
                     {
-                        this.inFlight.TryRemove(request.Uri, out _);
+                        this.inFlight.TryRemove(new KeyValuePair<string, InFlight>(key, entry));
                     }
                 }, CancellationToken.None);
             }
@@ -240,8 +253,58 @@ public class ImageService : IImageService
     }
 
 
-    async Task<ImageResult> DownloadCoreAsync(ImageRequest request, InFlight entry, CancellationToken cancellationToken)
+    async Task<ImageResult> LoadCoreAsync(ImageRequest request, InFlight entry, CancellationToken cancellationToken)
     {
+        CacheEntryMeta? stale = null;
+
+        if (UsesCache(request))
+        {
+            // Checked again now this caller owns the load. Between its own memory miss and winning
+            // the race, a load of the same URI can have finished and left the shared map - and
+            // without this look the owner would download a picture that is already on disk.
+            if (this.MemoryCache.Get(request.Uri) is { } cached)
+                return ImageResult.Ok(ImageOrigin.Memory, cached, null, cached.LongLength);
+
+            var meta = await this.DiskCache.GetEntryAsync(request.Uri, cancellationToken).ConfigureAwait(false);
+            if (meta is not null && !meta.IsExpiredAt(this.time.GetUtcNow()))
+                return await this.FromDiskAsync(request, meta, cancellationToken).ConfigureAwait(false);
+
+            stale = meta;
+        }
+
+        try
+        {
+            return await this.DownloadCoreAsync(request, entry, stale, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception) when (stale is not null && this.Options.ServeStaleOnError)
+        {
+            return await this.FromDiskAsync(request, stale, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+
+    async Task<ImageResult> FromDiskAsync(ImageRequest request, CacheEntryMeta meta, CancellationToken cancellationToken)
+    {
+        var path = this.DiskCache.GetImagePath(request.Uri);
+        var bytes = await this.TryHoldInMemoryAsync(request, path, meta.ContentLength, cancellationToken)
+            .ConfigureAwait(false);
+
+        return ImageResult.Ok(ImageOrigin.Disk, bytes, path, meta.ContentLength);
+    }
+
+
+    async Task<ImageResult> DownloadCoreAsync(
+        ImageRequest request,
+        InFlight entry,
+        CacheEntryMeta? stale,
+        CancellationToken cancellationToken
+    )
+    {
+        // An expired copy with validators turns the download into a question - "has this changed?" -
+        // that a 304 answers with headers alone.
+        if (stale is { CanRevalidate: true })
+            request = request with { IfNoneMatch = stale.ETag, IfModifiedSince = stale.LastModified };
+
         // Queued is reported before the wait, not after. That ordering is the feature: a caller
         // sitting behind three other downloads has nothing to measure, so its ring spins.
         entry.Report(ImageLoadProgress.Queued);
@@ -252,18 +315,31 @@ public class ImageService : IImageService
             var download = await this.downloader.DownloadAsync(request, cancellationToken).ConfigureAwait(false);
             await using var body = download.Stream;
 
+            if (download.NotModified)
+            {
+                if (stale is null)
+                    throw new InvalidOperationException($"'{request.Uri}' answered 304 Not Modified, but nothing is cached for it");
+
+                var refreshed = await this.DiskCache
+                    .RefreshAsync(request.Uri, stale, download, request.CacheDuration ?? this.Options.DiskCacheDuration, cancellationToken)
+                    .ConfigureAwait(false);
+
+                entry.Report(new ImageLoadProgress(ImageLoadState.Loaded, refreshed.ContentLength, refreshed.ContentLength));
+                return await this.FromDiskAsync(request, refreshed, cancellationToken).ConfigureAwait(false);
+            }
+
             var total = download.ContentLength is > 0 ? download.ContentLength : null;
             entry.Report(new ImageLoadProgress(ImageLoadState.Downloading, 0, total));
 
-            var lastReport = DateTime.UtcNow;
+            var lastReport = this.time.GetTimestamp();
             var lastPercent = -1d;
 
             void Report(long read)
             {
-                var now = DateTime.UtcNow;
+                var now = this.time.GetTimestamp();
                 var percent = total is > 0 ? (double)read / total.Value : -1;
 
-                if (now - lastReport < MinReportInterval && (percent < 0 || percent - lastPercent < MinReportDelta))
+                if (this.time.GetElapsedTime(lastReport, now) < MinReportInterval && (percent < 0 || percent - lastPercent < MinReportDelta))
                     return;
 
                 lastReport = now;

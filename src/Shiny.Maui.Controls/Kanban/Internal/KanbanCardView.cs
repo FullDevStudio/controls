@@ -1,5 +1,6 @@
 using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Layouts;
+using Shiny.Maui.Controls.Infrastructure;
 using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls.Kanban.Internal;
@@ -300,7 +301,7 @@ sealed class KanbanCardView : Border
         var date = card.DueDate!.Value;
         this.due.Text = date.ToString(this.owner.DueDateFormat, this.owner.EffectiveCulture);
 
-        var now = DateTimeOffset.Now;
+        var now = ShinyTime.For(this).GetLocalNow();
         var key = date < now
             ? ShinyThemeKeys.Color.Error
             : date - now <= this.owner.DueSoonWindow

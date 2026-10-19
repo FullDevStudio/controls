@@ -1023,10 +1023,10 @@ public sealed partial class SpreadsheetController
     // ---- insertion ----
 
     /// <summary>Writes today's date into the active cell, formatted as a date — Ctrl+;.</summary>
-    public void InsertCurrentDate() => this.InsertNow(DateTime.Now.Date, NumberFormats.CodeOf(NumberFormatPreset.ShortDate));
+    public void InsertCurrentDate() => this.InsertNow(this.Workbook.Time.GetLocalNow().Date, NumberFormats.CodeOf(NumberFormatPreset.ShortDate));
 
     /// <summary>Writes the time now into the active cell — Ctrl+Shift+:.</summary>
-    public void InsertCurrentTime() => this.InsertNow(new DateTime(1899, 12, 31) + DateTime.Now.TimeOfDay, NumberFormats.CodeOf(NumberFormatPreset.Time));
+    public void InsertCurrentTime() => this.InsertNow(new DateTime(1899, 12, 31) + this.Workbook.Time.GetLocalNow().TimeOfDay, NumberFormats.CodeOf(NumberFormatPreset.Time));
 
     void InsertNow(DateTime value, string format)
     {

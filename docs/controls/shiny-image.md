@@ -107,10 +107,30 @@ builder.UseShinyControls(cfg => cfg
         o.MemoryCacheEnabled     = true;
         o.MaxMemoryCacheBytes    = 32 * 1024 * 1024;
         o.MaxMemoryItemBytes     = 2 * 1024 * 1024;   // bigger images stay disk-only
+        o.ServeStaleOnError      = true;              // offline? show the expired copy
         o.SvgCacheEntryLimit     = 32;                // parsed SVG documents kept
     })
 );
 ```
+
+**How the disk cache decides.** An entry lives as long as the server's `Cache-Control: max-age` or
+`Expires` says, otherwise `DiskCacheDuration`. An expired entry is **revalidated, not thrown away**:
+the next request carries its `ETag` / `Last-Modified` as `If-None-Match` / `If-Modified-Since`, and a
+`304 Not Modified` extends the entry without downloading the image again. If the refresh fails
+(offline, timeout, 5xx), the stale copy is shown instead of the error artwork; set
+`ServeStaleOnError = false` to fail instead. A custom `IImageDownloader` can honour the same
+validators: send `request.IfNoneMatch` / `request.IfModifiedSince` and return
+`new ImageDownloadResult(Stream.Null, NotModified: true)` on a 304. One that ignores them still works
+and just re-downloads.
+
+**One request per URL.** Everything past the memory tier is shared per URI: a dozen cells asking for
+one avatar make one disk read, or one request (download or revalidation), and every cell gets its
+result and its progress. A forced reload (`ReloadAsync`) and an uncached image never share with a
+normal load.
+
+**Clock.** Expiry, last-access stamps and progress throttling read an injected `TimeProvider`.
+Register one in DI (`builder.Services.AddSingleton<TimeProvider>(...)`) to control it in tests; the
+default is `TimeProvider.System`.
 
 ```csharp
 // Clear cached images — e.g. from a "free up space" setting
@@ -153,8 +173,16 @@ bytes, which is free; the network round-trip is what was skipped.
 
 ## Blazor
 
-There is no cache layer on Blazor and that is deliberate — the browser already has a well-tuned HTTP
-cache, shared across tabs and persisted between sessions. What Blazor *does* add is progress:
+There is no disk cache layer on Blazor and that is deliberate — the browser's HTTP cache already is
+one: it lives on disk, is shared across tabs and sessions, and revalidates with `ETag` /
+`Last-Modified` on its own. What Blazor *does* add:
+
+- **One fetch per URL.** Every `ShinyImage` showing the same URL rides one `fetch` and one blob. A late
+  arrival joins the fetch in flight (and is told how far it has got) or, once it has finished, gets the
+  same blob straight away. The blob is released when the last image showing it goes. One image leaving
+  the screen never cancels a fetch others are still waiting on. With an `IImageDownloader` registered
+  the same holds: one download per URL per scope (per user on Blazor Server), one blob.
+- **Progress:
 `ShinyImage` streams remote images through `fetch` and a `ReadableStream` reader so the ring can show
 a genuine percentage, which no `<img>` element can report.
 

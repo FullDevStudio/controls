@@ -1,3 +1,4 @@
+using Shiny.Maui.Controls.Infrastructure;
 using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls.Scheduler.Internal;
@@ -83,7 +84,7 @@ class CurrentTimeIndicator : ContentView
 
     public void UpdateTime(bool use24HourTime)
     {
-        var now = DateTime.Now;
+        var now = ShinyTime.For(this).LocalNow();
         timeLabel.Text = now.ToString(use24HourTime ? "HH:mm" : "h:mm tt");
     }
 }

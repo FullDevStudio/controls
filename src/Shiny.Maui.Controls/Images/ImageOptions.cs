@@ -50,6 +50,13 @@ public class ImageOptions
     /// </remarks>
     public long MaxMemoryItemBytes { get; set; } = 2 * 1024 * 1024;
 
+    /// <summary>
+    /// When a stale cached copy exists and refreshing it fails - offline, a timeout, a 5xx - show the
+    /// stale copy rather than the error artwork. On by default: an out-of-date avatar beats a broken
+    /// one, and an app that has to show exactly what the server holds can turn this off.
+    /// </summary>
+    public bool ServeStaleOnError { get; set; } = true;
+
     /// <summary>How long a single download may take before it is abandoned.</summary>
     public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(60);
 

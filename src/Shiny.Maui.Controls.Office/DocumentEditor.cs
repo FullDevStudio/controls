@@ -1,3 +1,4 @@
+using Shiny.Maui.Controls.Infrastructure;
 using Shiny.Maui.Controls.Themes;
 using Shiny.Controls.Office.Document;
 using SkiaSharp;
@@ -259,7 +260,8 @@ public partial class DocumentEditor : ContentView, IDisposable
         {
             Zoom = this.Zoom,
             PageLayout = this.PageLayout,
-            IsSpellCheckEnabled = this.IsSpellCheckEnabled
+            IsSpellCheckEnabled = this.IsSpellCheckEnabled,
+            Time = ShinyTime.For(this)
         };
         this.controller.Changed += this.OnControllerChanged;
         this.controller.LinkActivated += this.OnLinkActivated;
@@ -395,7 +397,8 @@ public partial class DocumentEditor : ContentView, IDisposable
     /// <summary>How far a second tap may land from the first and still be the same gesture.</summary>
     const double MultiTapSlop = 10;
 
-    DateTime lastPressAt;
+    /// <summary>The previous press's <see cref="TimeProvider.GetTimestamp"/>; 0 before the first.</summary>
+    long lastPressAt;
     double lastPressX;
     double lastPressY;
     int pressCount;
@@ -406,10 +409,11 @@ public partial class DocumentEditor : ContentView, IDisposable
     /// <summary>Counts consecutive taps in the same spot: 1 places a caret, 2 a word, 3 a paragraph.</summary>
     int CountPress(double x, double y)
     {
-        var now = DateTime.UtcNow;
+        var time = ShinyTime.For(this);
+        var now = time.GetTimestamp();
         var near = Math.Abs(x - this.lastPressX) <= MultiTapSlop && Math.Abs(y - this.lastPressY) <= MultiTapSlop;
 
-        this.pressCount = near && now - this.lastPressAt <= MultiTapInterval ? this.pressCount + 1 : 1;
+        this.pressCount = near && this.lastPressAt != 0 && time.GetElapsedTime(this.lastPressAt, now) <= MultiTapInterval ? this.pressCount + 1 : 1;
         this.lastPressAt = now;
         this.lastPressX = x;
         this.lastPressY = y;
@@ -1069,6 +1073,10 @@ public partial class DocumentEditor : ContentView, IDisposable
     protected override void OnHandlerChanged()
     {
         base.OnHandlerChanged();
+
+        // The controller may have been built before there was a handler to resolve the DI clock through.
+        if (this.controller is not null)
+            this.controller.Time = ShinyTime.For(this);
 
         if (this.Handler is null)
             this.UnhookKeyboard();

@@ -21,4 +21,10 @@ public class GanttModelOptions
     /// practical one, because a plan built from whole days rarely lands on exact zero.
     /// </summary>
     public TimeSpan CriticalSlackThreshold { get; set; } = TimeSpan.Zero;
+
+    /// <summary>
+    /// The clock that supplies "today" — used only to anchor the extent of an empty plan. Null means
+    /// <see cref="TimeProvider.System"/>; hosts pass the one registered in DI.
+    /// </summary>
+    public TimeProvider? Time { get; set; }
 }

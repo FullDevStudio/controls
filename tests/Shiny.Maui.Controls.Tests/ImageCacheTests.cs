@@ -236,14 +236,35 @@ public class ImageCacheTests : IDisposable
     [Fact]
     public void ResolveExpiry_PrefersMaxAgeOverExpiresHeader()
     {
+        var now = new DateTimeOffset(2026, 10, 19, 12, 0, 0, TimeSpan.Zero);
         var cacheControl = new CacheControlHeaderValue { MaxAge = TimeSpan.FromMinutes(30) };
-        var resolved = HttpImageDownloader.ResolveExpiry(cacheControl, DateTimeOffset.UtcNow.AddDays(5));
 
-        resolved.ShouldNotBeNull();
-        resolved.Value.ShouldBeInRange(
-            DateTimeOffset.UtcNow.AddMinutes(29),
-            DateTimeOffset.UtcNow.AddMinutes(31)
-        );
+        HttpImageDownloader
+            .ResolveExpiry(cacheControl, now.AddDays(5), now)
+            .ShouldBe(now.AddMinutes(30));
+    }
+
+
+    [Fact]
+    public async Task Expiry_RunsOnTheInjectedClock()
+    {
+        var clock = new ManualTimeProvider();
+        var cache = new DiskImageCache(this.Options(), clock);
+        var payload = Bytes(64);
+
+        var meta = await cache.WriteAsync("https://example.com/a.png", new MemoryStream(payload), Download(payload), TimeSpan.FromHours(3));
+
+        meta.ExpiresUtc.ShouldBe(clock.GetUtcNow().AddHours(3));
+        (await cache.GetAsync("https://example.com/a.png")).ShouldNotBeNull();
+
+        clock.Advance(TimeSpan.FromHours(3));
+
+        (await cache.GetAsync("https://example.com/a.png")).ShouldBeNull();
+
+        // Expired is not gone: the validators and bytes are still there to revalidate against.
+        var stale = await cache.GetEntryAsync("https://example.com/a.png");
+        stale.ShouldNotBeNull();
+        stale.IsExpiredAt(clock.GetUtcNow()).ShouldBeTrue();
     }
 
 
@@ -253,14 +274,14 @@ public class ImageCacheTests : IDisposable
         // Not null. Null would mean "you decide", and deciding to cache something the server
         // explicitly asked us not to is the wrong answer.
         HttpImageDownloader
-            .ResolveExpiry(new CacheControlHeaderValue { NoStore = true }, DateTimeOffset.UtcNow.AddDays(5))
+            .ResolveExpiry(new CacheControlHeaderValue { NoStore = true }, DateTimeOffset.UtcNow.AddDays(5), DateTimeOffset.UtcNow)
             .ShouldBe(DateTimeOffset.MinValue);
     }
 
 
     [Fact]
     public void ResolveExpiry_FallsBackToNull_WhenNothingIsSaid()
-        => HttpImageDownloader.ResolveExpiry(null, null).ShouldBeNull();
+        => HttpImageDownloader.ResolveExpiry(null, null, DateTimeOffset.UtcNow).ShouldBeNull();
 
 
     sealed class FaultingStream : Stream

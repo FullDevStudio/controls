@@ -232,9 +232,11 @@ public sealed class NotebookPage
 
     public string Title { get; set; }
 
-    public DateTimeOffset Created { get; set; } = DateTimeOffset.UtcNow;
+    // A page built directly (rather than through NotebookDocument, which stamps both from its own clock)
+    // has no clock to ask, so these fall back to the system one.
+    public DateTimeOffset Created { get; set; } = TimeProvider.System.GetUtcNow();
 
-    public DateTimeOffset Modified { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset Modified { get; set; } = TimeProvider.System.GetUtcNow();
 
     public List<NoteItem> Items { get; } = new();
 

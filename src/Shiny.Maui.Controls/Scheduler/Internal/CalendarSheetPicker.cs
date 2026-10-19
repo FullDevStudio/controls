@@ -25,8 +25,8 @@ class CalendarSheetPicker : ContentView
     readonly Border[] cellBorders = new Border[42];
     readonly DateOnly[] cellDates = new DateOnly[42];
 
-    DateOnly selectedDate = DateOnly.FromDateTime(DateTime.Today);
-    DateOnly displayMonth = DateOnly.FromDateTime(DateTime.Today);
+    DateOnly selectedDate = DateOnly.FromDateTime(ShinyTime.Current.Today());
+    DateOnly displayMonth = DateOnly.FromDateTime(ShinyTime.Current.Today());
     DayOfWeek firstDayOfWeek = DayOfWeek.Sunday;
     bool isExpanded;
     bool buildPending;
@@ -310,7 +310,7 @@ class CalendarSheetPicker : ContentView
         var firstOfMonth = new DateOnly(dm.Year, dm.Month, 1);
         var firstDayOffset = ((int)firstOfMonth.DayOfWeek - (int)firstDayOfWeek + 7) % 7;
         var startDate = firstOfMonth.AddDays(-firstDayOffset);
-        var today = DateOnly.FromDateTime(DateTime.Today);
+        var today = DateOnly.FromDateTime(ShinyTime.For(this).Today());
         var totalDays = firstDayOffset + DateTime.DaysInMonth(dm.Year, dm.Month);
         rowsNeeded = (totalDays + 6) / 7;
 

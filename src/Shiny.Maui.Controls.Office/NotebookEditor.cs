@@ -1,4 +1,5 @@
 using Shiny.Controls.Office.Notebook;
+using Shiny.Maui.Controls.Infrastructure;
 using Shiny.Controls.Office.Shapes;
 using Shiny.Controls.Office.Spreadsheet;
 using Shiny.Controls.Office.View;
@@ -196,6 +197,7 @@ public class NotebookEditor : ContentView, IDisposable
             return;
         }
 
+        this.ApplyClock(this.Notebook);
         this.controller = new NotebookEditorController(this.Notebook, this.measurer)
         {
             IsReadOnly = this.IsReadOnly,
@@ -209,6 +211,24 @@ public class NotebookEditor : ContentView, IDisposable
             this.controller.Resize(this.Width, this.Height);
 
         this.Invalidate();
+    }
+
+    /// <summary>
+    /// Hands the notebook the DI clock its pages are stamped from - unless the app already gave it one.
+    /// </summary>
+    void ApplyClock(NotebookDocument notebook)
+    {
+        if (ReferenceEquals(notebook.Time, TimeProvider.System))
+            notebook.Time = ShinyTime.For(this);
+    }
+
+    /// <summary>The notebook may have been bound before there was a handler to resolve the DI clock through.</summary>
+    protected override void OnHandlerChanged()
+    {
+        base.OnHandlerChanged();
+
+        if (this.Notebook is not null)
+            this.ApplyClock(this.Notebook);
     }
 
     protected override void OnSizeAllocated(double width, double height)
@@ -354,7 +374,8 @@ public class NotebookEditor : ContentView, IDisposable
         _ => PointerKind.Touch
     };
 
-    DateTime lastTapTime;
+    /// <summary>The previous tap's <see cref="TimeProvider.GetTimestamp"/>; 0 before the first, and after a double tap.</summary>
+    long lastTapTime;
     double lastTapX;
     double lastTapY;
 
@@ -368,8 +389,10 @@ public class NotebookEditor : ContentView, IDisposable
     /// </remarks>
     bool IsDoubleTap(double x, double y)
     {
-        var now = DateTime.UtcNow;
-        var isDouble = (now - this.lastTapTime).TotalMilliseconds < 400 &&
+        var time = ShinyTime.For(this);
+        var now = time.GetTimestamp();
+        var isDouble = this.lastTapTime != 0 &&
+            time.GetElapsedTime(this.lastTapTime, now).TotalMilliseconds < 400 &&
             Math.Abs(x - this.lastTapX) < 12 &&
             Math.Abs(y - this.lastTapY) < 12;
 
@@ -378,7 +401,7 @@ public class NotebookEditor : ContentView, IDisposable
         this.lastTapY = y;
 
         if (isDouble)
-            this.lastTapTime = DateTime.MinValue;
+            this.lastTapTime = 0;
 
         return isDouble;
     }

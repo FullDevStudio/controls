@@ -60,14 +60,14 @@ public static class NotebookPackage
 
     // ---- read ----
 
-    internal static NotebookDocument Read(Stream source, string? path)
+    internal static NotebookDocument Read(Stream source, string? path, TimeProvider? time = null)
     {
         using var archive = new ZipArchive(source, ZipArchiveMode.Read, leaveOpen: true);
 
         var manifest = ReadJson(archive, ManifestEntry, NotebookJsonContext.Default.NotebookDto)
             ?? throw new InvalidDataException($"The package has no {ManifestEntry}.");
 
-        var document = new NotebookDocument(path) { Title = manifest.Title };
+        var document = new NotebookDocument(path) { Title = manifest.Title, Time = time ?? TimeProvider.System };
 
         foreach (var sectionDto in manifest.Sections)
         {
@@ -80,7 +80,7 @@ public static class NotebookPackage
 
             foreach (var pageRef in sectionDto.Pages)
             {
-                var page = NotebookMapping.FromDto(pageRef);
+                var page = NotebookMapping.FromDto(pageRef, document.Time);
                 var pageDto = ReadJson(archive, PageEntry(page.Id), NotebookJsonContext.Default.PageDto);
 
                 if (pageDto is not null)
@@ -101,7 +101,7 @@ public static class NotebookPackage
         // A notebook with nothing in it cannot be navigated to, so it would present as a broken
         // control rather than as an empty one.
         if (document.Sections.Count == 0)
-            document.Sections.Add(NotebookDocument.NewSection("Section 1"));
+            document.Sections.Add(document.NewSection("Section 1"));
 
         return document;
     }

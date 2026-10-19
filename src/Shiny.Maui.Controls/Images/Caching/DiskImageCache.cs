@@ -19,11 +19,18 @@ public class DiskImageCache
     const double TrimTargetRatio = 0.8;
 
     readonly ImageOptions options;
+    readonly TimeProvider time;
     readonly SemaphoreSlim trimGate = new(1, 1);
     string? resolvedRoot;
 
     /// <summary>Creates the cache.</summary>
-    public DiskImageCache(ImageOptions options) => this.options = options;
+    /// <param name="options">Cache settings.</param>
+    /// <param name="time">The clock expiry and last-access stamps are read from. <see cref="TimeProvider.System"/> when null.</param>
+    public DiskImageCache(ImageOptions options, TimeProvider? time = null)
+    {
+        this.options = options;
+        this.time = time ?? TimeProvider.System;
+    }
 
 
     /// <summary>The directory cache entries are written to. Created on first use.</summary>
@@ -69,6 +76,22 @@ public class DiskImageCache
     /// </summary>
     public async Task<CacheEntryMeta?> GetAsync(string uri, CancellationToken cancellationToken = default)
     {
+        var meta = await this.GetEntryAsync(uri, cancellationToken).ConfigureAwait(false);
+        return meta is not null && !meta.IsExpiredAt(this.time.GetUtcNow()) ? meta : null;
+    }
+
+
+    /// <summary>
+    /// Reads an entry whether or not it has expired, refreshing its last-access stamp. Returns null
+    /// on a miss or anything unreadable.
+    /// </summary>
+    /// <remarks>
+    /// An expired entry is not garbage. Its validators let the next request be a conditional one
+    /// that costs a 304 instead of the whole image, and its bytes are still the best thing to show
+    /// when the network is not there. Check <see cref="CacheEntryMeta.IsExpiredAt"/>.
+    /// </remarks>
+    public async Task<CacheEntryMeta?> GetEntryAsync(string uri, CancellationToken cancellationToken = default)
+    {
         var key = GetKey(uri);
         var imagePath = Path.Combine(this.Root, key + ImageExtension);
         var metaPath = this.GetMetaPath(key);
@@ -80,12 +103,9 @@ public class DiskImageCache
         if (meta is null)
             return null;
 
-        if (meta.ExpiresUtc <= DateTimeOffset.UtcNow)
-            return null;
-
         // Best-effort: a failed touch costs LRU accuracy, not correctness, and is not worth
         // failing an otherwise good cache hit over.
-        meta.LastAccessUtc = DateTimeOffset.UtcNow;
+        meta.LastAccessUtc = this.time.GetUtcNow();
         try
         {
             await this.WriteMetaAsync(metaPath, meta, cancellationToken).ConfigureAwait(false);
@@ -119,7 +139,10 @@ public class DiskImageCache
     {
         var key = GetKey(uri);
         var imagePath = Path.Combine(this.Root, key + ImageExtension);
-        var tempPath = imagePath + ".tmp";
+
+        // Unique per write. A forced reload and a normal load of the same URL can both be writing,
+        // and a shared ".tmp" name would have one truncate the file the other is still filling.
+        var tempPath = $"{imagePath}.{Guid.NewGuid():n}.tmp";
 
         long written = 0;
 
@@ -145,19 +168,44 @@ public class DiskImageCache
             throw;
         }
 
-        var now = DateTimeOffset.UtcNow;
+        var now = this.time.GetUtcNow();
         var meta = new CacheEntryMeta
         {
             Url = uri,
             DownloadedUtc = now,
             ExpiresUtc = download.ExpiresUtc ?? now.Add(fallbackDuration),
             ETag = download.ETag,
+            LastModified = download.LastModified,
             ContentLength = written,
             ContentType = download.ContentType,
             LastAccessUtc = now
         };
 
         await this.WriteMetaAsync(this.GetMetaPath(key), meta, cancellationToken).ConfigureAwait(false);
+        return meta;
+    }
+
+
+    /// <summary>
+    /// Extends an entry after the server answered a conditional request with 304, and returns it.
+    /// </summary>
+    public async Task<CacheEntryMeta> RefreshAsync(
+        string uri,
+        CacheEntryMeta meta,
+        ImageDownloadResult notModified,
+        TimeSpan fallbackDuration,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var now = this.time.GetUtcNow();
+        meta.ExpiresUtc = notModified.ExpiresUtc ?? now.Add(fallbackDuration);
+        meta.LastAccessUtc = now;
+
+        // A 304 may rotate the tag; one that says nothing leaves the old one standing.
+        if (!String.IsNullOrEmpty(notModified.ETag))
+            meta.ETag = notModified.ETag;
+
+        await this.WriteMetaAsync(this.GetMetaPath(GetKey(uri)), meta, cancellationToken).ConfigureAwait(false);
         return meta;
     }
 
@@ -238,6 +286,22 @@ public class DiskImageCache
         if (!Directory.Exists(this.Root))
             return;
 
+        // A write the app was killed in the middle of leaves its temp file behind, and nothing else
+        // ever looks for it. An hour is far longer than any live write takes.
+        var abandoned = this.time.GetUtcNow().UtcDateTime.AddHours(-1);
+        foreach (var temp in Directory.EnumerateFiles(this.Root, "*.tmp"))
+        {
+            try
+            {
+                if (File.GetLastWriteTimeUtc(temp) < abandoned)
+                    TryDelete(temp);
+            }
+            catch
+            {
+                // ignored
+            }
+        }
+
         var entries = new List<(string Key, long Size, DateTimeOffset LastAccess)>();
         var total = 0L;
 
@@ -313,12 +377,31 @@ public class DiskImageCache
     }
 
 
+    /// <remarks>
+    /// Temp file and move, like the image itself. Writing the sidecar in place left a window where a
+    /// concurrent read found it empty or half-written, decided the entry was unreadable, and went to
+    /// the network for an image that was sitting right there on disk.
+    /// </remarks>
     async Task WriteMetaAsync(string path, CacheEntryMeta meta, CancellationToken cancellationToken)
     {
-        await using var stream = File.Create(path);
-        await JsonSerializer
-            .SerializeAsync(stream, meta, ImageCacheJsonContext.Default.CacheEntryMeta, cancellationToken)
-            .ConfigureAwait(false);
+        var tempPath = $"{path}.{Guid.NewGuid():n}.tmp";
+
+        try
+        {
+            await using (var stream = File.Create(tempPath))
+            {
+                await JsonSerializer
+                    .SerializeAsync(stream, meta, ImageCacheJsonContext.Default.CacheEntryMeta, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+
+            File.Move(tempPath, path, true);
+        }
+        catch
+        {
+            TryDelete(tempPath);
+            throw;
+        }
     }
 
 

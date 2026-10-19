@@ -742,12 +742,13 @@ public class WordFeatureTests
     public async Task HorizontalLineBlankPageDateAndSymbols()
     {
         var (document, controller) = await OpenAsync();
+        controller.Time = new FixedClock(new DateTimeOffset(1999, 6, 15, 12, 0, 0, TimeSpan.Zero));
 
         var body = Body(document);
         controller.Selection.MoveTo(new DocumentPosition(body, 0));
         controller.InsertSymbol("©");
         controller.InsertDateTime("yyyy");
-        document.Paragraphs[body].PlainText.ShouldStartWith("©" + DateTime.Now.Year);
+        document.Paragraphs[body].PlainText.ShouldStartWith("©1999");
 
         controller.InsertHorizontalLine();
         document.Paragraphs[body + 1].Format.Borders!.Bottom.ShouldBeTrue();

@@ -72,11 +72,13 @@ public static class ControlsMauiAppBuilderExtensions
         builder.Services.TryAddSingleton(cfg.ImageOptions);
         builder.Services.TryAddSingleton<IImageDownloader>(sp => new HttpImageDownloader(
             sp.GetRequiredService<ImageOptions>(),
-            sp.GetService<HttpClient>()
+            sp.GetService<HttpClient>(),
+            sp.GetService<TimeProvider>()
         ));
         builder.Services.TryAddSingleton<IImageService>(sp => new ImageService(
             sp.GetRequiredService<ImageOptions>(),
-            sp.GetRequiredService<IImageDownloader>()
+            sp.GetRequiredService<IImageDownloader>(),
+            sp.GetService<TimeProvider>()
         ));
 
         // Parsed SVG documents are immutable and shared, so one cache for the whole app is right:

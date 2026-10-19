@@ -304,7 +304,7 @@ partial class ChatBubbleView : ContentView
         this.timestampLabel.FontSize = this.chatView.TimestampFontSize;
         if (isLast)
         {
-            var ts = ChatGroupHelper.FormatTimestamp(message.Timestamp);
+            var ts = ChatGroupHelper.FormatTimestamp(message.Timestamp, ShinyTime.For(this));
             if (message.EditedTimestamp is not null)
                 ts += " (edited)";
             this.timestampLabel.Text = ts;

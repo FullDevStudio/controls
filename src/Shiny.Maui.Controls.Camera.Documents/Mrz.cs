@@ -16,9 +16,10 @@ public static class Mrz
     /// <summary>
     /// Attempt to parse a TD3 passport MRZ from its two lines. Returns <c>true</c> with
     /// <paramref name="passport"/> populated when line 1 is a passport ('P') record carrying at least a
-    /// number or a name.
+    /// number or a name. <paramref name="time"/> supplies "today" for the birth-year century window;
+    /// null means <see cref="TimeProvider.System"/>.
     /// </summary>
-    public static bool TryParseTd3(string? line1, string? line2, out Passport passport)
+    public static bool TryParseTd3(string? line1, string? line2, out Passport passport, TimeProvider? time = null)
     {
         passport = null!;
         if (string.IsNullOrWhiteSpace(line1) || string.IsNullOrWhiteSpace(line2))
@@ -34,9 +35,10 @@ public static class Mrz
 
         var number = l2.Substring(0, 9).Replace("<", "").Trim();
         var nationality = Letters(l2.Substring(10, 3));
-        var dob = ParseDate(l2.Substring(13, 6), expiry: false);
+        var currentYear = (time ?? TimeProvider.System).GetLocalNow().Year;
+        var dob = ParseDate(l2.Substring(13, 6), expiry: false, currentYear);
         var sex = ParseSex(l2[20]);
-        var expiry = ParseDate(l2.Substring(21, 6), expiry: true);
+        var expiry = ParseDate(l2.Substring(21, 6), expiry: true, currentYear);
 
         if (number.Length == 0 && surname == null)
             return false;
@@ -106,7 +108,7 @@ public static class Mrz
         _ => PassportSex.Unspecified
     };
 
-    static DateOnly? ParseDate(string s, bool expiry)
+    static DateOnly? ParseDate(string s, bool expiry, int currentYear)
     {
         if (s.Length != 6 || !s.All(char.IsDigit))
             return null;
@@ -124,7 +126,7 @@ public static class Mrz
             year = 2000 + yy;
         else
         {
-            var pivot = DateTime.Today.Year % 100;
+            var pivot = currentYear % 100;
             year = yy <= pivot ? 2000 + yy : 1900 + yy;
         }
 

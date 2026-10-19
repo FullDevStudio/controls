@@ -30,5 +30,6 @@
     <ItemGroup>
         <InternalsVisibleTo Include="Shiny.Controls.MotionIcons.Tests" />
         <InternalsVisibleTo Include="Shiny.Blazor.Controls.Tests" />
+        <InternalsVisibleTo Include="Shiny.Blazor.Controls.Office" />
     </ItemGroup>
 </Project>

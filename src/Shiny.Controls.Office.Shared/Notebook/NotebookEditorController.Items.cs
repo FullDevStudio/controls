@@ -236,7 +236,7 @@ public sealed partial class NotebookEditorController
         if (this.IsReadOnly || this.Section is not { } section)
             return null;
 
-        var page = new NotebookPage(NotebookDocument.NewId(), title);
+        var page = this.Document.NewPage(title);
         this.Document.Execute(new AddPageCommand(section.Id, page, this.Address.Page + 1));
         this.GoToPage(page.Id);
 
@@ -262,7 +262,7 @@ public sealed partial class NotebookEditorController
         if (this.IsReadOnly)
             return null;
 
-        var section = NotebookDocument.NewSection(title);
+        var section = this.Document.NewSection(title);
         this.Document.Execute(new AddSectionCommand(section));
         this.Address = new PageAddress(this.Document.Sections.Count - 1, 0);
 

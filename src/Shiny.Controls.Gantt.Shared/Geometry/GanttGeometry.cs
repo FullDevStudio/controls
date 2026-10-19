@@ -226,7 +226,8 @@ public static class GanttGeometry
         double pixelsPerDay,
         CultureInfo? culture = null,
         GanttCalendar? calendar = null,
-        DateTimeOffset? now = null
+        DateTimeOffset? now = null,
+        TimeProvider? time = null
     )
     {
         var ticks = new List<GanttTick>();
@@ -234,7 +235,7 @@ public static class GanttGeometry
             return ticks;
 
         culture ??= CultureInfo.CurrentCulture;
-        var today = now ?? DateTimeOffset.Now;
+        var today = now ?? (time ?? TimeProvider.System).GetLocalNow();
 
         var cursor = FloorTo(from, scale, culture);
 

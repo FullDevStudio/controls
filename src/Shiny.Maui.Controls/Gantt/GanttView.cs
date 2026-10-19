@@ -189,7 +189,7 @@ public partial class GanttView : ContentView, IDisposable
     internal IReadOnlyList<GanttTick> UpperTicks { get; private set; } = [];
     internal IReadOnlyList<GanttTick> LowerTicks { get; private set; } = [];
     internal IReadOnlyList<(DateTimeOffset Start, DateTimeOffset End)> NonWorkingIntervals { get; private set; } = [];
-    internal DateTimeOffset Now { get; private set; } = DateTimeOffset.Now;
+    internal DateTimeOffset Now { get; private set; } = ShinyTime.Current.GetLocalNow();
 
     /// <summary>How far the timeline is scrolled, so the header can pin a partly-scrolled label.</summary>
     internal double ViewportScrollX { get; private set; }
@@ -277,7 +277,8 @@ public partial class GanttView : ContentView, IDisposable
             Calendar = this.Calendar ?? GanttCalendar.Continuous,
             RollUpSummaries = this.RollUpSummaries,
             ComputeCriticalPath = this.ShowCriticalPath,
-            CriticalSlackThreshold = this.CriticalSlackThreshold
+            CriticalSlackThreshold = this.CriticalSlackThreshold,
+            Time = ShinyTime.For(this)
         });
 
         // Watch each task, not just the collection: a view model that edits a date in place raises
@@ -350,7 +351,7 @@ public partial class GanttView : ContentView, IDisposable
         if (model is null)
             return;
 
-        this.Now = DateTimeOffset.Now;
+        this.Now = ShinyTime.For(this).GetLocalNow();
         this.ResolveRange(model);
         this.ResolveScale();
 
@@ -668,7 +669,7 @@ public partial class GanttView : ContentView, IDisposable
         this.nowTimer.Interval = TimeSpan.FromMinutes(1);
         this.nowTimer.Tick += (_, _) =>
         {
-            this.Now = DateTimeOffset.Now;
+            this.Now = ShinyTime.For(this).GetLocalNow();
             this.Repaint();
         };
         this.nowTimer.Start();

@@ -95,7 +95,7 @@ public sealed partial class DocumentEditorController
             this.ExecuteInsert(range.End, replacement);
 
         if (this.document.IsTrackingRevisions)
-            this.document.Execute(new TrackedDeleteCommand(range, this.Author, DateTime.UtcNow, this.NextRevisionId()));
+            this.document.Execute(new TrackedDeleteCommand(range, this.Author, this.Time.GetUtcNow().UtcDateTime, this.NextRevisionId()));
         else
             this.document.Execute(new DeleteRangeCommand(range));
     }

@@ -16,12 +16,20 @@ namespace Shiny.Maui.Controls.Images;
 /// <c>Expires</c>. Null hands the decision back to <see cref="ImageOptions.DiskCacheDuration"/>.
 /// </param>
 /// <param name="ETag">The entity tag, stored for future revalidation.</param>
+/// <param name="LastModified">The <c>Last-Modified</c> header, stored for future revalidation.</param>
+/// <param name="NotModified">
+/// The server answered a conditional request with 304: the cached copy is still good, and
+/// <paramref name="Stream"/> is empty. Only meaningful when the request carried
+/// <see cref="ImageRequest.IfNoneMatch"/> or <see cref="ImageRequest.IfModifiedSince"/>.
+/// </param>
 public record ImageDownloadResult(
     Stream Stream,
     long? ContentLength = null,
     string? ContentType = null,
     DateTimeOffset? ExpiresUtc = null,
-    string? ETag = null
+    string? ETag = null,
+    DateTimeOffset? LastModified = null,
+    bool NotModified = false
 );
 
 

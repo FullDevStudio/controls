@@ -415,7 +415,7 @@ public sealed partial class SlideEditorController
 
         var at = this.TextSelection.IsEmpty ? this.caret : this.DeleteSelectionCore();
         var before = this.LengthOf(at.Paragraph);
-        this.Execute(new InsertSlideFieldCommand(at, kind, dateFormat));
+        this.Execute(new InsertSlideFieldCommand(at, kind, dateFormat, this.Time.GetLocalNow().DateTime));
         this.MoveCaret(at with { Offset = at.Offset + Math.Max(0, this.LengthOf(at.Paragraph) - before) });
         return true;
     }

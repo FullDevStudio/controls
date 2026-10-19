@@ -27,4 +27,20 @@ public record ImageRequest(string Uri)
     /// pre-configured <c>HttpClient</c> instead.
     /// </summary>
     public IReadOnlyDictionary<string, string>? Headers { get; init; }
+
+    /// <summary>
+    /// Set by the service when it already holds an expired copy with an entity tag: send it as
+    /// <c>If-None-Match</c> and answer <see cref="ImageDownloadResult.NotModified"/> on a 304.
+    /// </summary>
+    /// <remarks>
+    /// A custom <see cref="IImageDownloader"/> that ignores this still works - it just re-downloads
+    /// the whole image where the built-in one would have got a few hundred bytes of headers.
+    /// </remarks>
+    public string? IfNoneMatch { get; init; }
+
+    /// <summary>
+    /// Set by the service alongside <see cref="IfNoneMatch"/>, from the expired copy's
+    /// <c>Last-Modified</c>: send it as <c>If-Modified-Since</c>.
+    /// </summary>
+    public DateTimeOffset? IfModifiedSince { get; init; }
 }

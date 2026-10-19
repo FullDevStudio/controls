@@ -10,13 +10,14 @@ namespace Shiny.Controls.Office.Spreadsheet;
 /// sees the freshly calculated result rather than the value cached in the file — which is stale the
 /// moment anything upstream is edited.
 /// </remarks>
-sealed class WorkbookCalcContext(Workbook workbook, TimeProvider time) : ICalcContext
+sealed class WorkbookCalcContext(Workbook workbook) : ICalcContext
 {
     public string CurrentSheet { get; set; } = workbook.Sheets.Count > 0 ? workbook.Sheets[0].Name : string.Empty;
 
     public CellRef CurrentCell { get; set; }
 
-    public DateTime Now => time.GetLocalNow().DateTime;
+    // Read through the workbook on every call so a host can swap the clock after the book is open.
+    public DateTime Now => workbook.Time.GetLocalNow().DateTime;
 
     public bool SheetExists(string sheet)
         => workbook.Sheets.Any(x => string.Equals(x.Name, sheet, StringComparison.OrdinalIgnoreCase));

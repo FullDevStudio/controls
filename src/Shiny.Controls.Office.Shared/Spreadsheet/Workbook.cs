@@ -64,10 +64,16 @@ public sealed partial class Workbook : OfficeDocument
                 IsSheetVisible(sheet)));
         }
 
-        this.calcContext = new WorkbookCalcContext(this, TimeProvider.System);
+        this.calcContext = new WorkbookCalcContext(this);
         this.Calc.NameResolver = this.ResolveNameNode;
         this.ReportUnsupported(workbookElement);
     }
+
+    /// <summary>
+    /// The clock behind TODAY() and NOW() and the insert-date/time commands. Defaults to the system clock;
+    /// a host sets its own (from DI) so a test or a demo can pin "now".
+    /// </summary>
+    public TimeProvider Time { get; set; } = TimeProvider.System;
 
     public IReadOnlyList<Worksheet> Sheets => this.sheets;
 

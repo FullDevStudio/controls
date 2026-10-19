@@ -52,7 +52,7 @@ public partial class ChatView : ContentView
     CancellationTokenSource? loadCts;
 
     // typing
-    readonly Dictionary<string, DateTimeOffset> typingUsers = new();
+    readonly Dictionary<string, long> typingUsers = new();
     IDispatcherTimer? typingExpiryTimer;
 
     // read receipts

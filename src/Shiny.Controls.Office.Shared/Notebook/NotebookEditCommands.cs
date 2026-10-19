@@ -232,7 +232,7 @@ public sealed record DeletePageCommand(string PageId) : NotebookCommand
         // A section with no pages has nowhere to put the caret and no page list row to click, so it
         // refills itself rather than becoming a tab that cannot be opened.
         if (section.Pages.Count == 0)
-            section.Pages.Add(new NotebookPage(NotebookDocument.NewId(), "Untitled page"));
+            section.Pages.Add(document.NewPage("Untitled page"));
 
         document.NotifyStructureChanged();
 
@@ -261,7 +261,7 @@ public sealed record MovePageCommand(string PageId, string TargetSectionId, int 
         to.Pages.Insert(Math.Clamp(this.Index, 0, to.Pages.Count), page);
 
         if (from.Pages.Count == 0 && !ReferenceEquals(from, to))
-            from.Pages.Add(new NotebookPage(NotebookDocument.NewId(), "Untitled page"));
+            from.Pages.Add(document.NewPage("Untitled page"));
 
         document.NotifyStructureChanged();
 
@@ -305,7 +305,7 @@ public sealed record DeleteSectionCommand(string SectionId) : NotebookCommand
         document.Sections.RemoveAt(index);
 
         if (document.Sections.Count == 0)
-            document.Sections.Add(NotebookDocument.NewSection("Section 1"));
+            document.Sections.Add(document.NewSection("Section 1"));
 
         document.NotifyStructureChanged();
 

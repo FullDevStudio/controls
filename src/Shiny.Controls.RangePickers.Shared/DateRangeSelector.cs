@@ -74,7 +74,7 @@ public sealed class DateRangeSelector
     public DateOnly? Hover { get; set; }
 
     /// <summary>Today, for <see cref="CalendarDayState.Today"/>. Settable so tests and time-zone-aware hosts can pin it.</summary>
-    public DateOnly Today { get; set; } = DateOnly.FromDateTime(DateTime.Today);
+    public DateOnly Today { get; set; } = DateOnly.FromDateTime(TimeProvider.System.GetLocalNow().DateTime);
 
     /// <summary>The completed range, or null while nothing or only a start is picked.</summary>
     public DateRange? Range => this.Start is { } s && this.End is { } e ? new DateRange(s, e) : null;

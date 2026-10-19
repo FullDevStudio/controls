@@ -257,9 +257,10 @@ class AgendaTimelinePanel : ContentView
         }
 
         // time marker
-        if (showTimeMarker && timeIndicator != null && date == DateOnly.FromDateTime(DateTime.Today))
+        var time = ShinyTime.For(this);
+        if (showTimeMarker && timeIndicator != null && date == DateOnly.FromDateTime(time.Today()))
         {
-            var now = DateTime.Now.TimeOfDay.TotalMinutes;
+            var now = time.LocalNow().TimeOfDay.TotalMinutes;
             var markerY = now * timeSlotHeight / 60.0;
 
             timeIndicator.UpdateTime(use24HourTime);

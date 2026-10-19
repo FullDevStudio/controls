@@ -142,9 +142,16 @@ public partial class DateRangeCalendar
 
     public static readonly BindableProperty DisplayMonthProperty = BindableProperty.Create(
         nameof(DisplayMonth), typeof(DateTime), typeof(DateRangeCalendar), default(DateTime), BindingMode.TwoWay,
-        coerceValue: (_, v) => v is DateTime d && d != default ? new DateTime(d.Year, d.Month, 1) : new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1),
-        defaultValueCreator: _ => new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1),
+        coerceValue: (b, v) => v is DateTime d && d != default ? new DateTime(d.Year, d.Month, 1) : CurrentMonth(b),
+        defaultValueCreator: b => CurrentMonth(b),
         propertyChanged: (b, _, _) => Redraw(b));
+
+    // The first of this month, by the control's clock.
+    static DateTime CurrentMonth(BindableObject b)
+    {
+        var today = ShinyTime.For(b as Element).Today();
+        return new DateTime(today.Year, today.Month, 1);
+    }
 
     /// <summary>The first month on screen.</summary>
     public DateTime DisplayMonth

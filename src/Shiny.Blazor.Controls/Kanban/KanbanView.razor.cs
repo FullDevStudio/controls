@@ -4,6 +4,7 @@ using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
+using Shiny.Blazor.Controls.Infrastructure;
 
 namespace Shiny.Blazor.Controls.Kanban;
 
@@ -27,8 +28,10 @@ namespace Shiny.Blazor.Controls.Kanban;
 public partial class KanbanView : ComponentBase, IAsyncDisposable
 {
     [Inject] IJSRuntime JS { get; set; } = default!;
+    [Inject] IServiceProvider Services { get; set; } = default!;
 
     ElementReference rootElement;
+    TimeProvider time = TimeProvider.System;
     IJSObjectReference? module;
     bool disposed;
     DotNetObjectReference<KanbanView>? selfRef;
@@ -213,6 +216,10 @@ public partial class KanbanView : ComponentBase, IAsyncDisposable
     internal CultureInfo EffectiveCulture => this.Culture ?? CultureInfo.CurrentCulture;
 
     bool Grouped => this.SwimlaneMode == KanbanSwimlaneMode.Grouped && this.Board.Swimlanes.Count > 0;
+
+
+    protected override void OnInitialized()
+        => this.time = ShinyTime.From(this.Services);
 
 
     protected override void OnParametersSet()
@@ -556,7 +563,7 @@ public partial class KanbanView : ComponentBase, IAsyncDisposable
 
     string DueClass(DateTimeOffset due)
     {
-        var now = DateTimeOffset.Now;
+        var now = this.time.GetLocalNow();
 
         if (due < now)
             return "is-overdue";

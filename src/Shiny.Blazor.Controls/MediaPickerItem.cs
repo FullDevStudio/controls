@@ -43,6 +43,18 @@ public sealed class MediaPickerItem
     /// <summary>True once <see cref="Data"/> holds the bytes.</summary>
     public bool HasData => this.Data.Length > 0;
 
+    /// <summary>
+    /// False keeps the photo in the picker: no remove button on its thumbnail. For a photo the
+    /// screen loaded itself — one already saved — rather than one the user just picked.
+    /// </summary>
+    public bool CanRemove { get; set; } = true;
+
+    /// <summary>True for a photo picked in this button, whose bytes the browser holds.</summary>
+    internal bool IsPicked => this.Opener != null;
+
+    /// <summary>True when the editor can be handed the bytes.</summary>
+    internal bool CanRead => this.Data.Length > 0 || this.Opener != null;
+
     /// <summary>Reads the bytes from the browser, in chunks. Set by the button that made this item.</summary>
     internal Func<long, CancellationToken, Task<Stream>>? Opener { get; set; }
 

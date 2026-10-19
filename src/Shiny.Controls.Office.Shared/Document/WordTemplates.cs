@@ -45,18 +45,26 @@ public static class WordTemplates
     ];
 
     /// <summary>Opens a template as an editable document — the template's own <see cref="OfficeTemplate.Open"/>, or blank.</summary>
-    public static async Task<WordDocument> OpenAsync(OfficeTemplate? template, CancellationToken cancellationToken = default)
+    /// <param name="time">
+    /// The clock a built-in template stamps today's date from (the letter's date line); the system clock when null.
+    /// A custom template's own <see cref="OfficeTemplate.Open"/> is used as is.
+    /// </param>
+    public static async Task<WordDocument> OpenAsync(OfficeTemplate? template, CancellationToken cancellationToken = default, TimeProvider? time = null)
     {
-        Stream stream = template?.Open is { } open
-            ? await open(cancellationToken).ConfigureAwait(false)
-            : Create(BlankId);
+        Stream stream = template?.Open is not { } open
+            ? Create(BlankId, time)
+            : All.Contains(template)
+                // The built-in templates' Open delegates are static and cannot see a clock, so build them here.
+                ? Create(template.Id, time)
+                : await open(cancellationToken).ConfigureAwait(false);
 
         await using (stream.ConfigureAwait(false))
             return await WordDocument.OpenAsync(stream, editable: true, cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>Writes the template with this id (blank for an unknown id) to a new, rewound stream.</summary>
-    public static MemoryStream Create(string id)
+    /// <param name="time">The clock the letter template's date line comes from; the system clock when null.</param>
+    public static MemoryStream Create(string id, TimeProvider? time = null)
     {
         var output = new MemoryStream();
 
@@ -109,7 +117,7 @@ public static class WordTemplates
                         Para("Street Address", "NoSpacing"),
                         Para("City, State ZIP", "NoSpacing"),
                         Para(string.Empty),
-                        Para(DateTime.Today.ToString("MMMM d, yyyy", System.Globalization.CultureInfo.InvariantCulture)),
+                        Para((time ?? TimeProvider.System).GetLocalNow().Date.ToString("MMMM d, yyyy", System.Globalization.CultureInfo.InvariantCulture)),
                         Para(string.Empty),
                         Para("Recipient Name", "NoSpacing"),
                         Para("Company", "NoSpacing"),

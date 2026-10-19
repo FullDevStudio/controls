@@ -34,7 +34,7 @@ public class SchedulerCalendarView : ContentView
 
     public static readonly BindableProperty SelectedDateProperty = BindableProperty.Create(
         nameof(SelectedDate), typeof(DateOnly), typeof(SchedulerCalendarView),
-        defaultValue: DateOnly.FromDateTime(DateTime.Today),
+        defaultValueCreator: b => DateOnly.FromDateTime(ShinyTime.For((Element)b).Today()),
         defaultBindingMode: BindingMode.TwoWay,
         propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SchedulerCalendarView), () =>
             {
@@ -43,7 +43,7 @@ public class SchedulerCalendarView : ContentView
 
     public static readonly BindableProperty DisplayMonthProperty = BindableProperty.Create(
         nameof(DisplayMonth), typeof(DateOnly), typeof(SchedulerCalendarView),
-        defaultValue: DateOnly.FromDateTime(DateTime.Today),
+        defaultValueCreator: b => DateOnly.FromDateTime(ShinyTime.For((Element)b).Today()),
         defaultBindingMode: BindingMode.TwoWay,
         propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SchedulerCalendarView), () =>
             {
@@ -429,7 +429,7 @@ public class SchedulerCalendarView : ContentView
         var firstOfMonth = new DateOnly(dm.Year, dm.Month, 1);
         var firstDayOffset = ((int)firstOfMonth.DayOfWeek - (int)FirstDayOfWeek + 7) % 7;
         var startDate = firstOfMonth.AddDays(-firstDayOffset);
-        var today = DateOnly.FromDateTime(DateTime.Today);
+        var today = DateOnly.FromDateTime(ShinyTime.For(this).Today());
 
         for (var i = 0; i < 42; i++)
         {

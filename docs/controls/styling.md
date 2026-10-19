@@ -114,3 +114,18 @@ brand colour. Internal parts now carry their own `CommonStates` group (a locally
 property beats one arriving through a style) and express disabled as opacity. Implicit styles
 targeting the Shiny control types themselves — `<Style TargetType="shiny:PillView">` — are
 unaffected; this only stops the app's `Button`/`Entry` styles leaking into parts you never declared.
+
+## Clock
+
+Controls that show or compute "now" or "today" (calendars, schedulers, range-picker presets, Gantt,
+Kanban due dates, chat timestamps, Office date fields, image cache expiry) read the `TimeProvider`
+registered in DI, falling back to `TimeProvider.System`. Register one to pin the date for a demo, a
+screenshot pass or a test:
+
+```csharp
+builder.Services.AddSingleton<TimeProvider>(myClock);
+```
+
+The Office models (`Workbook`, `NotebookDocument`, `DocumentEditorController`, `SlideEditorController`)
+also have a settable `Time` property for code that builds them without DI.
+

@@ -158,7 +158,7 @@ public class TimePickerCell : CellBase
     void UpdateDisplayText()
     {
         if (valueLabel == null) return;
-        var dt = DateTime.Today.Add(Time);
+        var dt = DateTime.SpecifyKind(ShinyTime.For(this).Today(), DateTimeKind.Local).Add(Time);
         valueLabel.Text = dt.ToString(Format);
     }
 

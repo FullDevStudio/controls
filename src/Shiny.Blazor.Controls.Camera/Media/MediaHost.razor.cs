@@ -82,9 +82,9 @@ public partial class MediaHost : IDisposable
     };
 
 
-    static string FormatElapsed(DateTimeOffset started)
+    string FormatElapsed(DateTimeOffset started)
     {
-        var elapsed = DateTimeOffset.UtcNow - started;
+        var elapsed = this.Media.Time.GetUtcNow() - started;
         return elapsed.TotalHours >= 1
             ? elapsed.ToString(@"h\:mm\:ss")
             : elapsed.ToString(@"m\:ss");

@@ -1302,6 +1302,21 @@ All of these services are registered **Scoped**, never Singleton — they hold p
 
 No DI registration is required for Blazor — components are used directly in `.razor` pages.
 
+### Clock (both hosts)
+
+Every control that reads "now" or "today" (calendars, schedulers, range presets, Gantt, Kanban due
+dates, chat timestamps, Office date fields, image cache expiry) uses the `TimeProvider` registered in
+DI, falling back to `TimeProvider.System`. Never generate `DateTime.Now`/`UtcNow`/`Today` inside
+control code — read the clock instead. To pin the date for a demo, screenshot pass or test:
+
+```csharp
+// any TimeProvider subclass, e.g. FakeTimeProvider from Microsoft.Extensions.TimeProvider.Testing
+builder.Services.AddSingleton<TimeProvider>(myClock);
+```
+
+The Office models (`Workbook`, `NotebookDocument`, `DocumentEditorController`, `SlideEditorController`)
+also expose a settable `Time` property for code that builds them without DI.
+
 ## MAUI → Blazor Translation Cheat Sheet
 
 All controls exist on both hosts, but the Blazor surface is idiomatic Razor, not a 1:1 XAML port. When generating Blazor code, translate with these rules:

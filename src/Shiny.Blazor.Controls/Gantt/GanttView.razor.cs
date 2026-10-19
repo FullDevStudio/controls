@@ -4,6 +4,7 @@ using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
+using Shiny.Blazor.Controls.Infrastructure;
 using Shiny.Controls.Gantt;
 
 namespace Shiny.Blazor.Controls.Gantt;
@@ -30,6 +31,7 @@ namespace Shiny.Blazor.Controls.Gantt;
 public partial class GanttView : ComponentBase, IAsyncDisposable
 {
     [Inject] IJSRuntime JS { get; set; } = default!;
+    [Inject] IServiceProvider Services { get; set; } = default!;
 
     ElementReference scrollElement;
     ElementReference canvasElement;
@@ -247,7 +249,8 @@ public partial class GanttView : ComponentBase, IAsyncDisposable
     public DateTimeOffset RangeStart { get; private set; }
     public DateTimeOffset RangeEnd { get; private set; }
 
-    internal DateTimeOffset Now { get; private set; } = DateTimeOffset.Now;
+    // Set by Rebuild, which OnParametersSet runs before the first render.
+    internal DateTimeOffset Now { get; private set; }
     internal CultureInfo EffectiveCulture => this.Culture ?? CultureInfo.CurrentCulture;
 
     internal List<BarVisual> Bars { get; } = [];
@@ -389,7 +392,8 @@ public partial class GanttView : ComponentBase, IAsyncDisposable
     public void Rebuild()
     {
         this.UnhookItems();
-        this.Now = DateTimeOffset.Now;
+        var time = ShinyTime.From(this.Services);
+        this.Now = time.GetLocalNow();
 
         var calendar = this.Calendar ?? GanttCalendar.Continuous;
 
@@ -398,7 +402,8 @@ public partial class GanttView : ComponentBase, IAsyncDisposable
             Calendar = calendar,
             RollUpSummaries = this.RollUpSummaries,
             ComputeCriticalPath = this.ShowCriticalPath,
-            CriticalSlackThreshold = this.CriticalSlackThreshold
+            CriticalSlackThreshold = this.CriticalSlackThreshold,
+            Time = time
         });
 
         foreach (var task in this.Model.AllTasks)

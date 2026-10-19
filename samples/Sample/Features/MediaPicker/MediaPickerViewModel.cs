@@ -32,6 +32,12 @@ public partial class MediaPickerViewModel : ObservableObject
     double compressionQuality = 85;
 
     [ObservableProperty]
+    double itemSpacing = 8;
+
+    [ObservableProperty]
+    ObservableCollection<MediaPickerItem> customPhotos = new();
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(OutputFormat))]
     bool usePng;
 
@@ -55,7 +61,8 @@ public partial class MediaPickerViewModel : ObservableObject
             await using var src = await FileSystem.OpenAppPackageFileAsync($"sample_photo{i}.jpg");
             using var ms = new MemoryStream();
             await src.CopyToAsync(ms);
-            this.Photos.Add(new MediaPickerItem(ms.ToArray(), 900, 1200, "image/jpeg"));
+            // The first stands in for a photo that is already saved, so it can't be removed.
+            this.Photos.Add(new MediaPickerItem(ms.ToArray(), 900, 1200, "image/jpeg") { CanRemove = i > 1 });
         }
         OnPropertyChanged(nameof(this.Photos));
     }

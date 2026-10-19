@@ -1,6 +1,7 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Shiny.Blazor.Controls.Infrastructure;
 using Shiny.Controls.RangePickers;
 
 namespace Shiny.Blazor.Controls;
@@ -18,6 +19,8 @@ namespace Shiny.Blazor.Controls;
 /// </example>
 public partial class DateRangeCalendar
 {
+    [Inject] IServiceProvider Services { get; set; } = default!;
+
     readonly DateRangeSelector selector = new();
     DateOnly displayMonth;
     DateOnly? lastDisplayParameter;
@@ -114,7 +117,7 @@ public partial class DateRangeCalendar
 
     int MonthCount => Math.Clamp(this.Months, 1, 12);
 
-    DateOnly TodayValue => this.Today ?? DateOnly.FromDateTime(DateTime.Today);
+    DateOnly TodayValue => this.Today ?? DateOnly.FromDateTime(ShinyTime.From(this.Services).Today());
 
 
     protected override void OnParametersSet()

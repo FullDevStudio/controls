@@ -27,11 +27,16 @@
                                      MaxPhotos="{Binding MaxPhotos}"
                                      CompressionQuality="{Binding CompressionQualityPercent}"
                                      OutputFormat="{Binding OutputFormat}"
+                                     ItemSpacing="{Binding ItemSpacing}"
                                      PermissionDeniedText="Photo access was denied — enable it in Settings." />
 
             <Label Text="{Binding Photos.Count, StringFormat='Photos added: {0}'}"
                    AutomationId="PhotoCountLabel"
                    FontAttributes="Bold" />
+
+            <Label Text="Load Sample Photos locks the first one (CanRemove = false): it has no ✕."
+                   FontSize="12"
+                   Opacity="0.7" />
 
             <!-- Lets the populated state be demoed without photo-library access -->
             <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
@@ -71,6 +76,38 @@
 
             <Label Text="{Binding CompressionQualityPercent, StringFormat='Compression quality: {0}%'}" AutomationId="QualityLabel" />
             <Slider Minimum="10" Maximum="100" Value="{Binding CompressionQuality}" AutomationId="QualitySlider" />
+
+            <Label Text="{Binding ItemSpacing, StringFormat='Item spacing: {0:0}'}" AutomationId="ItemSpacingLabel" />
+            <Slider Minimum="0" Maximum="32" Value="{Binding ItemSpacing}" AutomationId="ItemSpacingSlider" />
+
+            <BoxView HeightRequest="1" Color="#33888888" />
+
+            <Label Text="Custom add button" FontSize="16" FontAttributes="Bold" />
+            <Label Text="AddButtonTemplate replaces the dashed trigger. The whole template is the tap target, so keep it to visuals — no Button inside."
+                   FontSize="13"
+                   Opacity="0.7" />
+
+            <shiny:MediaPickerButton AutomationId="CustomAddPicker"
+                                     Photos="{Binding CustomPhotos}"
+                                     MaxPhotos="3"
+                                     ItemSpacing="12">
+                <shiny:MediaPickerButton.AddButtonTemplate>
+                    <DataTemplate>
+                        <Border Padding="16"
+                                StrokeThickness="0"
+                                BackgroundColor="{AppThemeBinding Light=#E8F0FE, Dark=#1E2A3A}"
+                                StrokeShape="RoundRectangle 16">
+                            <HorizontalStackLayout Spacing="12" HorizontalOptions="Center">
+                                <Label Text="📷" FontSize="24" VerticalOptions="Center" />
+                                <VerticalStackLayout VerticalOptions="Center">
+                                    <Label Text="Add up to 3 photos" FontAttributes="Bold" />
+                                    <Label Text="Gallery or camera" FontSize="12" Opacity="0.7" />
+                                </VerticalStackLayout>
+                            </HorizontalStackLayout>
+                        </Border>
+                    </DataTemplate>
+                </shiny:MediaPickerButton.AddButtonTemplate>
+            </shiny:MediaPickerButton>
 
         </VerticalStackLayout>
     </ScrollView>

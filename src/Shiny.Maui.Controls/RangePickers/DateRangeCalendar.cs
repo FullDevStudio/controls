@@ -72,7 +72,7 @@ public partial class DateRangeCalendar : ContentView
 
     DayOfWeek EffectiveFirstDay => this.FirstDayOfWeek ?? CalendarMath.FirstDayOfWeek(this.EffectiveCulture);
 
-    DateOnly Today => DateOnly.FromDateTime(DateTime.Today);
+    DateOnly Today => DateOnly.FromDateTime(ShinyTime.For(this).Today());
 
 
     /// <summary>The range, once both ends are picked.</summary>

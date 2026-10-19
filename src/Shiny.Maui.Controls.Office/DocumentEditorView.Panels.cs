@@ -281,7 +281,7 @@ public partial class DocumentEditorView
         if (OfficeMenus.PageOf(this) is not { } page)
             return;
 
-        var formats = DocumentEditorController.DateTimeFormats(DateTime.Now).Distinct().ToArray();
+        var formats = DocumentEditorController.DateTimeFormats(controller.Time.GetLocalNow().DateTime).Distinct().ToArray();
         var choice = await page.DisplayActionSheet("Date & Time", "Cancel", null, formats);
 
         if (choice is null || choice == "Cancel")

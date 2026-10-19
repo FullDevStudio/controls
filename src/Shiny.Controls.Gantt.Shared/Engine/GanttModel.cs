@@ -207,7 +207,7 @@ public sealed class GanttModel
         var topo = TopologicalSort(all, successorsOf, predecessorsOf, issues);
 
         var latestFinish = new Dictionary<string, DateTimeOffset>(StringComparer.Ordinal);
-        var (start, end) = Extent(all);
+        var (start, end) = Extent(all, opts.Time ?? TimeProvider.System);
 
         if (opts.ComputeCriticalPath)
             ComputeCriticalPath(all, topo, byId, successorsOf, deps, latestFinish, opts, end);
@@ -686,14 +686,15 @@ public sealed class GanttModel
     }
 
 
-    static (DateTimeOffset Start, DateTimeOffset End) Extent(List<GanttTask> all)
+    static (DateTimeOffset Start, DateTimeOffset End) Extent(List<GanttTask> all, TimeProvider time)
     {
         if (all.Count == 0)
         {
-            // DateTime.Today is Kind.Local, so pairing it with an explicit offset throws. The
-            // single-argument overload takes the machine's own offset, which is the right default
-            // for an unbound control anyway.
-            var epoch = new DateTimeOffset(DateTime.Today);
+            // Local midnight today. The offset is the clock's zone's offset AT midnight, not now's —
+            // they differ on a DST changeover day. The date is Kind.Unspecified, so pairing it with an
+            // explicit offset is legal (a Kind.Local date with a non-machine offset would throw).
+            var today = time.GetLocalNow().Date;
+            var epoch = new DateTimeOffset(today, time.LocalTimeZone.GetUtcOffset(today));
             return (epoch, epoch);
         }
 

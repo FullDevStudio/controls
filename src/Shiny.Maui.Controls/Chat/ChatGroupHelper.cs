@@ -21,9 +21,9 @@ static class ChatGroupHelper
         return currentMinute != prevMinute;
     }
 
-    public static string FormatTimestamp(DateTimeOffset timestamp)
+    public static string FormatTimestamp(DateTimeOffset timestamp, TimeProvider time)
     {
-        var today = DateTimeOffset.Now.Date;
+        var today = time.GetLocalNow().Date;
         return timestamp.Date == today
             ? timestamp.ToString("h:mm tt")
             : timestamp.ToString("MMM d, h:mm tt");

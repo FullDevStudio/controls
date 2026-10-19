@@ -13,6 +13,9 @@ public class PassportParser : IDocumentParser<Passport>
     /// <summary>Color for the highlighted MRZ boxes.</summary>
     public Color BoxColor { get; set; } = Color.FromArgb("#6366F1");
 
+    /// <summary>The clock that dates "today" for the MRZ birth-year window. Defaults to the system clock.</summary>
+    public TimeProvider Time { get; set; } = TimeProvider.System;
+
     /// <inheritdoc/>
     public Passport Merge(Passport accumulated, Passport incoming)
     {
@@ -63,7 +66,7 @@ public class PassportParser : IDocumentParser<Passport>
         if (line2.Block is null)
             return false;
 
-        if (!Mrz.TryParseTd3(line1.Cleaned, line2.Cleaned, out var passport))
+        if (!Mrz.TryParseTd3(line1.Cleaned, line2.Cleaned, out var passport, this.Time))
             return false;
 
         document = passport;

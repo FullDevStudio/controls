@@ -61,7 +61,7 @@ public enum SlideFieldKind
 /// renumbers it when slides move; an auto-updating date is <c>type="datetime1"</c> likewise.
 /// </para>
 /// </remarks>
-public sealed record ApplyHeaderFooterCommand(IReadOnlyList<int> Slides, SlideHeaderFooter Settings) : SlideCommand
+public sealed record ApplyHeaderFooterCommand(IReadOnlyList<int> Slides, SlideHeaderFooter Settings, DateTime? Now = null) : SlideCommand
 {
     public override string Name => "Header & Footer";
 
@@ -133,7 +133,7 @@ public sealed record ApplyHeaderFooterCommand(IReadOnlyList<int> Slides, SlideHe
         switch (type)
         {
             case "sldNum":
-                content.AppendChild(SlideFields.Build(SlideFieldKind.SlideNumber, index + 1, null));
+                content.AppendChild(SlideFields.Build(SlideFieldKind.SlideNumber, index + 1, null, this.Now));
                 break;
 
             case "dt" when this.Settings.FixedDate is { Length: > 0 } fixedDate:
@@ -141,7 +141,7 @@ public sealed record ApplyHeaderFooterCommand(IReadOnlyList<int> Slides, SlideHe
                 break;
 
             case "dt":
-                content.AppendChild(SlideFields.Build(SlideFieldKind.DateTime, index + 1, this.Settings.DateFormat));
+                content.AppendChild(SlideFields.Build(SlideFieldKind.DateTime, index + 1, this.Settings.DateFormat, this.Now));
                 break;
 
             default:
@@ -168,20 +168,21 @@ public sealed record ApplyHeaderFooterCommand(IReadOnlyList<int> Slides, SlideHe
 /// <summary>Building the field runs.</summary>
 static class SlideFields
 {
-    public static D.Field Build(SlideFieldKind kind, int slideNumber, string? dateFormat)
+    /// <param name="now">The date cached in a date field — the caller's clock; the system clock when null.</param>
+    public static D.Field Build(SlideFieldKind kind, int slideNumber, string? dateFormat, DateTime? now = null)
     {
         var field = new D.Field { Id = "{" + Guid.NewGuid().ToString().ToUpperInvariant() + "}", Type = kind == SlideFieldKind.SlideNumber ? "slidenum" : "datetime1" };
         field.AppendChild(new D.RunProperties { Language = "en-US" });
         field.AppendChild(new D.Text(kind == SlideFieldKind.SlideNumber
             ? slideNumber.ToString(CultureInfo.InvariantCulture)
-            : DateTime.Now.ToString(dateFormat ?? "d", CultureInfo.CurrentCulture)));
+            : (now ?? TimeProvider.System.GetLocalNow().DateTime).ToString(dateFormat ?? "d", CultureInfo.CurrentCulture)));
 
         return field;
     }
 }
 
 /// <summary>Inserts a slide-number or date field at a caret.</summary>
-public sealed record InsertSlideFieldCommand(SlidePosition At, SlideFieldKind Kind, string? DateFormat = null) : SlideCommand
+public sealed record InsertSlideFieldCommand(SlidePosition At, SlideFieldKind Kind, string? DateFormat = null, DateTime? Now = null) : SlideCommand
 {
     public override string Name => this.Kind == SlideFieldKind.SlideNumber ? "Insert slide number" : "Insert date";
 
@@ -194,7 +195,7 @@ public sealed record InsertSlideFieldCommand(SlidePosition At, SlideFieldKind Ki
         // Split at the caret, then put the field between the halves.
         var tail = ShapeTextEditor.Split(paragraph, this.At.Offset);
         paragraph.InsertAfterSelf(tail);
-        var field = SlideFields.Build(this.Kind, this.At.Slide + 1, this.DateFormat);
+        var field = SlideFields.Build(this.Kind, this.At.Slide + 1, this.DateFormat, this.Now);
 
         var properties = paragraph.Elements<D.Run>().LastOrDefault()?.RunProperties?.CloneNode(true) as D.RunProperties;
         if (properties is not null)

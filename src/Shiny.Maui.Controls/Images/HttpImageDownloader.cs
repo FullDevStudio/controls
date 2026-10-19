@@ -24,6 +24,7 @@ public class HttpImageDownloader : IImageDownloader
 
     readonly HttpClient client;
     readonly ImageOptions options;
+    readonly TimeProvider time;
 
     /// <summary>Creates the downloader.</summary>
     /// <param name="options">Cache and timeout settings.</param>
@@ -31,10 +32,12 @@ public class HttpImageDownloader : IImageDownloader
     /// The client to use. When null a shared internal one is used - which is the normal case, since
     /// an app that wanted its own client would be registering its own downloader.
     /// </param>
-    public HttpImageDownloader(ImageOptions? options = null, HttpClient? client = null)
+    /// <param name="time">The clock a <c>max-age</c> is counted from. <see cref="TimeProvider.System"/> when null.</param>
+    public HttpImageDownloader(ImageOptions? options = null, HttpClient? client = null, TimeProvider? time = null)
     {
         this.options = options ?? new ImageOptions();
         this.client = client ?? LazyFallbackClient.Value;
+        this.time = time ?? TimeProvider.System;
     }
 
 
@@ -53,9 +56,30 @@ public class HttpImageDownloader : IImageDownloader
                 msg.Headers.TryAddWithoutValidation(pair.Key, pair.Value);
         }
 
+        if (!String.IsNullOrEmpty(request.IfNoneMatch))
+            msg.Headers.TryAddWithoutValidation("If-None-Match", request.IfNoneMatch);
+
+        if (request.IfModifiedSince is { } since)
+            msg.Headers.IfModifiedSince = since;
+
         var response = await this.client
             .SendAsync(msg, HttpCompletionOption.ResponseHeadersRead, linked.Token)
             .ConfigureAwait(false);
+
+        if (response.StatusCode == System.Net.HttpStatusCode.NotModified)
+        {
+            // A 304 carries no body, but it may carry a fresh max-age - which is the whole point of
+            // asking: the copy on disk is good for another stretch, for the price of the headers.
+            using (response)
+            {
+                return new ImageDownloadResult(
+                    Stream.Null,
+                    ExpiresUtc: ResolveExpiry(response.Headers.CacheControl, response.Content.Headers.Expires, this.time.GetUtcNow()),
+                    ETag: response.Headers.ETag?.Tag,
+                    NotModified: true
+                );
+            }
+        }
 
         response.EnsureSuccessStatusCode();
 
@@ -65,8 +89,9 @@ public class HttpImageDownloader : IImageDownloader
             stream,
             response.Content.Headers.ContentLength,
             response.Content.Headers.ContentType?.MediaType,
-            ResolveExpiry(response.Headers.CacheControl, response.Content.Headers.Expires),
-            response.Headers.ETag?.Tag
+            ResolveExpiry(response.Headers.CacheControl, response.Content.Headers.Expires, this.time.GetUtcNow()),
+            response.Headers.ETag?.Tag,
+            response.Content.Headers.LastModified
         );
     }
 
@@ -81,7 +106,7 @@ public class HttpImageDownloader : IImageDownloader
     /// is the wrong answer. An expired entry is still written - it just always revalidates - which
     /// keeps the write path uniform and costs one file that gets trimmed away later.
     /// </remarks>
-    internal static DateTimeOffset? ResolveExpiry(CacheControlHeaderValue? cacheControl, DateTimeOffset? expires)
+    internal static DateTimeOffset? ResolveExpiry(CacheControlHeaderValue? cacheControl, DateTimeOffset? expires, DateTimeOffset now)
     {
         if (cacheControl is not null)
         {
@@ -89,7 +114,7 @@ public class HttpImageDownloader : IImageDownloader
                 return DateTimeOffset.MinValue;
 
             if (cacheControl.MaxAge is { } maxAge)
-                return DateTimeOffset.UtcNow.Add(maxAge);
+                return now.Add(maxAge);
         }
         return expires;
     }

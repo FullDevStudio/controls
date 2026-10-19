@@ -182,7 +182,7 @@
                     @if (isLast && msg.Status != MessageStatus.Sending)
                     {
                         <div class="shiny-chat-time">
-                            @ChatGroupHelper.FormatTimestamp(msg.Timestamp)@(msg.EditedTimestamp is not null ? " · edited" : "")
+                            @ChatGroupHelper.FormatTimestamp(msg.Timestamp, time)@(msg.EditedTimestamp is not null ? " · edited" : "")
                         </div>
                     }
                 </div>

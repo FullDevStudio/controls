@@ -1,6 +1,8 @@
 @namespace Shiny.Blazor.Controls.Scheduler
+@using Shiny.Blazor.Controls.Infrastructure
 @using Shiny.Blazor.Controls.Theming
 @implements IDisposable
+@inject IServiceProvider Services
 
 <div class="shiny-cal-list" @ref="hostEl" @onscroll="OnScroll">
     @if (isLoading && groups.Count == 0)
@@ -65,9 +67,10 @@
     bool isLoading;
     bool isLoadingMore;
     CancellationTokenSource? loadCts;
+    TimeProvider time = TimeProvider.System;
 
     [Parameter] public ISchedulerEventProvider? Provider { get; set; }
-    [Parameter] public DateOnly SelectedDate { get; set; } = DateOnly.FromDateTime(DateTime.Today);
+    [Parameter] public DateOnly SelectedDate { get; set; }
     [Parameter] public EventCallback<DateOnly> SelectedDateChanged { get; set; }
     [Parameter] public int DaysPerPage { get; set; } = 30;
     [Parameter] public string DefaultEventColor { get; set; } = "#6366F1";
@@ -82,6 +85,14 @@
 
     ISchedulerEventProvider? lastProvider;
     DateOnly lastSelectedDate;
+
+    protected override void OnInitialized()
+    {
+        time = ShinyTime.From(Services);
+        // unset means today - by the injected clock, which a parameter initializer cannot see
+        if (SelectedDate == default)
+            SelectedDate = DateOnly.FromDateTime(time.Today());
+    }
 
     protected override void OnParametersSet()
     {
@@ -149,7 +160,7 @@
                 .ThenBy(e => e.Start)
                 .ToList();
             if (dayEvents.Count > 0)
-                result.Add(new CalendarListDayGroup(date, dayEvents));
+                result.Add(new CalendarListDayGroup(date, dayEvents, time));
         }
         return result;
     }

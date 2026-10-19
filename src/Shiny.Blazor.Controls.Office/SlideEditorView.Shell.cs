@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using Shiny.Blazor.Controls;
+using Shiny.Blazor.Controls.Infrastructure;
 using Shiny.Controls.Office.Icons;
 using Shiny.Controls.Office.Presentation;
 using Shiny.Controls.Office.Shell;
@@ -30,6 +31,12 @@ namespace Shiny.Blazor.Controls.Office;
 public partial class SlideEditorView : IDisposable
 {
     [Inject] IJSRuntime Js { get; set; } = default!;
+    [Inject] IServiceProvider Services { get; set; } = default!;
+
+    /// <summary>The DI clock (or the system one). Resolved once, in <see cref="OnInitialized"/>.</summary>
+    TimeProvider time = TimeProvider.System;
+
+    protected override void OnInitialized() => this.time = ShinyTime.From(this.Services);
 
     // ---- switches ----
 

@@ -229,10 +229,14 @@ public class KanbanViewTests
     public void DueDatesAreClassifiedAgainstTheDueSoonWindow()
     {
         var view = Build(out _, out _);
+        var now = new DateTimeOffset(2026, 10, 19, 12, 0, 0, TimeSpan.Zero);
+        typeof(KanbanView)
+            .GetField("time", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+            .SetValue(view, new FixedClock(now));
 
-        Invoke<string>(view, "DueClass", DateTimeOffset.Now.AddDays(-1)).ShouldBe("is-overdue");
-        Invoke<string>(view, "DueClass", DateTimeOffset.Now.AddHours(6)).ShouldBe("is-soon");
-        Invoke<string>(view, "DueClass", DateTimeOffset.Now.AddDays(30)).ShouldBe(string.Empty);
+        Invoke<string>(view, "DueClass", now.AddDays(-1)).ShouldBe("is-overdue");
+        Invoke<string>(view, "DueClass", now.AddHours(6)).ShouldBe("is-soon");
+        Invoke<string>(view, "DueClass", now.AddDays(30)).ShouldBe(string.Empty);
     }
 
 
@@ -312,4 +316,10 @@ public class KanbanViewTests
 
         return (T)method.Invoke(method.IsStatic ? null : view, args)!;
     }
+}
+
+
+sealed class FixedClock(DateTimeOffset now) : TimeProvider
+{
+    public override DateTimeOffset GetUtcNow() => now;
 }

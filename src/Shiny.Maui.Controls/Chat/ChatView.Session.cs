@@ -205,7 +205,7 @@ public partial class ChatView
             return;
 
         if (e.IsTyping)
-            this.typingUsers[e.UserId] = DateTimeOffset.UtcNow;
+            this.typingUsers[e.UserId] = ShinyTime.For(this).GetTimestamp();
         else
             this.typingUsers.Remove(e.UserId);
 
@@ -389,9 +389,10 @@ public partial class ChatView
 
     void OnTypingExpiryTick(object? sender, EventArgs e)
     {
-        var now = DateTimeOffset.UtcNow;
+        var time = ShinyTime.For(this);
+        var now = time.GetTimestamp();
         var stale = this.typingUsers
-            .Where(kv => (now - kv.Value).TotalSeconds > 6)
+            .Where(kv => time.GetElapsedTime(kv.Value, now).TotalSeconds > 6)
             .Select(kv => kv.Key)
             .ToList();
 

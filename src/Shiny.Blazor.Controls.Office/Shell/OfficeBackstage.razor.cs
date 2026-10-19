@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Shiny.Blazor.Controls.Infrastructure;
 using Shiny.Controls.Office.Icons;
 using Shiny.Controls.Office.Shell;
 
@@ -15,6 +16,13 @@ namespace Shiny.Blazor.Controls.Office;
 public partial class OfficeBackstage : ComponentBase
 {
     OfficeShellOptions? fallbackOptions;
+
+    [Inject] IServiceProvider Services { get; set; } = default!;
+
+    /// <summary>The DI clock (or the system one). Resolved once, in <see cref="OnInitialized"/>.</summary>
+    TimeProvider time = TimeProvider.System;
+
+    protected override void OnInitialized() => this.time = ShinyTime.From(this.Services);
 
     [CascadingParameter] public OfficeShell? Shell { get; set; }
 

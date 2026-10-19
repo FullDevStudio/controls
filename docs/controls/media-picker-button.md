@@ -30,7 +30,58 @@ A button that adds photos from the gallery and/or camera, compresses/re-encodes 
 | CompressionQuality | int | 92 | Encoder quality percentage (1–100) |
 | MaxImageDimension | int | 0 | If > 0, longest edge is downscaled to this many pixels |
 | OutputFormat | ImageExportFormat | Jpeg | Output encoding (Png or Jpeg) |
-| Photos | IList\<MediaPickerItem\> | empty | Collected photos (TwoWay) |
+| Photos | IList\<MediaPickerItem\> | empty | Collected photos (TwoWay). Hand in photos the screen already has; set `CanRemove = false` on any that must stay |
+| ItemSpacing | double | 0 (MAUI) / 12 (Blazor) | Space between thumbnails in the inline carousel |
+| AddButtonTemplate | DataTemplate? / RenderFragment? | null | Replaces the dashed "Add Photo" trigger |
+
+## Photos that can't be removed
+
+`MediaPickerItem.CanRemove` (default `true`) controls the ✕ on a thumbnail. Set it to `false` for a photo the screen loaded itself — one already saved — so the user can add to the set but not take that one out. It survives an edit. Removal from code (`Photos.Remove`, Blazor `ClearAsync`, a successful upload) is not blocked.
+
+```csharp
+// MAUI — MediaPickerItem is a record, so CanRemove is init-only
+Photos.Add(new MediaPickerItem(bytes, 900, 1200, "image/jpeg") { CanRemove = false });
+```
+
+```razor
+@* Blazor — hand in saved photos by URL; the picker shows them as it shows its own *@
+<MediaPickerButton @bind-Photos="photos" MaxPhotos="5" />
+
+@code {
+    IReadOnlyList<MediaPickerItem> photos =
+    [
+        new() { DataUri = "/photos/41.jpg", ContentType = "image/jpeg", CanRemove = false }
+    ];
+}
+```
+
+On Blazor, `Photos` is now read as well as written: a list the screen passes in replaces what the picker holds. A photo handed in by URL has no bytes in the browser, so `UploadAllAsync` skips it (it is not waiting to be sent), it can't be opened in the editor unless its `Data` is set, and `ReadAllBytesAsync` throws for it.
+
+## Custom add button
+
+`AddButtonTemplate` replaces the dashed trigger. The template is the whole tap target, and it still hides at `MaxPhotos`.
+
+```xml
+<shiny:MediaPickerButton Photos="{Binding Photos}" MaxPhotos="3" ItemSpacing="12">
+    <shiny:MediaPickerButton.AddButtonTemplate>
+        <DataTemplate>
+            <Border Padding="16" StrokeShape="RoundRectangle 16">
+                <Label Text="📷  Add up to 3 photos" HorizontalOptions="Center" />
+            </Border>
+        </DataTemplate>
+    </shiny:MediaPickerButton.AddButtonTemplate>
+</shiny:MediaPickerButton>
+```
+
+```razor
+<MediaPickerButton @bind-Photos="photos" MaxPhotos="3" ItemSpacing="16" AddButtonText="Add up to 3 photos">
+    <AddButtonTemplate>
+        <div class="my-add-tile">📷 Add up to 3 photos</div>
+    </AddButtonTemplate>
+</MediaPickerButton>
+```
+
+Keep the template to visuals. On MAUI a `Button` inside it takes the tap for itself and nothing opens; on Blazor it is rendered inside a `<button>`, so a nested button or link is invalid markup. On Blazor, `AddButtonText` stays as the button's accessible name.
 
 **Events:** `PhotoAdded`, `PhotoRemoved`, `PhotosChanged` (+ `PhotosChangedCommand`), `PermissionDenied`
 

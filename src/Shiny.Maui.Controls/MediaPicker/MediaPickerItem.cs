@@ -15,4 +15,10 @@ public record MediaPickerItem(byte[] Data, int Width, int Height, string Content
 
     /// <summary>An <see cref="ImageSource"/> for binding/display; yields a new stream each load.</summary>
     public ImageSource Thumbnail => ImageSource.FromStream(() => new MemoryStream(this.Data, false));
+
+    /// <summary>
+    /// False keeps the photo in the picker: no remove button on its thumbnail. For a photo the
+    /// screen loaded itself — one already saved — rather than one the user just picked.
+    /// </summary>
+    public bool CanRemove { get; init; } = true;
 }

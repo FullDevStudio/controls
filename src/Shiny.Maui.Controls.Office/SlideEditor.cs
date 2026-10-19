@@ -1,4 +1,5 @@
 using Shiny.Controls.Office.Presentation;
+using Shiny.Maui.Controls.Infrastructure;
 using SkiaSharp;
 using SkiaSharp.Views.Maui;
 using SkiaSharp.Views.Maui.Controls;
@@ -189,7 +190,8 @@ public partial class SlideEditor : ContentView, IDisposable
         this.controller = new SlideEditorController(this.Deck, this.measurer)
         {
             IsReadOnly = this.IsReadOnly,
-            Index = this.SlideIndex
+            Index = this.SlideIndex,
+            Time = ShinyTime.For(this)
         };
 
         this.controller.Changed += this.OnControllerChanged;
@@ -202,6 +204,15 @@ public partial class SlideEditor : ContentView, IDisposable
             this.controller.Resize(this.Width, this.Height);
 
         this.Invalidate();
+    }
+
+    /// <summary>The controller may have been built before there was a handler to resolve the DI clock through.</summary>
+    protected override void OnHandlerChanged()
+    {
+        base.OnHandlerChanged();
+
+        if (this.controller is not null)
+            this.controller.Time = ShinyTime.For(this);
     }
 
     protected override void OnSizeAllocated(double width, double height)
@@ -443,7 +454,8 @@ public partial class SlideEditor : ContentView, IDisposable
         e.Handled = true;
     }
 
-    DateTime lastTapTime;
+    /// <summary>The previous tap's <see cref="TimeProvider.GetTimestamp"/>; 0 before the first, and after a double tap.</summary>
+    long lastTapTime;
     double lastTapX;
     double lastTapY;
 
@@ -457,8 +469,10 @@ public partial class SlideEditor : ContentView, IDisposable
     /// </remarks>
     bool IsDoubleTap(double x, double y)
     {
-        var now = DateTime.UtcNow;
-        var isDouble = (now - this.lastTapTime).TotalMilliseconds < 400 &&
+        var time = ShinyTime.For(this);
+        var now = time.GetTimestamp();
+        var isDouble = this.lastTapTime != 0 &&
+            time.GetElapsedTime(this.lastTapTime, now).TotalMilliseconds < 400 &&
             Math.Abs(x - this.lastTapX) < 12 &&
             Math.Abs(y - this.lastTapY) < 12;
 
@@ -468,7 +482,7 @@ public partial class SlideEditor : ContentView, IDisposable
 
         // A double tap must not seed a triple: reset, so three quick taps are a double then a single.
         if (isDouble)
-            this.lastTapTime = DateTime.MinValue;
+            this.lastTapTime = 0;
 
         return isDouble;
     }

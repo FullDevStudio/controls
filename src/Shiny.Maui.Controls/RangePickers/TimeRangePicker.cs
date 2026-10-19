@@ -148,7 +148,7 @@ public partial class TimeRangePicker : RangePickerBase
 
     void ScrollToSelection()
     {
-        Scroll(this.startScroll, this.startColumn, this.draftStart ?? this.Constraints.Snap(TimeOnly.FromDateTime(DateTime.Now)));
+        Scroll(this.startScroll, this.startColumn, this.draftStart ?? this.Constraints.Snap(TimeOnly.FromDateTime(ShinyTime.For(this).LocalNow())));
         if (this.draftEnd is { } end)
             Scroll(this.endScroll, this.endColumn, end);
 

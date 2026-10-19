@@ -23,6 +23,7 @@ public class MediaPickerButton : ContentView
 {
     readonly VerticalStackLayout root;
     readonly ContentView displayHost;   // swaps between empty view / carousel / compact preview
+    readonly ContentView addHost;       // the tap target; holds the default trigger or the AddButtonTemplate
     readonly Border addTrigger;
     readonly Label addTriggerLabel;
     readonly Label permissionLabel;
@@ -64,9 +65,11 @@ public class MediaPickerButton : ContentView
             HorizontalOptions = LayoutOptions.Fill
         }.WithStrokeThickness(ShinyThemeKeys.Border.Thin);
         this.addTrigger.SetDynamicResource(Border.StrokeProperty, ShinyThemeKeys.Color.OutlineVariant);
+
+        this.addHost = new ContentView { Content = this.addTrigger };
         var addTap = new TapGestureRecognizer();
         addTap.Tapped += (_, _) => _ = OnAddTappedAsync();
-        this.addTrigger.GestureRecognizers.Add(addTap);
+        this.addHost.GestureRecognizers.Add(addTap);
 
         this.permissionLabel = new Label
         {
@@ -87,7 +90,7 @@ public class MediaPickerButton : ContentView
         this.root = new VerticalStackLayout
         {
             Spacing = 8,
-            Children = { this.displayHost, this.addTrigger, this.permissionLabel, this.viewer }
+            Children = { this.displayHost, this.addHost, this.permissionLabel, this.viewer }
         };
         this.Content = this.root;
 
@@ -222,6 +225,36 @@ public class MediaPickerButton : ContentView
     {
         get => (DataTemplate?)GetValue(ItemTemplateProperty);
         set => SetValue(ItemTemplateProperty, value);
+    }
+
+    /// <summary>
+    /// Replaces the dashed "Add Photo" trigger. The content is tapped as a whole, so keep it to
+    /// visuals: a <see cref="Button"/> inside it swallows the tap and nothing opens.
+    /// </summary>
+    public static readonly BindableProperty AddButtonTemplateProperty = BindableProperty.Create(
+        nameof(AddButtonTemplate), typeof(DataTemplate), typeof(MediaPickerButton), null,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(MediaPickerButton), () =>
+            {
+                ((MediaPickerButton)b).ApplyAddButtonTemplate();
+            }));
+    public DataTemplate? AddButtonTemplate
+    {
+        get => (DataTemplate?)GetValue(AddButtonTemplateProperty);
+        set => SetValue(AddButtonTemplateProperty, value);
+    }
+
+    /// <summary>Space between thumbnails in the inline carousel.</summary>
+    public static readonly BindableProperty ItemSpacingProperty = BindableProperty.Create(
+        nameof(ItemSpacing), typeof(double), typeof(MediaPickerButton), 0.0,
+        validateValue: (_, v) => (double)v >= 0,
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(MediaPickerButton), () =>
+            {
+                ((MediaPickerButton)b).carousel.ItemSpacing = (double)n;
+            }));
+    public double ItemSpacing
+    {
+        get => (double)GetValue(ItemSpacingProperty);
+        set => SetValue(ItemSpacingProperty, value);
     }
 
     public static readonly BindableProperty AddButtonTextProperty = BindableProperty.Create(
@@ -418,8 +451,11 @@ public class MediaPickerButton : ContentView
             this.displayHost.Content = BuildCompactPreview();
         }
 
-        this.addTrigger.IsVisible = count < this.MaxPhotos;
+        this.addHost.IsVisible = count < this.MaxPhotos;
     }
+
+    void ApplyAddButtonTemplate()
+        => this.addHost.Content = this.AddButtonTemplate?.CreateContent() as View ?? this.addTrigger;
 
     View ResolveNoImagesView()
     {
@@ -473,6 +509,7 @@ public class MediaPickerButton : ContentView
             VerticalOptions = LayoutOptions.Start,
             Margin = new Thickness(6)
         }.Neutralize().WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
+        removeButton.SetBinding(IsVisibleProperty, static (MediaPickerItem i) => i.CanRemove);
         removeButton.Clicked += (s, _) =>
         {
             if (((BindableObject)s!).BindingContext is MediaPickerItem item)
@@ -655,7 +692,8 @@ public class MediaPickerButton : ContentView
         if (item == null || index < 0 || index >= this.Photos.Count)
             return;
 
-        this.Photos[index] = item;
+        // An edited photo is still the same photo, locked or not.
+        this.Photos[index] = item with { CanRemove = this.Photos[index].CanRemove };
         if (this.UseFeedback)
             FeedbackHelper.Execute(this, "Edited");
 
@@ -679,7 +717,7 @@ public class MediaPickerButton : ContentView
     void RemovePhoto(MediaPickerItem item)
     {
         var idx = this.Photos.IndexOf(item);
-        if (idx < 0)
+        if (idx < 0 || !item.CanRemove)
             return;
 
         this.Photos.RemoveAt(idx);

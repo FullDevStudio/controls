@@ -987,7 +987,7 @@
         var value = preset switch
         {
             NumberFormatPreset.Percent => 0.256,
-            NumberFormatPreset.ShortDate or NumberFormatPreset.Time => ExcelDate.FromDateTime(DateTime.Now),
+            NumberFormatPreset.ShortDate or NumberFormatPreset.Time => ExcelDate.FromDateTime(this.Controller.Workbook.Time.GetLocalNow().DateTime),
             _ => 1234.5
         };
 

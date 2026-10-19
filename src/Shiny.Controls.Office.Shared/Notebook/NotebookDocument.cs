@@ -45,6 +45,12 @@ public sealed class NotebookDocument : OfficeDocument
     public string Title { get; set; } = "Notebook";
 
     /// <summary>
+    /// The clock pages are stamped from when they are created and edited.
+    /// </summary>
+    /// <remarks>Defaults to the system clock; a host sets the one from its DI container.</remarks>
+    public TimeProvider Time { get; set; } = TimeProvider.System;
+
+    /// <summary>
     /// The sections, top to bottom.
     /// </summary>
     /// <remarks>
@@ -72,29 +78,36 @@ public sealed class NotebookDocument : OfficeDocument
     /// sensible empty state only when there is somewhere to start writing; an empty notebook reads as
     /// a control that failed to load.
     /// </remarks>
-    public static NotebookDocument Create(string title = "Notebook")
+    public static NotebookDocument Create(string title = "Notebook", TimeProvider? time = null)
     {
-        var document = new NotebookDocument((string?)null) { Title = title };
-        document.Sections.Add(NewSection("Section 1"));
+        var document = new NotebookDocument((string?)null) { Title = title, Time = time ?? TimeProvider.System };
+        document.Sections.Add(document.NewSection("Section 1"));
 
         return document;
     }
 
-    internal static NotebookSection NewSection(string title)
+    internal NotebookSection NewSection(string title)
     {
         var section = new NotebookSection(NewId(), title);
-        section.Pages.Add(new NotebookPage(NewId(), "Untitled page"));
+        section.Pages.Add(this.NewPage("Untitled page"));
 
         return section;
     }
 
-    public static async Task<NotebookDocument> OpenAsync(string path, CancellationToken cancellationToken = default)
+    /// <summary>A new, empty page stamped created and modified now by <see cref="Time"/>. Not yet in any section.</summary>
+    internal NotebookPage NewPage(string title)
     {
-        await using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, useAsync: true);
-        return await OpenAsync(file, path, cancellationToken).ConfigureAwait(false);
+        var now = this.Time.GetUtcNow();
+        return new NotebookPage(NewId(), title) { Created = now, Modified = now };
     }
 
-    public static async Task<NotebookDocument> OpenAsync(Stream source, string? path = null, CancellationToken cancellationToken = default)
+    public static async Task<NotebookDocument> OpenAsync(string path, CancellationToken cancellationToken = default, TimeProvider? time = null)
+    {
+        await using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, useAsync: true);
+        return await OpenAsync(file, path, cancellationToken, time).ConfigureAwait(false);
+    }
+
+    public static async Task<NotebookDocument> OpenAsync(Stream source, string? path = null, CancellationToken cancellationToken = default, TimeProvider? time = null)
     {
         ArgumentNullException.ThrowIfNull(source);
 
@@ -104,7 +117,7 @@ public sealed class NotebookDocument : OfficeDocument
         await source.CopyToAsync(buffer, cancellationToken).ConfigureAwait(false);
         buffer.Position = 0;
 
-        return NotebookPackage.Read(buffer, path);
+        return NotebookPackage.Read(buffer, path, time);
     }
 
     // ---- navigation ----
@@ -153,7 +166,7 @@ public sealed class NotebookDocument : OfficeDocument
     internal void NotifyContentChanged(NotebookPage? page)
     {
         if (page is not null)
-            page.Modified = DateTimeOffset.UtcNow;
+            page.Modified = this.Time.GetUtcNow();
 
         this.MarkDirty();
         this.ContentChanged?.Invoke(this, EventArgs.Empty);

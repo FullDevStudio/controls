@@ -31,6 +31,12 @@ public sealed partial class DocumentEditorController
     /// </remarks>
     public string Author { get; set; } = string.IsNullOrWhiteSpace(Environment.UserName) ? "Author" : Environment.UserName;
 
+    /// <summary>
+    /// The clock comments, tracked changes and Insert ▸ Date &amp; Time read "now" from.
+    /// </summary>
+    /// <remarks>Defaults to the system clock; a host sets the one from its DI container.</remarks>
+    public TimeProvider Time { get; set; } = TimeProvider.System;
+
     /// <summary>The author's initials, for comment balloons.</summary>
     public string AuthorInitials => new string(this.Author
         .Split(' ', StringSplitOptions.RemoveEmptyEntries)
@@ -151,7 +157,7 @@ public sealed partial class DocumentEditorController
     void ExecuteInsert(DocumentPosition at, string text)
     {
         if (this.document.IsTrackingRevisions)
-            this.document.Execute(new TrackedInsertTextCommand(at, text, this.Author, DateTime.UtcNow, this.NextRevisionId()));
+            this.document.Execute(new TrackedInsertTextCommand(at, text, this.Author, this.Time.GetUtcNow().UtcDateTime, this.NextRevisionId()));
         else
             this.document.Execute(new InsertTextCommand(at, text));
     }
@@ -184,7 +190,7 @@ public sealed partial class DocumentEditorController
             : this.Selection.Range;
 
         var id = this.document.NextId(typeof(Comment)).ToString(System.Globalization.CultureInfo.InvariantCulture);
-        this.document.Execute(new AddCommentCommand(range, id, this.Author, this.AuthorInitials, text, DateTime.UtcNow));
+        this.document.Execute(new AddCommentCommand(range, id, this.Author, this.AuthorInitials, text, this.Time.GetUtcNow().UtcDateTime));
         this.AfterEdit();
 
         return this.document.Comments.FirstOrDefault(x => x.Id == id);

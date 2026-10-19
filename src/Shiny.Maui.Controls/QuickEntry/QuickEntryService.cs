@@ -7,6 +7,7 @@ sealed class QuickEntryService : IQuickEntryService, IDisposable
     readonly IReadOnlyList<IQuickEntryPresenter> presenters;
     readonly IReadOnlyList<IScreenGlowPresenter> glowPresenters;
     readonly ILogger<QuickEntryService>? logger;
+    readonly TimeProvider time;
 
     View? content;
     IQuickEntryPresenter? active;
@@ -19,19 +20,22 @@ sealed class QuickEntryService : IQuickEntryService, IDisposable
     // Focus bounces once as the OS moves the key window between processes, and that transient
     // arrives as a deactivation. Ignoring them for a beat after Show stops the popup closing the
     // instant it opens.
-    DateTime suppressDeactivateUntil = DateTime.MinValue;
+    static readonly TimeSpan suppressDeactivateFor = TimeSpan.FromMilliseconds(400);
+    long? suppressDeactivateSince;
 
     public QuickEntryService(
         QuickEntryOptions options,
         IEnumerable<IQuickEntryPresenter> presenters,
         IEnumerable<IScreenGlowPresenter> glowPresenters,
-        ILogger<QuickEntryService>? logger = null
+        ILogger<QuickEntryService>? logger = null,
+        TimeProvider? time = null
     )
     {
         this.Options = options;
         this.presenters = presenters.ToList();
         this.glowPresenters = glowPresenters.ToList();
         this.logger = logger;
+        this.time = time ?? TimeProvider.System;
         this.currentHeight = options.CollapsedHeight;
     }
 
@@ -75,7 +79,7 @@ sealed class QuickEntryService : IQuickEntryService, IDisposable
         {
             await this.PrepareAsync(presenter).ConfigureAwait(true);
 
-            this.suppressDeactivateUntil = DateTime.UtcNow.AddMilliseconds(400);
+            this.suppressDeactivateSince = this.time.GetTimestamp();
             presenter.Show(this.Options, this.Options.Width, this.currentHeight);
             this.IsOpen = true;
 
@@ -296,7 +300,7 @@ sealed class QuickEntryService : IQuickEntryService, IDisposable
     {
         if (!this.IsOpen || !this.Options.DismissOnFocusLost)
             return;
-        if (DateTime.UtcNow < this.suppressDeactivateUntil)
+        if (this.suppressDeactivateSince is { } since && this.time.GetElapsedTime(since) < suppressDeactivateFor)
             return;
 
         this.Hide();

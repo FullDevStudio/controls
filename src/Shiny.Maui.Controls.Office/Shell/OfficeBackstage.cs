@@ -4,6 +4,7 @@ using System.ComponentModel;
 using Microsoft.Maui.Controls.Shapes;
 using Shiny.Controls.Office.Icons;
 using Shiny.Controls.Office.Shell;
+using Shiny.Maui.Controls.Infrastructure;
 using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls.Office;
@@ -379,7 +380,7 @@ public class OfficeBackstage : ContentView
             icon.Color = ink;
 
         this.headline.Text = OfficeBackstageText.Headline(this.EffectiveApp);
-        this.greeting.Text = OfficeBackstageText.Greeting(DateTime.Now);
+        this.greeting.Text = OfficeBackstageText.Greeting(ShinyTime.For(this).LocalNow());
         this.ApplyPage();
         this.BuildFormats();
         this.OnTemplatesChanged();
@@ -405,7 +406,7 @@ public class OfficeBackstage : ContentView
         this.IsVisible = this.IsOpen;
 
         if (this.IsOpen)
-            this.greeting.Text = OfficeBackstageText.Greeting(DateTime.Now);
+            this.greeting.Text = OfficeBackstageText.Greeting(ShinyTime.For(this).LocalNow());
         else
             this.Closed?.Invoke(this, EventArgs.Empty);
     }
@@ -551,7 +552,7 @@ public class OfficeBackstage : ContentView
         if (!string.IsNullOrWhiteSpace(file.Location))
             texts.Children.Add(ShellChrome.Text(file.Location, 11, ShinyThemeKeys.Color.OnSurfaceVariant));
 
-        var when = ShellChrome.Text(OfficeBackstageText.Relative(file.LastOpened, DateTimeOffset.Now), 12, ShinyThemeKeys.Color.OnSurfaceVariant);
+        var when = ShellChrome.Text(OfficeBackstageText.Relative(file.LastOpened, ShinyTime.For(this).GetLocalNow()), 12, ShinyThemeKeys.Color.OnSurfaceVariant);
 
         var grid = new Grid { ColumnDefinitions = { new(GridLength.Auto), new(GridLength.Star), new(GridLength.Auto) }, ColumnSpacing = 12, Padding = new Thickness(10, 6) };
         grid.Add(icon, 0);

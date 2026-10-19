@@ -19,14 +19,19 @@ sealed class KeyboardShortcutInitializer : IMauiInitializeService
     static readonly TimeSpan pollInterval = TimeSpan.FromMilliseconds(250);
     static readonly TimeSpan timeout = TimeSpan.FromSeconds(30);
 
+    readonly TimeProvider time;
+
+    public KeyboardShortcutInitializer(TimeProvider? time = null)
+        => this.time = time ?? TimeProvider.System;
+
     public void Initialize(IServiceProvider services)
-        => _ = WatchAsync(Dispatcher.GetForCurrentThread());
+        => _ = WatchAsync(Dispatcher.GetForCurrentThread(), this.time);
 
-    static async Task WatchAsync(IDispatcher? dispatcher)
+    static async Task WatchAsync(IDispatcher? dispatcher, TimeProvider time)
     {
-        var deadline = DateTime.UtcNow + timeout;
+        var started = time.GetTimestamp();
 
-        while (DateTime.UtcNow < deadline)
+        while (time.GetElapsedTime(started) < timeout)
         {
             var ready = false;
             void Check()

@@ -986,11 +986,14 @@ public partial class SlideEditorView
         this.Entry("Select None", c => c.ClearSelection())
     ];
 
+    /// <summary>"Now" for date previews: the editor's clock, so a preview matches the field it inserts.</summary>
+    DateTime Now => (this.Controller?.Time ?? this.time).GetLocalNow().DateTime;
+
     List<RibbonMenuEntry> DateMenu =>
     [
         .. new[] { "d", "D", "MMMM d, yyyy", "d MMMM yyyy", "yyyy-MM-dd", "t", "g" }.Select(format => new RibbonMenuEntry
         {
-            Text = DateTime.Now.ToString(format, CultureInfo.CurrentCulture),
+            Text = this.Now.ToString(format, CultureInfo.CurrentCulture),
             IsDisabled = this.Disabled,
             OnClick = EventCallback.Factory.Create(this, () => this.InsertDate(format))
         }),
@@ -1341,7 +1344,7 @@ public partial class SlideEditorView
         var current = this.Controller?.CurrentHeaderFooter ?? new SlideHeaderFooter();
         this.hfDate = current.DateAndTime;
         this.hfDateFixed = false;
-        this.hfFixedDate = DateTime.Now.ToString("d", CultureInfo.CurrentCulture);
+        this.hfFixedDate = this.Now.ToString("d", CultureInfo.CurrentCulture);
         this.hfNumber = current.SlideNumber;
         this.hfFooter = current.Footer;
         this.hfFooterText = current.FooterText;

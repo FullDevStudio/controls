@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using Shiny.Blazor.Controls;
+using Shiny.Blazor.Controls.Infrastructure;
 using Shiny.Controls.Office.Document;
 using Shiny.Controls.Office.Shell;
 using Shiny.Controls.Office.Skia;
@@ -26,6 +27,12 @@ namespace Shiny.Blazor.Controls.Office;
 public partial class DocumentEditorView
 {
     [Inject] IJSRuntime Js { get; set; } = default!;
+    [Inject] IServiceProvider Services { get; set; } = default!;
+
+    /// <summary>The DI clock (or the system one). Resolved once, in <see cref="OnInitialized"/>.</summary>
+    TimeProvider time = TimeProvider.System;
+
+    protected override void OnInitialized() => this.time = ShinyTime.From(this.Services);
 
     // ---- parameters ----
 
@@ -620,7 +627,7 @@ public partial class DocumentEditorView
             return;
         }
 
-        var opened = await WordTemplates.OpenAsync(template);
+        var opened = await WordTemplates.OpenAsync(template, time: this.time);
         var previous = this.documentOverride;
         this.documentOverride = opened;
         previous?.Dispose();
@@ -675,7 +682,8 @@ public partial class DocumentEditorView
         return DocumentPdfExporter.Export(document, output, new DocumentPdfOptions
         {
             Title = this.EffectiveDocumentName,
-            Author = this.C?.Author
+            Author = this.C?.Author,
+            Time = this.time
         });
     }
 

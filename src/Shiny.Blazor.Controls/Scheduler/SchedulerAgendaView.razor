@@ -3,7 +3,9 @@
 @using Microsoft.JSInterop
 @implements IDisposable
 @implements IAsyncDisposable
+@using Shiny.Blazor.Controls.Infrastructure
 @inject IJSRuntime JS
+@inject IServiceProvider Services
 
 <div class="shiny-agenda" @ref="rootElement">
     @if (allDayEvents.Count > 0)
@@ -31,7 +33,7 @@
                 var captured = d;
                 var isSel = d == SelectedDate;
                 var inRange = !isSel && d > SelectedDate && d < SelectedDate.AddDays(Days);
-                var isToday = d == DateOnly.FromDateTime(DateTime.Today);
+                var isToday = d == DateOnly.FromDateTime(time.Today());
                 <div class="shiny-agenda-date @(isSel ? "is-selected" : "") @(inRange ? "is-inrange" : "") @(isToday ? "is-today" : "")"
                      @onclick="() => SetSelectedDateAsync(captured)">
                     <div class="shiny-agenda-date-name">@d.ToString("ddd")</div>
@@ -63,7 +65,7 @@
                     {
                         var captured = cell.Value;
                         var isSel = captured == SelectedDate;
-                        var isToday = captured == DateOnly.FromDateTime(DateTime.Today);
+                        var isToday = captured == DateOnly.FromDateTime(time.Today());
                         <div class="shiny-agenda-calendar-cell @(isSel ? "is-selected" : "") @(isToday ? "is-today" : "")"
                              @onclick="() => SelectCalendarDateAsync(captured)">@captured.Day</div>
                     }
@@ -127,7 +129,7 @@
             @for (var i = 0; i < Days; i++)
             {
                 var date = SelectedDate.AddDays(i);
-                var isToday = date == DateOnly.FromDateTime(DateTime.Today);
+                var isToday = date == DateOnly.FromDateTime(time.Today());
                 <div class="shiny-agenda-daycol" style="height:@(TimeSlotHeight * 24)px;" data-day-index="@i">
                     @for (var hour = 0; hour < 24; hour++)
                     {
@@ -162,7 +164,7 @@
                     }
                     @if (ShowCurrentTimeMarker && isToday)
                     {
-                        var minutes = DateTime.Now.TimeOfDay.TotalMinutes;
+                        var minutes = time.LocalNow().TimeOfDay.TotalMinutes;
                         var top = AgendaGeometry.MinutesToY(minutes, TimeSlotHeight);
                         <div class="shiny-agenda-now" style="top:@(Px(top))px;background:@CurrentTimeMarkerColor;"></div>
                     }
@@ -185,10 +187,11 @@
     bool isLoading;
     CancellationTokenSource? loadCts;
     System.Threading.Timer? markerTimer;
-    DateOnly calendarMonth = DateOnly.FromDateTime(DateTime.Today);
+    DateOnly calendarMonth;
+    TimeProvider time = TimeProvider.System;
 
     [Parameter] public ISchedulerEventProvider? Provider { get; set; }
-    [Parameter] public DateOnly SelectedDate { get; set; } = DateOnly.FromDateTime(DateTime.Today);
+    [Parameter] public DateOnly SelectedDate { get; set; }
     [Parameter] public EventCallback<DateOnly> SelectedDateChanged { get; set; }
     [Parameter] public int DaysToShow { get; set; } = 1;
     [Parameter] public bool ShowCarouselDatePicker { get; set; } = true;
@@ -270,9 +273,16 @@
     int lastDays;
 
     protected override void OnInitialized()
-        => markerTimer = new System.Threading.Timer(
+    {
+        time = ShinyTime.From(Services);
+        // unset means today - by the injected clock, which a parameter initializer cannot see
+        if (SelectedDate == default)
+            SelectedDate = DateOnly.FromDateTime(time.Today());
+
+        markerTimer = new System.Threading.Timer(
             _ => _ = InvokeAsync(StateHasChanged), null,
             TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+    }
 
     protected override void OnParametersSet()
     {

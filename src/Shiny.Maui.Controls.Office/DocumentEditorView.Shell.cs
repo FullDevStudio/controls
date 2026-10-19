@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using Shiny.Controls.Office.Document;
 using Shiny.Controls.Office.Shell;
 using Shiny.Controls.Office.Skia;
+using Shiny.Maui.Controls.Infrastructure;
 using Shiny.Maui.Controls.Ribbons;
 using Shiny.Maui.Controls.Themes;
 
@@ -208,7 +209,8 @@ public partial class DocumentEditorView
         return DocumentPdfExporter.Export(document, output, new DocumentPdfOptions
         {
             Title = this.DocumentName,
-            Author = this.editor.Controller?.Author
+            Author = this.editor.Controller?.Author,
+            Time = ShinyTime.For(this)
         });
     }
 
@@ -635,7 +637,7 @@ public partial class DocumentEditorView
             return;
         }
 
-        var now = DateTimeOffset.Now;
+        var now = controller.Time.GetLocalNow();
         foreach (var comment in comments)
             this.commentsList.Children.Add(this.CommentCard(controller, comment, comment.Id == current, now));
     }
@@ -735,7 +737,7 @@ public partial class DocumentEditorView
 
         try
         {
-            var document = await WordTemplates.OpenAsync(template);
+            var document = await WordTemplates.OpenAsync(template, time: ShinyTime.For(this));
             this.Document = document;
             this.DocumentName = template.IsBlank ? "Document1" : template.Name;
             this.DocumentLocation = null;

@@ -1030,9 +1030,11 @@ public class SpreadsheetParityTests
         controller.HandleKey("=", SheetKeyModifiers.Alt).ShouldBeTrue();
         controller.Sheet.GetFormula(CellRef.Parse("B6")).ShouldBe("SUM(B2:B5)");
 
+        var clock = new FixedClock(new DateTimeOffset(2026, 2, 28, 23, 59, 0, TimeSpan.Zero));
+        workbook.Time = clock;
         controller.GoTo(CellRef.Parse("E1"));
         controller.HandleKey(";", SheetKeyModifiers.Control).ShouldBeTrue();
-        controller.Sheet.GetValue(CellRef.Parse("E1")).AsNumber().ShouldBe(ExcelDate.FromDateTime(DateTime.Today));
+        controller.Sheet.GetValue(CellRef.Parse("E1")).AsNumber().ShouldBe(ExcelDate.FromDateTime(clock.GetLocalNow().Date));
 
         SheetDialog? dialog = null;
         controller.DialogRequested += (_, d) => dialog = d;

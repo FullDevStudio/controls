@@ -38,15 +38,16 @@ sealed class FileDropInitializer : IMauiInitializeService
 
         // Initialize services run while the MauiApp is being built, before Application.Current
         // exists. Nothing here can be done synchronously.
-        _ = WatchAsync(service, Dispatcher.GetForCurrentThread());
+        var time = services.GetService<TimeProvider>() ?? TimeProvider.System;
+        _ = WatchAsync(service, Dispatcher.GetForCurrentThread(), time);
     }
 
-    static async Task WatchAsync(FileDropService service, IDispatcher? dispatcher)
+    static async Task WatchAsync(FileDropService service, IDispatcher? dispatcher, TimeProvider time)
     {
         var hooked = false;
-        var deadline = DateTime.UtcNow + StartupTimeout;
+        var started = time.GetTimestamp();
 
-        while (DateTime.UtcNow < deadline)
+        while (time.GetElapsedTime(started) < StartupTimeout)
         {
             var settled = await InvokeAsync(dispatcher, () =>
             {

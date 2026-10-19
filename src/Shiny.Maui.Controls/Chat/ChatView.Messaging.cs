@@ -104,7 +104,7 @@ public partial class ChatView
             ImageUrl: imageUrl,
             Status: MessageStatus.Sending,
             StatusReason: null,
-            Timestamp: DateTimeOffset.Now,
+            Timestamp: ShinyTime.For(this).GetLocalNow(),
             EditedTimestamp: null,
             Reactions: Array.Empty<Reaction>(),
             ReadReceipts: Array.Empty<ReadReceipt>()

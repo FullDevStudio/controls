@@ -1,3 +1,5 @@
+using Shiny.Maui.Controls.Infrastructure;
+
 namespace Shiny.Maui.Controls.Scheduler.Internal;
 
 class DateCarouselPicker : ContentView
@@ -70,7 +72,7 @@ class DateCarouselPicker : ContentView
         stack.Children.Clear();
         items.Clear();
 
-        var today = DateOnly.FromDateTime(DateTime.Today);
+        var today = DateOnly.FromDateTime(ShinyTime.For(this).Today());
         var start = selectedDate.AddDays(-14);
 
         for (var i = 0; i < 29; i++)
@@ -110,7 +112,7 @@ class DateCarouselPicker : ContentView
 
     void UpdateSelection()
     {
-        var today = DateOnly.FromDateTime(DateTime.Today);
+        var today = DateOnly.FromDateTime(ShinyTime.For(this).Today());
         var start = selectedDate.AddDays(-14);
         for (var i = 0; i < items.Count; i++)
         {

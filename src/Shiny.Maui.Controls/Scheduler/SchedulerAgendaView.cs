@@ -37,7 +37,7 @@ public class SchedulerAgendaView : ContentView
 
     public static readonly BindableProperty SelectedDateProperty = BindableProperty.Create(
         nameof(SelectedDate), typeof(DateOnly), typeof(SchedulerAgendaView),
-        defaultValue: DateOnly.FromDateTime(DateTime.Today),
+        defaultValueCreator: b => DateOnly.FromDateTime(ShinyTime.For((Element)b).Today()),
         defaultBindingMode: BindingMode.TwoWay,
         propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SchedulerAgendaView), () =>
             {
@@ -816,9 +816,10 @@ public class SchedulerAgendaView : ContentView
     async void ScrollToCurrentTime()
     {
         await Task.Delay(100);
-        if (SelectedDate == DateOnly.FromDateTime(DateTime.Today))
+        var time = ShinyTime.For(this);
+        if (SelectedDate == DateOnly.FromDateTime(time.Today()))
         {
-            var now = DateTime.Now.TimeOfDay.TotalMinutes;
+            var now = time.LocalNow().TimeOfDay.TotalMinutes;
             var scrollY = Math.Max(0, (now - 60) * TimeSlotHeight / 60.0);
             await scrollView.ScrollToAsync(0, scrollY, false);
         }

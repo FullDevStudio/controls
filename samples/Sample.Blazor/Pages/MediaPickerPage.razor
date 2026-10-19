@@ -16,6 +16,7 @@
     <label><input type="checkbox" @bind="usePng" /> PNG output</label>
     <label>Max: <input type="number" min="1" max="10" @bind="maxPhotos" style="width:56px;" /></label>
     <label>Quality: <input type="range" min="10" max="100" @bind="quality" style="width:120px;vertical-align:middle;" /> @quality%</label>
+    <label>Spacing: <input type="range" min="0" max="32" @bind="spacing" @bind:event="oninput" style="width:120px;vertical-align:middle;" /> @(spacing)px</label>
 </div>
 
 <div style="max-width:640px;">
@@ -27,8 +28,18 @@
                        MaxPhotos="maxPhotos"
                        CompressionQuality="quality"
                        OutputFormat="@(usePng ? "png" : "jpeg")"
+                       ItemSpacing="spacing"
                        PermissionDeniedText="Photo access was denied." />
 </div>
+
+<div style="display:flex;gap:8px;margin-top:12px;">
+    <button @onclick="LoadSaved">Load saved photos</button>
+    <button @onclick="() => photos = []">Clear</button>
+</div>
+<p style="color:#888;max-width:640px;">
+    "Load saved photos" hands the picker two photos the server already has. The first is locked
+    (<code>CanRemove = false</code>), so it has no &#10005;.
+</p>
 
 <p style="margin-top:12px;font-weight:600;">Photos added: @photos.Count</p>
 
@@ -43,6 +54,25 @@
     <button @onclick="ReadFirst">Read the first photo's bytes</button>
     <span style="margin-left:8px;">@readReport</span>
 }
+
+<h2 style="margin-top:32px;">Custom add button</h2>
+<p style="color:#888;max-width:640px;">
+    <code>AddButtonTemplate</code> replaces the dashed button. It is rendered inside the button that does
+    the adding, so keep it to markup &mdash; no buttons or links of its own.
+</p>
+<div style="max-width:640px;">
+    <MediaPickerButton @bind-Photos="customPhotos" MaxPhotos="3" ItemSpacing="16" AddButtonText="Add up to 3 photos">
+        <AddButtonTemplate>
+            <div style="display:flex;align-items:center;justify-content:center;gap:12px;padding:16px;border-radius:16px;background:var(--shiny-color-primary-container, #D8E2FF);color:var(--shiny-color-on-primary-container, #001A41);">
+                <span style="font-size:24px;">&#128247;</span>
+                <span style="display:flex;flex-direction:column;align-items:flex-start;">
+                    <strong>Add up to 3 photos</strong>
+                    <small style="opacity:0.7;">Gallery or camera</small>
+                </span>
+            </div>
+        </AddButtonTemplate>
+    </MediaPickerButton>
+</div>
 
 <h2 style="margin-top:32px;">Inside a sheet</h2>
 <p style="color:#888;max-width:640px;">
@@ -66,12 +96,28 @@
     bool sheetOpen;
     IReadOnlyList<Shiny.Blazor.Controls.MediaPickerItem> sheetPhotos = [];
     IReadOnlyList<Shiny.Blazor.Controls.MediaPickerItem> photos = [];
+    IReadOnlyList<Shiny.Blazor.Controls.MediaPickerItem> customPhotos = [];
     string readReport = "";
+    int spacing = 12;
+
+    void LoadSaved() => photos =
+    [
+        new() { DataUri = "images/sample_photo1.jpg", ContentType = "image/jpeg", Width = 900, Height = 1200, CanRemove = false },
+        new() { DataUri = "images/sample_photo2.jpg", ContentType = "image/jpeg", Width = 900, Height = 1200 }
+    ];
 
     async Task ReadFirst()
     {
-        var bytes = await photos[0].ReadAllBytesAsync();
-        readReport = $"{bytes.Length:N0} bytes, {photos[0].ContentType}, {photos[0].Width}×{photos[0].Height}";
+        try
+        {
+            var bytes = await photos[0].ReadAllBytesAsync();
+            readReport = $"{bytes.Length:N0} bytes, {photos[0].ContentType}, {photos[0].Width}×{photos[0].Height}";
+        }
+        catch (InvalidOperationException)
+        {
+            // A saved photo was handed in by URL; the browser never held its bytes.
+            readReport = "That one was loaded from the server, not picked here.";
+        }
     }
 
     bool allowGallery = true;

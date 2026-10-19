@@ -76,6 +76,12 @@ public sealed partial class SlideEditorController : SlideController
     }
 
     /// <summary>
+    /// The clock date fields (Insert ▸ Date &amp; Time, Header &amp; Footer) are stamped from.
+    /// </summary>
+    /// <remarks>Defaults to the system clock; a host sets the one from its DI container.</remarks>
+    public TimeProvider Time { get; set; } = TimeProvider.System;
+
+    /// <summary>
     /// Slides were added, removed or reordered — by this controller, by undo, or by anything else
     /// driving the deck.
     /// </summary>

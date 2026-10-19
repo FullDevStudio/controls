@@ -17,6 +17,7 @@ public partial class MediaPickerButton : IAsyncDisposable
     byte[] editBytes = [];
 
     readonly List<MediaPickerItem> items = new();
+    IReadOnlyList<MediaPickerItem>? adoptedPhotos;
 
     bool viewerOpen;
     string? viewerSource;
@@ -46,6 +47,16 @@ public partial class MediaPickerButton : IAsyncDisposable
     [Parameter] public string OutputFormat { get; set; } = "jpeg";
 
     [Parameter] public string AddButtonText { get; set; } = "➕ Add Photo";
+
+    /// <summary>
+    /// Replaces the dashed "Add Photo" button. It is rendered inside a <c>&lt;button&gt;</c> that
+    /// does the adding, so keep it to markup: no buttons or links of its own.
+    /// <see cref="AddButtonText"/> stays as its accessible name.
+    /// </summary>
+    [Parameter] public RenderFragment? AddButtonTemplate { get; set; }
+
+    /// <summary>Space between thumbnails in the inline carousel, in pixels. Default 12.</summary>
+    [Parameter] public double ItemSpacing { get; set; } = 12;
     [Parameter] public string GalleryActionText { get; set; } = "Choose from Gallery";
     [Parameter] public string CameraActionText { get; set; } = "Take Photo";
 
@@ -88,6 +99,28 @@ public partial class MediaPickerButton : IAsyncDisposable
     [Parameter] public EventCallback<MediaPickerUploadProgress> UploadProgress { get; set; }
 
     bool ShouldLoadBytes => this.LoadBytes ?? this.UploadUrl == null;
+
+    string StripStyle => FormattableString.Invariant($"gap:{Math.Max(0, this.ItemSpacing)}px");
+
+    bool CurrentCanEdit => currentIndex >= 0 && currentIndex < items.Count && items[currentIndex].CanRead;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Photos the screen hands in (already saved ones, say) are taken as the list. Our own
+        // PhotosChanged comes back through @bind as the same array, and is left alone.
+        if (ReferenceEquals(this.Photos, this.adoptedPhotos))
+            return;
+
+        this.adoptedPhotos = this.Photos;
+        var incoming = this.Photos ?? [];
+        var dropped = this.items.Where(x => !incoming.Contains(x)).ToList();
+
+        this.items.Clear();
+        this.items.AddRange(incoming);
+
+        foreach (var item in dropped.Where(x => x.IsPicked))
+            await this.ReleaseAsync(item).ConfigureAwait(false);
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -231,7 +264,8 @@ public partial class MediaPickerButton : IAsyncDisposable
     {
         var results = new List<MediaPickerUploadResult>();
 
-        foreach (var item in this.items.ToList())
+        // A photo the screen handed in was never picked here, so it has nothing waiting to send.
+        foreach (var item in this.items.Where(x => x.IsPicked).ToList())
             results.Add(await this.UploadAsync(item, upload, keep, cancellationToken).ConfigureAwait(false));
 
         return results;
@@ -327,7 +361,7 @@ public partial class MediaPickerButton : IAsyncDisposable
 
     async Task RemoveAt(int index)
     {
-        if (index < 0 || index >= items.Count)
+        if (index < 0 || index >= items.Count || !items[index].CanRemove)
             return;
 
         await this.RemoveAsync(items[index]);
@@ -340,14 +374,7 @@ public partial class MediaPickerButton : IAsyncDisposable
         if (!this.items.Remove(item))
             return;
 
-        if (this.module != null)
-        {
-            try
-            {
-                await this.module.InvokeVoidAsync("release", this.rootEl, item.Id).ConfigureAwait(false);
-            }
-            catch (JSDisconnectedException) { /* the page is gone; so are its object URLs */ }
-        }
+        await this.ReleaseAsync(item).ConfigureAwait(false);
 
         if (!notify)
             return;
@@ -357,12 +384,25 @@ public partial class MediaPickerButton : IAsyncDisposable
     }
 
 
+    async Task ReleaseAsync(MediaPickerItem item)
+    {
+        if (this.module == null || !item.IsPicked)
+            return;
+
+        try
+        {
+            await this.module.InvokeVoidAsync("release", this.rootEl, item.Id).ConfigureAwait(false);
+        }
+        catch (JSDisconnectedException) { /* the page is gone; so are its object URLs */ }
+    }
+
+
     async Task StartEdit()
     {
         viewerOpen = false;
 
         // The editor works on bytes, so they come over now even when nothing else needed them.
-        editBytes = currentIndex >= 0 && currentIndex < items.Count
+        editBytes = CurrentCanEdit
             ? await items[currentIndex].ReadAllBytesAsync(this.MaxReadSize)
             : [];
 
@@ -389,12 +429,15 @@ public partial class MediaPickerButton : IAsyncDisposable
         var contentType = format == "png" ? "image/png" : "image/jpeg";
         var existing = items[currentIndex];
 
+        // A photo handed in by the screen has no id in the browser yet; the edit becomes its blob.
+        var id = string.IsNullOrEmpty(existing.Id) ? Guid.NewGuid().ToString("N") : existing.Id;
+
         // Back to the browser as a stream, and it becomes the blob that gets uploaded or read later.
         using var stream = new MemoryStream(bytes);
         var replaced = await module.InvokeAsync<MediaPickerJsResult?>(
             "replace",
             rootEl,
-            existing.Id,
+            id,
             new DotNetStreamReference(stream),
             contentType
         );
@@ -404,6 +447,7 @@ public partial class MediaPickerButton : IAsyncDisposable
 
         var item = ToItem(replaced);
         item.FileName = existing.FileName;
+        item.CanRemove = existing.CanRemove;
 
         if (this.ShouldLoadBytes)
             item.Data = bytes;
@@ -418,6 +462,7 @@ public partial class MediaPickerButton : IAsyncDisposable
     async Task NotifyChangedAsync()
     {
         Photos = items.ToArray();
+        adoptedPhotos = Photos;
         await PhotosChanged.InvokeAsync(Photos);
     }
 

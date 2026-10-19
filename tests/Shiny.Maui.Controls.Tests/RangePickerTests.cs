@@ -1,4 +1,7 @@
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Maui;
 using Microsoft.Maui.Controls;
+using Microsoft.Maui.Handlers;
 using Shiny.Controls.RangePickers;
 using Shiny.Maui.Controls.Infrastructure;
 using Shouldly;
@@ -79,12 +82,15 @@ public class RangePickerTests
     [Fact]
     public void APresetSelectsItsRange()
     {
-        var calendar = new DateRangeCalendar { Presets = [DateRangePresets.Last7Days] };
+        var clock = new ManualTimeProvider(new DateTimeOffset(2001, 3, 4, 12, 0, 0, TimeSpan.Zero));
+        var calendar = WithClock(new DateRangeCalendar { Presets = [DateRangePresets.Last7Days] }, clock);
 
         calendar.ApplyPreset(DateRangePresets.Last7Days).ShouldBeTrue();
 
-        calendar.EndDate.ShouldBe(DateTime.Today);
-        calendar.StartDate.ShouldBe(DateTime.Today.AddDays(-6));
+        // "Today" is the registered clock's, not the wall clock's - so this cannot flake at midnight.
+        var today = clock.GetLocalNow().Date;
+        calendar.EndDate.ShouldBe(today);
+        calendar.StartDate.ShouldBe(today.AddDays(-6));
     }
 
 
@@ -229,5 +235,22 @@ public class RangePickerTests
         // The calendar does not scroll vertically, so the card does - for a short or landscape screen.
         picker.PopupCard.ShouldBeOfType<Border>().Content.ShouldBeOfType<ScrollView>();
         picker.Cancel();
+    }
+
+
+    /// <summary>Gives <paramref name="view"/> a no-op handler whose services carry <paramref name="clock"/>.</summary>
+    static T WithClock<T>(T view, TimeProvider clock) where T : VisualElement
+    {
+        var services = new ServiceCollection().AddSingleton(clock).BuildServiceProvider();
+        var handler = new StubHandler();
+        handler.SetMauiContext(new MauiContext(services));
+        view.Handler = handler;
+        return view;
+    }
+
+
+    sealed class StubHandler() : ViewHandler<IView, object>(new PropertyMapper<IView, StubHandler>())
+    {
+        protected override object CreatePlatformView() => new();
     }
 }

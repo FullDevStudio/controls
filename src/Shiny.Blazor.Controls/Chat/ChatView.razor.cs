@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 
+using Shiny.Blazor.Controls.Infrastructure;
 using Shiny.Blazor.Controls.Theming;
 
 namespace Shiny.Blazor.Controls.Chat;
@@ -27,7 +28,10 @@ public partial class ChatView : IAsyncDisposable
     IChatSessionProvider? boundProvider;
 
     readonly List<ChatMessage> messages = new();
-    readonly Dictionary<string, DateTimeOffset> typing = new();  // userId -> expires-at
+    readonly Dictionary<string, long> typing = new();  // userId -> timestamp of the last typing event
+    TimeProvider time = TimeProvider.System;
+
+    [Inject] IServiceProvider Services { get; set; } = default!;
 
     string? inputText;
     string? errorMessage;
@@ -112,6 +116,9 @@ public partial class ChatView : IAsyncDisposable
     bool IsMine(ChatMessage m) => session is not null && m.SenderId == session.CurrentUserId;
     ChatSessionUserInfo? GetUser(string userId) => session?.Info.Users.FirstOrDefault(u => u.UserId == userId);
 
+
+    protected override void OnInitialized()
+        => time = ShinyTime.From(Services);
 
     protected override async Task OnParametersSetAsync()
     {
@@ -260,7 +267,7 @@ public partial class ChatView : IAsyncDisposable
                 return;
 
             if (e.IsTyping)
-                typing[e.UserId] = DateTimeOffset.UtcNow.Add(TypingExpiry);
+                typing[e.UserId] = time.GetTimestamp();
             else
                 typing.Remove(e.UserId);
 
@@ -397,7 +404,7 @@ public partial class ChatView : IAsyncDisposable
         var clientId = Guid.NewGuid().ToString();
         var optimistic = new ChatMessage(
             clientId, clientId, CurrentUserId, body, null,
-            MessageStatus.Sending, null, DateTimeOffset.UtcNow, null,
+            MessageStatus.Sending, null, time.GetUtcNow(), null,
             Array.Empty<Reaction>(), Array.Empty<ReadReceipt>());
         messages.Add(optimistic);
         pendingScrollToEnd = true;
@@ -465,7 +472,7 @@ public partial class ChatView : IAsyncDisposable
         var clientId = Guid.NewGuid().ToString();
         var optimistic = new ChatMessage(
             clientId, clientId, CurrentUserId, null, dataUrl,
-            MessageStatus.Sending, null, DateTimeOffset.UtcNow, null,
+            MessageStatus.Sending, null, time.GetUtcNow(), null,
             Array.Empty<Reaction>(), Array.Empty<ReadReceipt>());
         messages.Add(optimistic);
         pendingScrollToEnd = true;
@@ -596,10 +603,10 @@ public partial class ChatView : IAsyncDisposable
             typingSent = true;
             try { await session.ToggleTypingAsync(true); } catch { }
         }
-        lastInputAt = DateTimeOffset.UtcNow;
+        lastInputAt = time.GetTimestamp();
     }
 
-    DateTimeOffset lastInputAt;
+    long lastInputAt;
 
     async Task StopTypingAsync()
     {
@@ -621,14 +628,14 @@ public partial class ChatView : IAsyncDisposable
 
     async Task TickTypingAsync()
     {
-        var now = DateTimeOffset.UtcNow;
+        var now = time.GetTimestamp();
 
-        var expired = typing.Where(kv => kv.Value <= now).Select(kv => kv.Key).ToList();
+        var expired = typing.Where(kv => time.GetElapsedTime(kv.Value, now) >= TypingExpiry).Select(kv => kv.Key).ToList();
         var changed = expired.Count > 0;
         foreach (var id in expired)
             typing.Remove(id);
 
-        if (typingSent && now - lastInputAt > TypingOutIdle)
+        if (typingSent && time.GetElapsedTime(lastInputAt, now) > TypingOutIdle)
             await StopTypingAsync();
 
         if (changed)

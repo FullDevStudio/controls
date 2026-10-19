@@ -20,6 +20,16 @@ public class CacheEntryMeta
     /// <summary>The server's entity tag, if it sent one.</summary>
     public string? ETag { get; set; }
 
+    /// <summary>The server's <c>Last-Modified</c>, if it sent one.</summary>
+    public DateTimeOffset? LastModified { get; set; }
+
+    /// <summary>Whether the entry has gone stale at <paramref name="now"/> and must be revalidated before it is trusted.</summary>
+    public bool IsExpiredAt(DateTimeOffset now) => this.ExpiresUtc <= now;
+
+    /// <summary>Whether a stale copy can be revalidated cheaply instead of downloaded again.</summary>
+    [JsonIgnore]
+    public bool CanRevalidate => !String.IsNullOrEmpty(this.ETag) || this.LastModified is not null;
+
     /// <summary>Size of the image file in bytes.</summary>
     public long ContentLength { get; set; }
 

@@ -55,7 +55,7 @@ class MediaCapturePage : ContentPage
 
     IDispatcherTimer? timer;
     readonly double requestedZoom;
-    DateTimeOffset recordingStartedAt;
+    long recordingStartedAt; // a TimeProvider timestamp, not a wall-clock time
     CameraPhoto? pendingPhoto;
     int resultCount;
     bool isBusy;
@@ -566,12 +566,13 @@ class MediaCapturePage : ContentPage
         if (this.videoOptions?.ShowElapsed != true && this.videoOptions?.MaxDuration is null)
             return;
 
-        this.recordingStartedAt = DateTimeOffset.UtcNow;
+        var time = this.ResolveTime();
+        this.recordingStartedAt = time.GetTimestamp();
         this.timer = this.Dispatcher.CreateTimer();
         this.timer.Interval = TimeSpan.FromMilliseconds(250);
         this.timer.Tick += (_, _) =>
         {
-            var elapsed = DateTimeOffset.UtcNow - this.recordingStartedAt;
+            var elapsed = time.GetElapsedTime(this.recordingStartedAt);
             if (this.videoOptions?.ShowElapsed == true)
             {
                 this.statusLabel.Text = $"● {elapsed:mm\\:ss}";
@@ -583,6 +584,11 @@ class MediaCapturePage : ContentPage
         };
         this.timer.Start();
     }
+
+    // The clock registered in DI (this page's services, then the app's), or the system one.
+    TimeProvider ResolveTime() =>
+        (this.Handler?.MauiContext?.Services ?? Application.Current?.Handler?.MauiContext?.Services)?.GetService<TimeProvider>()
+        ?? TimeProvider.System;
 
     void StopTimer()
     {

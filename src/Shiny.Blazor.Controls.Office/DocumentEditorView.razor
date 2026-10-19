@@ -872,7 +872,7 @@
                 }
                 else
                 {
-                    var now = DateTimeOffset.Now;
+                    var now = c.Time.GetLocalNow();
                     var current = c.CurrentComment?.Id;
 
                     <div class="doc-comments" role="list">
@@ -1382,7 +1382,7 @@
 
     List<RibbonMenuEntry> DateTimeMenu =>
     [
-        .. DocumentEditorController.DateTimeFormats(DateTime.Now).Distinct().Select(text => Entry(text, c => c.InsertText(text)))
+        .. DocumentEditorController.DateTimeFormats((C?.Time ?? this.time).GetLocalNow().DateTime).Distinct().Select(text => Entry(text, c => c.InsertText(text)))
     ];
 
     List<RibbonMenuEntry> WatermarkMenu =>

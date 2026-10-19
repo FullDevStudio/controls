@@ -5,7 +5,9 @@
 @using Shiny.Blazor.Controls
 @using Microsoft.AspNetCore.Components.Rendering
 @implements IAsyncDisposable
+@using Shiny.Blazor.Controls.Infrastructure
 @inject IJSRuntime Js
+@inject IServiceProvider Services
 
 @*
     A workbook, drawn on a Skia canvas, with the sheet strip that makes it a workbook rather than a
@@ -221,15 +223,22 @@
     /// <summary>The live controller, exposed so a toolbar or formula bar can drive the same state.</summary>
     public SpreadsheetController? Controller => this.controller;
 
+    /// <summary>The DI clock (or the system one), handed to the engine so a host can pin "now".</summary>
+    TimeProvider time = TimeProvider.System;
+
     protected override void OnInitialized()
+    {
+        this.time = ShinyTime.From(this.Services);
+
         // Repaint on a scheme flip: the canvas only redraws when told to, so without this the grid
         // keeps the pixels it had when the app was the other way round.
-        => this.scheme = new ThemeSchemeWatcher(this.Js, () =>
+        this.scheme = new ThemeSchemeWatcher(this.Js, () =>
         {
             this.canvas?.Invalidate();
             this.StateHasChanged();
             return Task.CompletedTask;
         });
+    }
 
     protected override void OnParametersSet()
     {
@@ -271,6 +280,10 @@
         }
 
         this.Detach();
+
+        // The app's own clock wins; otherwise TODAY(), NOW() and Ctrl+; read the DI one.
+        if (ReferenceEquals(this.Workbook.Time, TimeProvider.System))
+            this.Workbook.Time = this.time;
 
         this.controller = new SpreadsheetController(this.Workbook, sheet);
         this.controller.Changed += this.OnControllerChanged;

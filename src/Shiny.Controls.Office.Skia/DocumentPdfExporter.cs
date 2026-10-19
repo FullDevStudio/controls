@@ -42,6 +42,8 @@ public static class DocumentPdfExporter
         using var painter = new DocumentPainter(measurer);
         var controller = Layout(document, measurer);
 
+        // Local kind, as the old wall-clock read was: Skia writes a non-UTC date with the local zone's offset.
+        var now = DateTime.SpecifyKind((options.Time ?? TimeProvider.System).GetLocalNow().DateTime, DateTimeKind.Local);
         var metadata = new SKDocumentPdfMetadata
         {
             Title = options.Title ?? string.Empty,
@@ -50,8 +52,8 @@ public static class DocumentPdfExporter
             Producer = "Shiny Controls",
             RasterDpi = 150,
             EncodingQuality = 90,
-            Creation = DateTime.Now,
-            Modified = DateTime.Now
+            Creation = now,
+            Modified = now
         };
 
         using var pdf = SKDocument.CreatePdf(output, metadata)
@@ -168,4 +170,7 @@ public sealed class DocumentPdfOptions
 
     /// <summary>Fonts to consult before the platform's — on WebAssembly, where there are no system fonts.</summary>
     public OfficeFontRegistry? Fonts { get; init; }
+
+    /// <summary>The clock the PDF's created/modified dates come from. Defaults to the system clock.</summary>
+    public TimeProvider? Time { get; init; }
 }

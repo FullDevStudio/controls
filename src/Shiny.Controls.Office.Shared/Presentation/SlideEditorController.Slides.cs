@@ -313,7 +313,7 @@ public sealed partial class SlideEditorController
             return;
 
         this.ClearSelection();
-        this.Execute(new ApplyHeaderFooterCommand(applyToAll ? Enumerable.Range(0, this.Count).ToList() : [this.Index], settings));
+        this.Execute(new ApplyHeaderFooterCommand(applyToAll ? Enumerable.Range(0, this.Count).ToList() : [this.Index], settings, this.Time.GetLocalNow().DateTime));
     }
 
     /// <summary>What the current slide's date, number and footer are, to fill the dialog in.</summary>

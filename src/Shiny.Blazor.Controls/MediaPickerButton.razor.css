@@ -90,6 +90,19 @@
     font-size: calc(15px * var(--shiny-type-scale, 1));
 }
 
+/* A custom AddButtonTemplate brings its own look; the button only makes it clickable. */
+.shiny-mediapicker-add-custom {
+    display: block;
+    padding: 0;
+    margin: 0;
+    border: none;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: inherit;
+    cursor: pointer;
+}
+
 .shiny-mediapicker-denied {
     text-align: center;
     color: var(--shiny-color-error, #C20014);

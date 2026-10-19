@@ -17,15 +17,18 @@
     }
     else if (ShowAsCarouselInView)
     {
-        <div class="shiny-mediapicker-strip">
+        <div class="shiny-mediapicker-strip" style="@StripStyle">
             @for (var i = 0; i < items.Count; i++)
             {
                 var index = i;
                 var item = items[index];
                 <div class="shiny-mediapicker-thumb" @onclick="() => OpenViewer(index)">
                     <img src="@item.DataUri" alt="" />
-                    <button type="button" class="shiny-mediapicker-remove"
-                            @onclick="() => RemoveAt(index)" @onclick:stopPropagation="true">&#10005;</button>
+                    @if (item.CanRemove)
+                    {
+                        <button type="button" class="shiny-mediapicker-remove"
+                                @onclick="() => RemoveAt(index)" @onclick:stopPropagation="true">&#10005;</button>
+                    }
                 </div>
             }
         </div>
@@ -43,7 +46,15 @@
 
     @if (items.Count < MaxPhotos)
     {
-        <button type="button" class="shiny-mediapicker-add" @onclick="OnAddClickAsync">@AddButtonText</button>
+        @if (AddButtonTemplate != null)
+        {
+            @* The template sits inside the button, so it gets the keyboard and the click for free. *@
+            <button type="button" class="shiny-mediapicker-add-custom" aria-label="@AddButtonText" @onclick="OnAddClickAsync">@AddButtonTemplate</button>
+        }
+        else
+        {
+            <button type="button" class="shiny-mediapicker-add" @onclick="OnAddClickAsync">@AddButtonText</button>
+        }
     }
 
     @if (permissionDenied)
@@ -78,7 +89,7 @@
         }
     </HeaderTemplate>
     <FooterTemplate>
-        @if (AllowPhotoEdit)
+        @if (AllowPhotoEdit && CurrentCanEdit)
         {
             <button type="button" class="shiny-mediapicker-editbtn" @onclick="StartEdit">&#9998; Edit</button>
         }

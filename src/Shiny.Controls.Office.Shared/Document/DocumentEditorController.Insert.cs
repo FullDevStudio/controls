@@ -163,7 +163,7 @@ public sealed partial class DocumentEditorController
 
     /// <summary>Types today's date (and time) at the caret, in the given .NET format.</summary>
     public void InsertDateTime(string format = "D")
-        => this.InsertText(DateTime.Now.ToString(string.IsNullOrEmpty(format) ? "D" : format));
+        => this.InsertText(this.Time.GetLocalNow().DateTime.ToString(string.IsNullOrEmpty(format) ? "D" : format));
 
     /// <summary>The characters Insert ▸ Symbol offers without opening a full character map.</summary>
     public static IReadOnlyList<string> CommonSymbols { get; } =

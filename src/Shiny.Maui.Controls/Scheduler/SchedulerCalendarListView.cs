@@ -32,7 +32,7 @@ public class SchedulerCalendarListView : ContentView
 
     public static readonly BindableProperty SelectedDateProperty = BindableProperty.Create(
         nameof(SelectedDate), typeof(DateOnly), typeof(SchedulerCalendarListView),
-        defaultValue: DateOnly.FromDateTime(DateTime.Today),
+        defaultValueCreator: b => DateOnly.FromDateTime(ShinyTime.For((Element)b).Today()),
         defaultBindingMode: BindingMode.TwoWay,
         propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SchedulerCalendarListView), () =>
             {
@@ -471,6 +471,7 @@ public class SchedulerCalendarListView : ContentView
         if (token.IsCancellationRequested) return [];
 
         var result = new List<CalendarListDayGroup>();
+        var time = ShinyTime.For(this);
         for (var date = start; date < end; date = date.AddDays(1))
         {
             var dayEvents = events
@@ -487,7 +488,7 @@ public class SchedulerCalendarListView : ContentView
                 .ToList();
 
             if (dayEvents.Count > 0)
-                result.Add(new CalendarListDayGroup(date, dayEvents));
+                result.Add(new CalendarListDayGroup(date, dayEvents, time));
         }
 
         return result;

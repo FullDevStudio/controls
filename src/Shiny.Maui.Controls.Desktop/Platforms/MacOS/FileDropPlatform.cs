@@ -4,6 +4,7 @@ using Foundation;
 using ObjCRuntime;
 using WebKit;
 using Shiny.Maui.Controls.Desktop.TrayIcon;
+using Shiny.Maui.Controls.Infrastructure;
 using Microsoft.Maui.Graphics;
 using MauiWindow = Microsoft.Maui.Controls.Window;
 
@@ -61,10 +62,11 @@ sealed class MacDropTarget : IDisposable
     readonly MauiWindow window;
     readonly NSWindow native;
     readonly List<NSObject> observers = new();
+    readonly TimeProvider time;
 
     MacFileDropView? view;
     NSView? originalContent;
-    DateTime lastCheck = DateTime.MinValue;
+    long? lastCheck; // a TimeProvider timestamp; null until the first check
     bool disposed;
 
     public MacDropTarget(IFileDropHost host, MauiWindow window, NSWindow native)
@@ -72,6 +74,7 @@ sealed class MacDropTarget : IDisposable
         this.host = host;
         this.window = window;
         this.native = native;
+        this.time = ShinyTime.For(window);
 
         MacMainThread.Invoke(() =>
         {
@@ -93,11 +96,10 @@ sealed class MacDropTarget : IDisposable
         if (this.disposed)
             return;
 
-        var now = DateTime.UtcNow;
-        if (!force && now - this.lastCheck < recheckInterval)
+        if (!force && this.lastCheck is { } last && this.time.GetElapsedTime(last) < recheckInterval)
             return;
 
-        this.lastCheck = now;
+        this.lastCheck = this.time.GetTimestamp();
         this.EnsureInstalled();
     }
 

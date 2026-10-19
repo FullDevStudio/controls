@@ -601,7 +601,7 @@ public sealed partial class DocumentEditorController : DocumentController
             {
                 // Tracked: the character stays, struck through, and the caret steps back over it.
                 if (!this.IsDeletedAt(from))
-                    this.document.Execute(new TrackedDeleteCommand(new DocumentRange(from, caret), this.Author, DateTime.UtcNow, this.NextRevisionId()));
+                    this.document.Execute(new TrackedDeleteCommand(new DocumentRange(from, caret), this.Author, this.Time.GetUtcNow().UtcDateTime, this.NextRevisionId()));
 
                 this.Selection.MoveTo(from);
                 this.AfterEdit();
@@ -661,7 +661,7 @@ public sealed partial class DocumentEditorController : DocumentController
             if (this.document.IsTrackingRevisions)
             {
                 if (!this.IsDeletedAt(caret))
-                    this.document.Execute(new TrackedDeleteCommand(new DocumentRange(caret, next), this.Author, DateTime.UtcNow, this.NextRevisionId()));
+                    this.document.Execute(new TrackedDeleteCommand(new DocumentRange(caret, next), this.Author, this.Time.GetUtcNow().UtcDateTime, this.NextRevisionId()));
 
                 this.Selection.MoveTo(next);
                 this.AfterEdit();
@@ -693,7 +693,7 @@ public sealed partial class DocumentEditorController : DocumentController
         if (this.document.IsTrackingRevisions)
         {
             // The deleted text stays in place, struck through; whatever replaces it goes after it.
-            this.document.Execute(new TrackedDeleteCommand(range, this.Author, DateTime.UtcNow, this.NextRevisionId()));
+            this.document.Execute(new TrackedDeleteCommand(range, this.Author, this.Time.GetUtcNow().UtcDateTime, this.NextRevisionId()));
 
             var after = this.ClampPosition(range.End);
             this.Selection.MoveTo(after);

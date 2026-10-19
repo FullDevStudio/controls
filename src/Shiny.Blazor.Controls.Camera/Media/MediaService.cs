@@ -23,13 +23,17 @@ public sealed class MediaService : IMediaService, IAsyncDisposable
     Task<IJSObjectReference>? moduleTask;
     int hostCount;
 
-    public MediaService(IJSRuntime js, MediaServiceOptions? options = null)
+    public MediaService(IJSRuntime js, MediaServiceOptions? options = null, TimeProvider? time = null)
     {
         this.js = js;
         this.Options = options ?? new MediaServiceOptions();
+        this.Time = time ?? TimeProvider.System;
     }
 
     public MediaServiceOptions Options { get; }
+
+    /// <summary>The clock recording times are read from — the one registered in DI, or the system one.</summary>
+    internal TimeProvider Time { get; }
 
     /// <summary>The modal on screen, or null. Read by <c>MediaHost</c>.</summary>
     public MediaSession? ActiveSession { get; private set; }
@@ -384,7 +388,7 @@ public sealed class MediaService : IMediaService, IAsyncDisposable
             {
                 await camera.StartRecordingAsync(opts.IncludeAudio);
                 session.IsRecording = true;
-                session.RecordingStartedAt = DateTimeOffset.UtcNow;
+                session.RecordingStartedAt = this.Time.GetUtcNow();
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {

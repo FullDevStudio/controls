@@ -1,4 +1,5 @@
 @namespace Shiny.Blazor.Controls.Office
+@using Shiny.Blazor.Controls.Infrastructure
 
 @*
     The File backstage: a full-window page with the app's accent down the left and the file tasks -
@@ -33,7 +34,7 @@
             @switch (this.SelectedPage)
             {
                 case OfficeBackstagePage.Home:
-                    <p class="office-backstage__greeting">@OfficeBackstageText.Greeting(DateTime.Now)</p>
+                    <p class="office-backstage__greeting">@OfficeBackstageText.Greeting(this.time.LocalNow())</p>
                     <h1 class="office-backstage__headline">@OfficeBackstageText.Headline(this.Info.App)</h1>
 
                     <div class="office-backstage__tiles">
@@ -265,7 +266,7 @@
                                 <span class="office-backstage__muted">@f.Location</span>
                             }
                         </span>
-                        <span class="office-backstage__recent-when">@OfficeBackstageText.Relative(f.LastOpened, DateTimeOffset.Now)</span>
+                        <span class="office-backstage__recent-when">@OfficeBackstageText.Relative(f.LastOpened, this.time.GetLocalNow())</span>
                     </button>
                 }
             </div>
