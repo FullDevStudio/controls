@@ -797,7 +797,7 @@ public partial class SlideEditorView
             this.Toggle(SlideIcon.HideSlide, "Hide Slide", () => this.Run(c => c.ToggleHideSlide()), () => this.C?.Current?.IsHidden == true,
                 () => this.Editable && (this.C?.Count ?? 0) > 0, RibbonItemSize.Large)));
 
-        // Export: the PDF and the pictures, through FileRequested - the host decides where they go.
+        // Export: the PDF and the pictures, through the document store.
         var pdf = new RibbonButton
         {
             Text = "PDF",
@@ -817,7 +817,9 @@ public partial class SlideEditorView
         }, RibbonItemSize.Large);
         pictures.Tooltip = "Export slides as pictures";
 
-        tab.Groups.Add(Group("Export", 70, pdf, pictures));
+        this.exportGroup = Group("Export", 70, pdf, pictures);
+        this.exportGroup.IsVisible = this.ShowFileCommands;
+        tab.Groups.Add(this.exportGroup);
 
         return tab;
     }

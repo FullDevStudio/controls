@@ -38,7 +38,7 @@
                      Ribbon="@(this.ShowToolbar && this.controller is not null ? (RenderFragment)this.RenderShellRibbon : null)"
                      RightPane="@(this.ShowCommentsPane ? (RenderFragment)this.RenderCommentsPane : null)"
                      StatusBar="@(this.ShowStatusBar ? (RenderFragment)this.RenderStatusBar : null)"
-                     Backstage="@(this.ShowBackstage ? (RenderFragment)this.RenderBackstage : null)">
+                     Backstage="@(this.ShowBackstage && this.ShowFileCommands ? (RenderFragment)this.RenderBackstage : null)">
             <div class="shiny-spreadsheet-body">
                 @((RenderFragment)this.RenderSheet)
             </div>
@@ -578,10 +578,12 @@
     {
         <OfficeTitleBar DocumentName="@this.EffectiveDocumentName"
                         DocumentNameChanged="this.OnDocumentNameChangedAsync"
-                        DocumentLocation="@this.Workbook?.Path"
+                        DocumentLocation="@(this.session.Current?.Location ?? this.Workbook?.Path)"
                         SaveState="this.EffectiveSaveState"
                         AutoSave="this.AutoSave"
                         AutoSaveChanged="this.OnAutoSaveChangedAsync"
+                        ShowSave="this.ShowFileCommands"
+                        ShowAutoSave="this.ShowFileCommands"
                         CanUndo="@(this.controller?.CanUndo ?? false)"
                         CanRedo="@(this.controller?.CanRedo ?? false)"
                         SaveRequested="this.SaveAsync"
@@ -605,7 +607,7 @@
                             WatermarkChanged="this.OnWatermarkChanged"
                             ShowFormulaBar="this.showFormulaBar"
                             ShowFormulaBarChanged="this.OnShowFormulaBarChanged"
-                            FileMenuRequested="this.OnFileMenuAsync"
+                            FileMenuRequested="@(this.ShowFileCommands || this.FileMenuRequested.HasDelegate ? EventCallback.Factory.Create(this, this.OnFileMenuAsync) : default)"
                             Changed="this.OnSheetsChanged">
             <HeaderEnd>
                 @if (this.ShowRibbonActions)
@@ -665,14 +667,14 @@
     {
         <OfficeBackstage DocumentName="@this.EffectiveDocumentName"
                          Templates="@(this.Templates ?? TemplateThumbnailCache.Spreadsheet ?? SpreadsheetTemplates.All)"
-                         RecentFiles="this.RecentFiles"
+                         RecentFiles="this.storeRecent"
                          DocumentInfo="this.documentInfo"
                          TemplateSelected="this.OnTemplateSelectedAsync"
-                         RecentFileSelected="this.RecentFileSelected"
-                         OpenRequested="this.OpenRequested"
+                         RecentFileSelected="this.OpenRecentAsync"
+                         OpenRequested="() => this.OpenAsync()"
                          SaveRequested="this.SaveAsync"
-                         SaveAsRequested="f => this.WriteFileAsync(f, SpreadsheetFileAction.SaveAs)"
-                         ExportRequested="f => this.WriteFileAsync(f, SpreadsheetFileAction.Export)"
+                         SaveAsRequested="this.SaveAsAsync"
+                         ExportRequested="this.ExportAsync"
                          PrintRequested="this.PrintAsync" />
     }
 
@@ -875,7 +877,7 @@
         if (e.MetaKey) modifiers |= SheetKeyModifiers.Meta;
 
         // Save and Print are the window's, not the grid's: Excel answers them from any cell.
-        if ((e.CtrlKey || e.MetaKey) && !e.ShiftKey && !e.AltKey && this.ShowShell)
+        if ((e.CtrlKey || e.MetaKey) && !e.ShiftKey && !e.AltKey && this.ShowShell && this.ShowFileCommands)
         {
             if (string.Equals(e.Key, "s", StringComparison.OrdinalIgnoreCase))
             {

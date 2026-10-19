@@ -44,6 +44,29 @@ public enum GamepadElementShape
 }
 
 
+/// <summary>Where a floating stick listens for a thumb to land.</summary>
+public enum GamepadFloatingRegion
+{
+    /// <summary>The stick's own size plus <see cref="GamepadElement.FloatingZone"/> on every side.</summary>
+    Around,
+
+    /// <summary>The left half of the arranged area - the usual movement stick.</summary>
+    LeftHalf,
+
+    /// <summary>The right half of the arranged area - the usual aim/camera stick.</summary>
+    RightHalf,
+
+    /// <summary>The top half of the arranged area.</summary>
+    TopHalf,
+
+    /// <summary>The bottom half of the arranged area - a portrait phone's thumb zone.</summary>
+    BottomHalf,
+
+    /// <summary>The whole arranged area.</summary>
+    Anywhere
+}
+
+
 /// <summary>Which point of the arranged area an element's offset is measured from.</summary>
 /// <remarks>
 /// Anchoring is what lets one layout work as a phone overlay in both orientations: a d-pad anchored
@@ -156,7 +179,7 @@ public sealed class GamepadElement
     public string? Color { get; set; }
 
     /// <summary>
-    /// For a stick: the stick re-centres wherever the thumb lands inside its <see cref="FloatingZone"/>
+    /// For a stick: the stick re-centres wherever the thumb lands inside its <see cref="FloatingRegion"/>
     /// and springs home on release - the "touch anywhere on the left" stick most mobile games use.
     /// </summary>
     public bool IsFloating { get; set; }
@@ -166,6 +189,14 @@ public sealed class GamepadElement
     /// device-independent units on each side.
     /// </summary>
     public float FloatingZone { get; set; } = 90;
+
+    /// <summary>
+    /// For a floating stick: the area a thumb can land in to grab it. <see cref="GamepadFloatingRegion.Around"/>
+    /// (the default) uses <see cref="FloatingZone"/>; the halves and <see cref="GamepadFloatingRegion.Anywhere"/>
+    /// are measured on the arranged area - the view, or the controller body when sized uniformly. Anything
+    /// drawn in the region, and every button's slop, still wins over the stick.
+    /// </summary>
+    public GamepadFloatingRegion FloatingRegion { get; set; }
 
     /// <summary>For a button: rapid-fires while held, at the view's turbo rate.</summary>
     public bool IsTurbo { get; set; }

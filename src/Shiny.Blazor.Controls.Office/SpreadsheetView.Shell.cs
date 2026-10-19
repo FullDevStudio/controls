@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.DependencyInjection;
 using Shiny.Controls.Office.Shell;
 using Shiny.Controls.Office.Skia;
 using Shiny.Controls.Office.Spreadsheet;
@@ -11,10 +12,9 @@ namespace Shiny.Blazor.Controls.Office;
 /// comments pane, the status bar and the File backstage.
 /// </summary>
 /// <remarks>
-/// On by default (<see cref="ShowShell"/>). Every part is a switch of its own, and what the backstage
-/// asks for — save, save as, export, print — arrives at the host as a <see cref="SpreadsheetFileRequest"/>
-/// through <see cref="FileRequested"/>. Left unhandled, the browser downloads the file (print opens the
-/// sheet as a PDF), so the shell works end to end without any host code.
+/// On by default (<see cref="ShowShell"/>). Every part is a switch of its own. Open, Save, Save As,
+/// Export and the recent list go to the <see cref="DocumentStore"/> — the browser's own by default — so
+/// the shell works end to end without any host code; Print opens the sheet as a PDF.
 /// </remarks>
 public partial class SpreadsheetView
 {
@@ -37,6 +37,9 @@ public partial class SpreadsheetView
 
     Workbook? ownedWorkbook;
     long savedRevision = -1;
+    readonly OfficeDocumentSession session = new(OfficeApp.Excel);
+    (Workbook Workbook, OfficeDocumentRef File)? attaching;
+    IReadOnlyList<OfficeRecentFile>? storeRecent;
     OfficeSaveState? transientSaveState;
     OfficeSaveState lastSaved = OfficeSaveState.None;
     CancellationTokenSource? autoSave;
@@ -64,6 +67,16 @@ public partial class SpreadsheetView
     /// <summary>Whether File opens the backstage. Off, File only raises <see cref="FileMenuRequested"/>.</summary>
     [Parameter] public bool ShowBackstage { get; set; } = true;
 
+    /// <summary>
+    /// The File surface: the ribbon's File button and backstage, the title bar's Save and AutoSave,
+    /// Ctrl+S / Ctrl+P, and Save / Export / Print / New in the command search. Off when the app owns
+    /// opening and saving — it calls <c>SaveAsync</c>, <c>OpenAsync(stream, fileName)</c> and the rest
+    /// itself, or reads the document directly. File still raises <c>FileMenuRequested</c> when that is
+    /// handled. The rest of the shell stays.
+    /// </summary>
+    [Parameter] public bool ShowFileCommands { get; set; } = true;
+
+
     /// <summary>The Comments button and the pane listing every note in the workbook.</summary>
     [Parameter] public bool ShowCommentsPane { get; set; } = true;
 
@@ -84,8 +97,8 @@ public partial class SpreadsheetView
     [Parameter] public OfficeSaveState? SaveState { get; set; }
 
     /// <summary>
-    /// The title bar's AutoSave switch. On, and with <see cref="FileRequested"/> handled, edits are saved
-    /// two seconds after the last one. (Unhandled, AutoSave does nothing: a download per edit is not a save.)
+    /// The title bar's AutoSave switch. On, edits to a <see cref="DocumentStore"/> file are saved two
+    /// seconds after the last one. A new workbook waits for its first Save, which asks where it goes.
     /// </summary>
     [Parameter] public bool AutoSave { get; set; }
 
@@ -97,8 +110,15 @@ public partial class SpreadsheetView
     /// <summary>The backstage's New page. Defaults to <see cref="SpreadsheetTemplates.All"/> — blank, budget, invoice, schedule.</summary>
     [Parameter] public IReadOnlyList<OfficeTemplate>? Templates { get; set; }
 
-    /// <summary>The backstage's recent files. The host's; none by default.</summary>
-    [Parameter] public IReadOnlyList<OfficeRecentFile>? RecentFiles { get; set; }
+    /// <summary>
+    /// Where Open, Save, Save As, Export and the recent list go. Null uses the registered
+    /// <see cref="IOfficeDocumentStore"/> (<c>AddShinyOfficeDocumentStore()</c>), or a
+    /// <see cref="BrowserOfficeDocumentStore"/> of the view's own when there is none.
+    /// </summary>
+    [Parameter] public IOfficeDocumentStore? DocumentStore { get; set; }
+
+    /// <summary>The store file the workbook came from or was last saved as. Null for a new workbook, or one the host set.</summary>
+    public OfficeDocumentRef? CurrentFile => this.session.Current;
 
     // ---- events ----
 
@@ -111,19 +131,8 @@ public partial class SpreadsheetView
     /// <summary>The view replaced its workbook — a template from the backstage. Use <c>@bind-Workbook</c>.</summary>
     [Parameter] public EventCallback<Workbook?> WorkbookChanged { get; set; }
 
-    /// <summary>Backstage ▸ Open. The host shows its own picker.</summary>
-    [Parameter] public EventCallback OpenRequested { get; set; }
-
-    [Parameter] public EventCallback<OfficeRecentFile> RecentFileSelected { get; set; }
-
     /// <summary>The Share button beside the comments toggle.</summary>
     [Parameter] public EventCallback ShareRequested { get; set; }
-
-    /// <summary>
-    /// Save, Save As, Export or Print. Handle it to put the file somewhere; unhandled, the browser
-    /// downloads it (Print opens the PDF in a new tab).
-    /// </summary>
-    [Parameter] public EventCallback<SpreadsheetFileRequest> FileRequested { get; set; }
 
     /// <summary>The command search behind the title bar — add the app's own commands to it.</summary>
     public OfficeCommandIndex Commands => this.commands;
@@ -171,6 +180,10 @@ public partial class SpreadsheetView
         this.transientSaveState = null;
         this.lastSaved = OfficeSaveState.None;
 
+        // A workbook the host set is not a store file; one this view opened is.
+        this.session.Current = this.attaching is { } a && ReferenceEquals(a.Workbook, workbook) ? a.File : null;
+        this.attaching = null;
+
         // A note says who wrote it; the signed-in name beats the machine's user name.
         if (!string.IsNullOrWhiteSpace(this.UserName) && this.controller is { } c)
             c.NoteAuthor = this.UserName;
@@ -200,13 +213,15 @@ public partial class SpreadsheetView
         this.backstageOpen = open;
         this.StateHasChanged();
 
-        if (!open)
+        if (open)
+            await this.LoadRecentFilesAsync();
+        else
             await this.FocusGridAsync();
     }
 
     async Task OnFileMenuAsync()
     {
-        if (this.ShowBackstage)
+        if (this.ShowBackstage && this.ShowFileCommands)
             await this.OnBackstageOpenChangedAsync(true);
 
         await this.FileMenuRequested.InvokeAsync();
@@ -310,11 +325,19 @@ public partial class SpreadsheetView
             next = SpreadsheetTemplates.Create(template);
         }
 
+        await this.ReplaceWorkbookAsync(next, template.IsBlank ? NextBookName() : template.Name, null);
+    }
+
+    /// <summary>Shows a workbook this view built or opened, taking ownership of it and disposing the one it replaces.</summary>
+    async Task ReplaceWorkbookAsync(Workbook next, string name, OfficeDocumentRef? file)
+    {
         var previous = this.ownedWorkbook;
         this.ownedWorkbook = next;
-        this.renamedTo = template.IsBlank ? NextBookName() : template.Name;
+        this.renamedTo = name;
+        this.attaching = file is null ? null : (next, file);
         this.Workbook = next;
         this.SheetName = null;
+        this.backstageOpen = false;
 
         this.OnParametersSet();
         this.canvas?.Invalidate();
@@ -328,6 +351,71 @@ public partial class SpreadsheetView
             previous.Dispose();
     }
 
+
+    // ---- backstage: open ----
+
+    BrowserOfficeDocumentStore? ownStore;
+
+    IOfficeDocumentStore Store
+        => this.DocumentStore
+           ?? this.Services.GetService<IOfficeDocumentStore>()
+           ?? (this.ownStore ??= new BrowserOfficeDocumentStore(this.Js));
+
+    async Task OpenRecentAsync(OfficeRecentFile file)
+    {
+        if (file.Document is { } document)
+            await this.OpenAsync(document);
+    }
+
+    /// <summary>
+    /// Opens a file from the <see cref="DocumentStore"/> — <paramref name="file"/>, or the one the user
+    /// picks when it is null — and shows it. The view owns the workbook it opens.
+    /// </summary>
+    /// <returns>False when the user cancelled or the file would not open.</returns>
+    public async Task<bool> OpenAsync(OfficeDocumentRef? file = null, CancellationToken cancellationToken = default)
+    {
+        var store = this.Store;
+        try
+        {
+            var opened = await this.session.OpenAsync(store, file, (s, ct) => Workbook.OpenAsync(s, cancellationToken: ct), cancellationToken);
+            if (opened is not { } result)
+                return false;
+
+            await this.ReplaceWorkbookAsync(result.Document, result.File.DisplayName, result.File);
+            return true;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            Console.Error.WriteLine($"[Shiny.Office] Could not open '{file?.Name}': {ex.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>Opens a workbook from a stream and shows it, named after <paramref name="fileName"/>. The view owns it.</summary>
+    public async Task OpenAsync(Stream stream, string fileName, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(stream);
+        var workbook = await Workbook.OpenAsync(stream, cancellationToken: cancellationToken);
+        await this.ReplaceWorkbookAsync(workbook, System.IO.Path.GetFileNameWithoutExtension(fileName), null);
+    }
+
+    /// <summary>Fills the backstage's recent list from the store.</summary>
+    async Task LoadRecentFilesAsync()
+    {
+        try
+        {
+            this.storeRecent = await this.Store.GetRecentAsync(OfficeApp.Excel);
+            this.StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[Shiny.Office] Could not read the recent list: {ex.Message}");
+        }
+    }
+
+    /// <summary>AutoSave only overwrites: a workbook with no file yet would have to ask where it goes.</summary>
+    bool CanAutoSave => this.session.Current is not null;
+
     static int bookNumber = 1;
 
     static string NextBookName() => $"Book{Interlocked.Increment(ref bookNumber)}";
@@ -335,18 +423,27 @@ public partial class SpreadsheetView
 
     // ---- backstage: save, save as, export, print ----
 
-    Task SaveAsync() => this.WriteFileAsync(OfficeFileFormats.Xlsx, SpreadsheetFileAction.Save);
+    /// <summary>Saves the workbook as xlsx through the <see cref="DocumentStore"/>, back over <see cref="CurrentFile"/> when there is one.</summary>
+    public Task SaveAsync() => this.WriteFileAsync(OfficeFileFormats.Xlsx, OfficeFileAction.Save);
 
-    Task PrintAsync() => this.WriteFileAsync(OfficeFileFormats.Pdf, SpreadsheetFileAction.Print);
+    /// <summary>Writes the workbook (or, for CSV and PDF, the active sheet) as a new file; an xlsx becomes <see cref="CurrentFile"/>.</summary>
+    public Task SaveAsAsync(OfficeFileFormat format) => this.WriteFileAsync(format, OfficeFileAction.SaveAs);
 
-    async Task WriteFileAsync(OfficeFileFormat format, SpreadsheetFileAction action)
+    /// <summary>Writes the workbook (or, for CSV and PDF, the active sheet) as a new file in <paramref name="format"/>.</summary>
+    public Task ExportAsync(OfficeFileFormat format) => this.WriteFileAsync(format, OfficeFileAction.Export);
+
+    /// <summary>Opens a PDF of the active sheet in a new tab, for the browser to print.</summary>
+    public Task PrintAsync() => this.WriteFileAsync(OfficeFileFormats.Pdf, OfficeFileAction.Print);
+
+    async Task WriteFileAsync(OfficeFileFormat format, OfficeFileAction action)
     {
         if (this.controller is not { } c)
             return;
 
-        var request = new SpreadsheetFileRequest(c.Workbook, c.Sheet, format, format.FileNameFor(this.EffectiveDocumentName), action);
-        var revision = c.Workbook.Revision;
-        var saving = action is SpreadsheetFileAction.Save or SpreadsheetFileAction.SaveAs && format.IsNative;
+        var workbook = c.Workbook;
+        var sheet = c.Sheet;
+        var revision = workbook.Revision;
+        var saving = action is OfficeFileAction.Save or OfficeFileAction.SaveAs && format.IsNative;
 
         if (saving)
         {
@@ -356,21 +453,30 @@ public partial class SpreadsheetView
 
         try
         {
-            if (this.FileRequested.HasDelegate)
+            if (action == OfficeFileAction.Print)
             {
-                await this.FileRequested.InvokeAsync(request);
+                // The browser's print is a tab with the PDF in it, not a file anywhere.
+                if (this.script is { } s)
+                    await s.InvokeAsync("openFile", format.FileNameFor(this.EffectiveDocumentName), format.MimeType,
+                        await SpreadsheetExport.ToBytesAsync(workbook, sheet, format));
+
+                return;
             }
-            else if (SpreadsheetExport.CanWrite(format) && this.script is { } s)
-            {
-                var bytes = await request.ToBytesAsync();
-                await s.InvokeAsync(action == SpreadsheetFileAction.Print ? "openFile" : "downloadFile", request.FileName, format.MimeType, bytes);
-            }
+
+            var file = await this.session.SaveAsync(this.Store, format, action, this.EffectiveDocumentName,
+                (stream, ct) => SpreadsheetExport.WriteAsync(workbook, sheet, format, stream, ct));
+
+            if (file is null)
+                return;
 
             if (saving)
             {
                 this.savedRevision = revision;
-                this.lastSaved = this.FileRequested.HasDelegate ? OfficeSaveState.Saved : OfficeSaveState.SavedLocally;
+                this.lastSaved = OfficeSaveState.Saved;
+                this.renamedTo = file.DisplayName;
             }
+
+            this.backstageOpen = false;
         }
         catch (Exception ex)
         {
@@ -390,7 +496,7 @@ public partial class SpreadsheetView
     /// <summary>AutoSave: two seconds after the last edit, when the host is there to take the file.</summary>
     void ScheduleAutoSave()
     {
-        if (!this.AutoSave || !this.FileRequested.HasDelegate || this.Workbook is not { } book || book.Revision == this.savedRevision)
+        if (!this.AutoSave || !this.CanAutoSave || this.Workbook is not { } book || book.Revision == this.savedRevision)
             return;
 
         this.autoSave?.Cancel();
@@ -414,11 +520,11 @@ public partial class SpreadsheetView
 
     void AddShellCommands()
     {
-        this.commands.Add(new OfficeCommand("Save", this.SaveAsync) { Id = "sheet:save", Category = "File", Shortcut = "Ctrl+S" });
-        this.commands.Add(new OfficeCommand("New Workbook", () => this.OnBackstageOpenChangedAsync(true)) { Id = "sheet:new", Category = "File", Keywords = ["template", "blank"] });
-        this.commands.Add(new OfficeCommand("Export to PDF", () => this.WriteFileAsync(OfficeFileFormats.Pdf, SpreadsheetFileAction.Export)) { Id = "sheet:pdf", Category = "File › Export" });
-        this.commands.Add(new OfficeCommand("Export to CSV", () => this.WriteFileAsync(OfficeFileFormats.Csv, SpreadsheetFileAction.Export)) { Id = "sheet:csv", Category = "File › Export", Keywords = ["comma"] });
-        this.commands.Add(new OfficeCommand("Print", this.PrintAsync) { Id = "sheet:print", Category = "File", Shortcut = "Ctrl+P" });
+        this.commands.Add(new OfficeCommand("Save", this.SaveAsync) { Id = "sheet:save", Category = "File", IsAvailable = () => this.ShowFileCommands, Shortcut = "Ctrl+S" });
+        this.commands.Add(new OfficeCommand("New Workbook", () => this.OnBackstageOpenChangedAsync(true)) { Id = "sheet:new", Category = "File", IsAvailable = () => this.ShowFileCommands, Keywords = ["template", "blank"] });
+        this.commands.Add(new OfficeCommand("Export to PDF", () => this.WriteFileAsync(OfficeFileFormats.Pdf, OfficeFileAction.Export)) { Id = "sheet:pdf", Category = "File › Export", IsAvailable = () => this.ShowFileCommands });
+        this.commands.Add(new OfficeCommand("Export to CSV", () => this.WriteFileAsync(OfficeFileFormats.Csv, OfficeFileAction.Export)) { Id = "sheet:csv", Category = "File › Export", IsAvailable = () => this.ShowFileCommands, Keywords = ["comma"] });
+        this.commands.Add(new OfficeCommand("Print", this.PrintAsync) { Id = "sheet:print", Category = "File", IsAvailable = () => this.ShowFileCommands, Shortcut = "Ctrl+P" });
         this.commands.Add(new OfficeCommand("Comments", () => this.OnCommentsOpenChangedAsync(!this.commentsOpen)) { Id = "sheet:comments", Category = "Review", Keywords = ["notes"] });
         this.commands.Add(new OfficeCommand("Normal View", () => this.OnViewModeChanged(OfficeViewModes.Normal.Id)) { Id = "sheet:normal", Category = "View" });
         this.commands.Add(new OfficeCommand("Page Layout", () => this.OnViewModeChanged(OfficeViewModes.PageLayout.Id)) { Id = "sheet:pagelayout", Category = "View", Keywords = ["print", "pages"] });
@@ -436,6 +542,7 @@ public partial class SpreadsheetView
     {
         this.commandSync?.Dispose();
         this.autoSave?.Cancel();
+        _ = this.ownStore?.DisposeAsync();
 
         // A host bound to WorkbookChanged was handed the workbook and may outlive this view with it.
         if (!this.WorkbookChanged.HasDelegate)

@@ -114,7 +114,7 @@ A face style only relabels. It never changes what a position reports.
 | Multi-touch | A thumb on the stick while the other presses buttons. iOS and Android track every finger natively; other MAUI platforms read one pointer (enough for a mouse). |
 | Thumb rolls | A finger between two neighbouring face buttons presses both. Sliding a finger from one button onto another moves the press. |
 | D-pad | `DPadMode="EightWay"` (diagonals, default) or `FourWay`. The d-pad keeps its finger until it lifts, so a thumb that drifts off the edge keeps steering. |
-| Floating stick | `GamepadElement.IsFloating = true`: the stick centres wherever the thumb lands within its `FloatingZone`. |
+| Floating stick | `GamepadElement.IsFloating = true`: the stick centres wherever the thumb lands and springs home on release. `FloatingRegion` picks where it listens: `Around` (default, the stick plus `FloatingZone` on each side), `LeftHalf`, `RightHalf`, `TopHalf`, `BottomHalf` or `Anywhere` — measured on the view, or on the controller body under `Sizing="Uniform"`. Drawn buttons inside the region still win, but touches in the region no longer pass through to whatever is beneath the overlay. |
 | Stick click | Double-tap and hold a stick for L3/R3 (`StickClickEnabled`). |
 | Triggers | Report their axis at `1.0` while held. |
 | Turbo | `GamepadElement.IsTurbo = true` rapid-fires while held, at `TurboRate` presses per second. |

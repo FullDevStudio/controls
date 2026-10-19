@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.JSInterop;
 using Shiny.Blazor.Controls;
 using Shiny.Blazor.Controls.Infrastructure;
@@ -19,9 +20,9 @@ namespace Shiny.Blazor.Controls.Office;
 /// is exactly what it was before: the ribbon over the page, with its own quick access and navigation pane.
 /// </para>
 /// <para>
-/// The shell does no I/O of its own, and neither does this: Save, Save As, Export, Open and New are
-/// events. What happens when the host has not handled one is the browser's natural answer — the file
-/// is downloaded, a template is opened in place, Print prints a PDF of the document.
+/// Open, Save, Save As, Export and the recent list go to the <see cref="DocumentStore"/> — the browser's
+/// own by default — and Print prints a PDF of the document. A template picked with nobody handling
+/// <see cref="NewDocumentRequested"/> is opened in place.
 /// </para>
 /// </remarks>
 public partial class DocumentEditorView
@@ -83,28 +84,29 @@ public partial class DocumentEditorView
     /// <summary>The backstage's templates. Null offers <see cref="WordTemplates.All"/> — Blank, Report and Letter.</summary>
     [Parameter] public IReadOnlyList<OfficeTemplate>? Templates { get; set; }
 
-    /// <summary>The backstage's recent files. The host keeps the list; picking one raises <see cref="RecentFileSelected"/>.</summary>
-    [Parameter] public IReadOnlyList<OfficeRecentFile>? RecentFiles { get; set; }
+    /// <summary>
+    /// Where Open, Save, Save As, Export and the recent list go. Null uses the registered
+    /// <see cref="IOfficeDocumentStore"/> (<c>AddShinyOfficeDocumentStore()</c>), or a
+    /// <see cref="BrowserOfficeDocumentStore"/> of the view's own when there is none.
+    /// </summary>
+    [Parameter] public IOfficeDocumentStore? DocumentStore { get; set; }
+
+    /// <summary>
+    /// The File surface: the ribbon's File button and backstage, the title bar's Save and AutoSave,
+    /// Ctrl+S / Ctrl+P, and Save / Export / Print / New in the command search. Off when the app owns
+    /// opening and saving — it calls <c>SaveAsync</c>, <c>OpenAsync(stream, fileName)</c> and the rest
+    /// itself, or reads the document directly. File still raises <c>FileMenuRequested</c> when that is
+    /// handled. The rest of the shell stays.
+    /// </summary>
+    [Parameter] public bool ShowFileCommands { get; set; } = true;
+
+    /// <summary>The store file the document came from or was last saved as. Null for a new document, or one the host set.</summary>
+    public OfficeDocumentRef? CurrentFile => this.session.Current;
 
     /// <summary>Editing, Reviewing (track changes on) or Viewing (read-only). Two-way bindable.</summary>
     [Parameter] public OfficeEditMode EditMode { get; set; }
 
     [Parameter] public EventCallback<OfficeEditMode> EditModeChanged { get; set; }
-
-    /// <summary>Save — the title bar's disk, the backstage's Save, Ctrl+S. Unhandled, the .docx is downloaded.</summary>
-    [Parameter] public EventCallback SaveRequested { get; set; }
-
-    /// <summary>Save As with the chosen format. Unhandled, .docx, .pdf, .txt and .html are downloaded.</summary>
-    [Parameter] public EventCallback<OfficeFileFormat> SaveAsRequested { get; set; }
-
-    /// <summary>Export with the chosen format. Unhandled, .pdf, .txt and .html are downloaded.</summary>
-    [Parameter] public EventCallback<OfficeFileFormat> ExportRequested { get; set; }
-
-    /// <summary>The backstage's Open › Browse.</summary>
-    [Parameter] public EventCallback OpenRequested { get; set; }
-
-    /// <summary>A recent file was picked in the backstage.</summary>
-    [Parameter] public EventCallback<OfficeRecentFile> RecentFileSelected { get; set; }
 
     /// <summary>
     /// A template was picked. Unhandled, the view opens it itself (<see cref="WordTemplates.OpenAsync"/>)
@@ -112,11 +114,8 @@ public partial class DocumentEditorView
     /// </summary>
     [Parameter] public EventCallback<OfficeTemplate> NewDocumentRequested { get; set; }
 
-    /// <summary>Raised when the view opened a document itself — a template picked with no handler for it.</summary>
+    /// <summary>Raised when the view opened a document itself — a template picked with no handler for it, or a file from the <see cref="DocumentStore"/>.</summary>
     [Parameter] public EventCallback<WordDocument> DocumentOpened { get; set; }
-
-    /// <summary>Print. Unhandled, a PDF of the document is opened in the browser's print dialog.</summary>
-    [Parameter] public EventCallback PrintRequested { get; set; }
 
     /// <summary>The ribbon's Share button.</summary>
     [Parameter] public EventCallback ShareRequested { get; set; }
@@ -155,6 +154,9 @@ public partial class DocumentEditorView
     OfficeNavigationTab navigationTab = OfficeNavigationTab.Headings;
 
     WordDocument? documentOverride;
+    readonly OfficeDocumentSession session = new(OfficeApp.Word);
+    IReadOnlyList<OfficeRecentFile>? storeRecent;
+    OfficeSaveState? storeSaveState;
     WordDocument? lastDocumentParameter;
     string? rulerSignature;
     IJSObjectReference? shellModule;
@@ -163,9 +165,9 @@ public partial class DocumentEditorView
     {
         this.statusItems = [this.pageItem, this.wordsItem, this.languageItem];
 
-        this.commands.Add(new OfficeCommand("Save", () => this.InvokeAsync(this.SaveAsync)) { Category = "File", Shortcut = "Ctrl+S", Keywords = ["store", "download"] });
-        this.commands.Add(new OfficeCommand("Export to PDF", () => this.InvokeAsync(() => this.ExportAsync(OfficeFileFormats.Pdf))) { Category = "File › Export", Keywords = ["pdf", "download"] });
-        this.commands.Add(new OfficeCommand("Print", () => this.InvokeAsync(this.PrintAsync)) { Category = "File", Shortcut = "Ctrl+P" });
+        this.commands.Add(new OfficeCommand("Save", () => this.InvokeAsync(this.SaveAsync)) { Category = "File", IsAvailable = () => this.ShowFileCommands, Shortcut = "Ctrl+S", Keywords = ["store", "download"] });
+        this.commands.Add(new OfficeCommand("Export to PDF", () => this.InvokeAsync(() => this.ExportAsync(OfficeFileFormats.Pdf))) { Category = "File › Export", IsAvailable = () => this.ShowFileCommands, Keywords = ["pdf", "download"] });
+        this.commands.Add(new OfficeCommand("Print", () => this.InvokeAsync(this.PrintAsync)) { Category = "File", IsAvailable = () => this.ShowFileCommands, Shortcut = "Ctrl+P" });
         this.commands.Add(new OfficeCommand("Word Count", () => this.InvokeAsync(() => { this.Open(DialogKind.WordCount); this.StateHasChanged(); })) { Category = "Review › Proofing", Shortcut = "Ctrl+Shift+G", Keywords = ["statistics", "count"] });
         this.commands.Add(new OfficeCommand("Navigation Pane", () => this.InvokeAsync(() => this.SetNavigationOpenAsync(!this.NavigationOpen))) { Category = "View › Show", Keywords = ["headings", "outline", "go to"] });
         this.commands.Add(new OfficeCommand("Comments Pane", () => this.InvokeAsync(() => this.SetCommentsOpenAsync(!this.CommentsOpen))) { Category = "Review › Comments", Keywords = ["comments", "review"] });
@@ -264,7 +266,10 @@ public partial class DocumentEditorView
     string EffectiveDocumentName => this.nameOverride ?? this.DocumentName ?? "Document1";
 
     OfficeSaveState EffectiveSaveState
-        => this.SaveState ?? (this.CurrentDocument is { IsDirty: true } ? OfficeSaveState.Unsaved : OfficeSaveState.None);
+        => this.SaveState ?? (this.CurrentDocument is { IsDirty: true } ? OfficeSaveState.Unsaved : this.storeSaveState ?? OfficeSaveState.None);
+
+    /// <summary>Where the document lives: the store file it came from, or the host's <see cref="DocumentLocation"/>.</summary>
+    string? EffectiveDocumentLocation => this.session.Current?.Location ?? this.DocumentLocation;
 
     bool EffectiveAutoSave => this.autoSaveOverride ?? this.AutoSave;
 
@@ -282,6 +287,10 @@ public partial class DocumentEditorView
                 this.documentOverride = null;
                 mine.Dispose();
             }
+
+            // The host's document is not a store file.
+            this.session.Current = null;
+            this.storeSaveState = null;
         }
     }
 
@@ -366,6 +375,7 @@ public partial class DocumentEditorView
         this.ribbonSync = null;
         this.documentOverride?.Dispose();
         this.documentOverride = null;
+        _ = this.ownStore?.DisposeAsync();
 
         if (this.shellModule is { } module)
             _ = DisposeModuleAsync(module);
@@ -497,10 +507,10 @@ public partial class DocumentEditorView
 
     async Task OnFileButtonAsync()
     {
-        if (this.ShellOn)
+        if (this.ShellOn && this.ShowFileCommands)
             await this.OpenBackstageAsync();
 
-        await this.FileClicked.InvokeAsync();
+        await this.FileMenuRequested.InvokeAsync();
     }
 
     async Task OnStyleSelected(OfficeStyleDescriptor style) => await this.Run(c => c.ApplyStyle(style.Id));
@@ -563,19 +573,22 @@ public partial class DocumentEditorView
     /// <summary>Opens the File backstage, refreshing its Info page.</summary>
     public Task OpenBackstageAsync()
     {
-        this.backstageInfo = WordShell.DocumentInfo(this.C, this.EffectiveDocumentName, this.DocumentLocation);
+        this.backstageInfo = WordShell.DocumentInfo(this.C, this.EffectiveDocumentName, this.EffectiveDocumentLocation);
         this.EnsureTemplateThumbnails();
         this.backstageOpen = true;
         this.StateHasChanged();
-        return Task.CompletedTask;
+        return this.LoadRecentFilesAsync();
     }
 
     Task OnBackstageOpenChanged(bool open)
     {
-        if (open)
-            this.EnsureTemplateThumbnails();
-
         this.backstageOpen = open;
+
+        if (open)
+        {
+            this.EnsureTemplateThumbnails();
+            return this.LoadRecentFilesAsync();
+        }
 
         if (!open && this.editor is { } surface)
             return surface.FocusAsync();
@@ -598,7 +611,7 @@ public partial class DocumentEditorView
         this.backstagePage = page;
 
         if (page == OfficeBackstagePage.Info)
-            this.backstageInfo = WordShell.DocumentInfo(this.C, this.EffectiveDocumentName, this.DocumentLocation);
+            this.backstageInfo = WordShell.DocumentInfo(this.C, this.EffectiveDocumentName, this.EffectiveDocumentLocation);
 
         if (page == OfficeBackstagePage.Print && this.CurrentDocument is { } document)
         {
@@ -628,47 +641,145 @@ public partial class DocumentEditorView
         }
 
         var opened = await WordTemplates.OpenAsync(template, time: this.time);
+        await this.ReplaceDocumentAsync(opened, template.IsBlank ? "Document" + (++untitled + 1) : template.Name, null);
+    }
+
+    int untitled;
+
+    /// <summary>Shows a document this view opened, taking ownership of it and disposing the one it replaces.</summary>
+    async Task ReplaceDocumentAsync(WordDocument opened, string name, OfficeDocumentRef? file)
+    {
         var previous = this.documentOverride;
         this.documentOverride = opened;
         previous?.Dispose();
 
-        this.nameOverride = template.IsBlank ? "Document" + (++untitled + 1) : template.Name;
+        this.session.Current = file;
+        this.storeSaveState = null;
+        this.nameOverride = name;
         this.backstageOpen = false;
         this.StateHasChanged();
 
         await this.DocumentOpened.InvokeAsync(opened);
     }
 
-    int untitled;
+    // ---- open ----
 
-    /// <summary>Save: the host's, or a .docx download.</summary>
-    public async Task SaveAsync()
+    BrowserOfficeDocumentStore? ownStore;
+
+    IOfficeDocumentStore Store
+        => this.DocumentStore
+           ?? this.Services.GetService<IOfficeDocumentStore>()
+           ?? (this.ownStore ??= new BrowserOfficeDocumentStore(this.Js));
+
+    async Task OpenRecentAsync(OfficeRecentFile file)
     {
-        if (this.SaveRequested.HasDelegate)
+        if (file.Document is { } document)
+            await this.OpenAsync(document);
+    }
+
+    /// <summary>
+    /// Opens a file from the <see cref="DocumentStore"/> — <paramref name="file"/>, or the one the user
+    /// picks when it is null — and shows it. The view owns the document it opens.
+    /// </summary>
+    /// <returns>False when the user cancelled or the file would not open.</returns>
+    public async Task<bool> OpenAsync(OfficeDocumentRef? file = null, CancellationToken cancellationToken = default)
+    {
+        var store = this.Store;
+        try
         {
-            await this.SaveRequested.InvokeAsync();
+            var opened = await this.session.OpenAsync(store, file, (s, ct) => WordDocument.OpenAsync(s, editable: true, cancellationToken: ct), cancellationToken);
+            if (opened is not { } result)
+                return false;
+
+            await this.ReplaceDocumentAsync(result.Document, result.File.DisplayName, result.File);
+            return true;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            Console.Error.WriteLine($"[Shiny.Office] Could not open '{file?.Name}': {ex.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>Opens a .docx from a stream and shows it, named after <paramref name="fileName"/>. The view owns it.</summary>
+    public async Task OpenAsync(Stream stream, string fileName, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(stream);
+        var document = await WordDocument.OpenAsync(stream, editable: true, cancellationToken: cancellationToken);
+        await this.ReplaceDocumentAsync(document, System.IO.Path.GetFileNameWithoutExtension(fileName), null);
+    }
+
+    /// <summary>Fills the backstage's recent list from the store.</summary>
+    async Task LoadRecentFilesAsync()
+    {
+        try
+        {
+            this.storeRecent = await this.Store.GetRecentAsync(OfficeApp.Word);
+            this.StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[Shiny.Office] Could not read the recent list: {ex.Message}");
+        }
+    }
+
+    async Task WriteToStoreAsync(OfficeFileFormat format, OfficeFileAction action)
+    {
+        if (this.CurrentDocument is not { } document)
+            return;
+
+        if (!DocumentExport.CanWrite(format))
+        {
+            Console.Error.WriteLine($"[Shiny.Office] No built-in writer for {format.Extension}.");
             return;
         }
 
-        await this.DownloadAsync(OfficeFileFormats.Docx);
+        var store = this.Store;
+        var name = this.EffectiveDocumentName;
+        var options = new DocumentPdfOptions { Title = name, Author = this.C?.Author, Time = this.time };
+        var saving = action is OfficeFileAction.Save or OfficeFileAction.SaveAs && format.IsNative;
+
+        try
+        {
+            if (saving)
+            {
+                this.storeSaveState = OfficeSaveState.Saving;
+                this.StateHasChanged();
+            }
+
+            var written = await this.session.SaveAsync(store, format, action, name,
+                (s, ct) => DocumentExport.WriteAsync(document, format, s, options, ct));
+
+            if (saving)
+                this.storeSaveState = written is null ? null : OfficeSaveState.Saved;
+
+            if (saving && written is not null)
+            {
+                document.MarkClean();
+                this.nameOverride = written.DisplayName;
+            }
+
+            if (written is not null)
+                this.backstageOpen = false;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[Shiny.Office] {action} failed: {ex.Message}");
+            if (saving)
+                this.storeSaveState = OfficeSaveState.Error;
+        }
+
+        this.StateHasChanged();
     }
 
-    async Task SaveAsAsync(OfficeFileFormat format)
-    {
-        if (this.SaveAsRequested.HasDelegate)
-            await this.SaveAsRequested.InvokeAsync(format);
-        else
-            await this.DownloadAsync(format);
-    }
+    /// <summary>Saves the document as .docx through the <see cref="DocumentStore"/>, back over <see cref="CurrentFile"/> when there is one.</summary>
+    public Task SaveAsync() => this.WriteToStoreAsync(OfficeFileFormats.Docx, OfficeFileAction.Save);
 
-    /// <summary>Export: the host's, or a download of the chosen format.</summary>
-    public async Task ExportAsync(OfficeFileFormat format)
-    {
-        if (this.ExportRequested.HasDelegate)
-            await this.ExportRequested.InvokeAsync(format);
-        else
-            await this.DownloadAsync(format);
-    }
+    /// <summary>Writes the document as a new file in <paramref name="format"/>; a .docx becomes <see cref="CurrentFile"/>.</summary>
+    public Task SaveAsAsync(OfficeFileFormat format) => this.WriteToStoreAsync(format, OfficeFileAction.SaveAs);
+
+    /// <summary>Writes the document as a new file in <paramref name="format"/> (.pdf, .txt, .html, .docx).</summary>
+    public Task ExportAsync(OfficeFileFormat format) => this.WriteToStoreAsync(format, OfficeFileAction.Export);
 
     /// <summary>
     /// Writes the document as a PDF — one page per printed page, drawn by the same painter as the
@@ -687,15 +798,9 @@ public partial class DocumentEditorView
         });
     }
 
-    /// <summary>Print: the host's, or the browser's print dialog over a PDF of the document.</summary>
+    /// <summary>Print: the browser's print dialog over a PDF of the document.</summary>
     public async Task PrintAsync()
     {
-        if (this.PrintRequested.HasDelegate)
-        {
-            await this.PrintRequested.InvokeAsync();
-            return;
-        }
-
         if (this.CurrentDocument is null)
             return;
 
@@ -709,49 +814,6 @@ public partial class DocumentEditorView
 
         using var stream = new DotNetStreamReference(pdf, leaveOpen: true);
         await module.InvokeVoidAsync("printPdf", stream);
-    }
-
-    /// <summary>Downloads the document in a format the view can write itself: .docx, .pdf, .txt or .html.</summary>
-    public async Task DownloadAsync(OfficeFileFormat format)
-    {
-        if (this.CurrentDocument is not { } document)
-            return;
-
-        using var buffer = new MemoryStream();
-
-        if (format.Id == OfficeFileFormats.Pdf.Id)
-        {
-            this.ExportPdf(buffer);
-        }
-        else if (format.Id == OfficeFileFormats.PlainText.Id)
-        {
-            var bytes = System.Text.Encoding.UTF8.GetBytes(document.PlainText);
-            buffer.Write(bytes);
-        }
-        else if (format.Id == OfficeFileFormats.Html.Id)
-        {
-            var bytes = System.Text.Encoding.UTF8.GetBytes(WordShell.ToHtml(document, this.EffectiveDocumentName));
-            buffer.Write(bytes);
-        }
-        else if (format.Id == OfficeFileFormats.Docx.Id)
-        {
-            var bytes = document.ToArray();
-            buffer.Write(bytes);
-        }
-        else
-        {
-            Console.Error.WriteLine($"[Shiny.Office] No built-in writer for {format.Extension}; handle SaveAsRequested/ExportRequested to support it.");
-            return;
-        }
-
-        buffer.Position = 0;
-
-        var module = await this.ShellModuleAsync();
-        if (module is null)
-            return;
-
-        using var stream = new DotNetStreamReference(buffer, leaveOpen: true);
-        await module.InvokeVoidAsync("saveFile", format.FileNameFor(this.EffectiveDocumentName), format.MimeType, stream);
     }
 
     async Task<IJSObjectReference?> ShellModuleAsync()

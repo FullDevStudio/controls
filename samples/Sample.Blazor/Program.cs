@@ -4,6 +4,7 @@ using Sample.Blazor;
 using Sample.Blazor.DockPanels;
 using Shiny.Blazor.Controls;
 using Shiny.Blazor.Controls.Captchas;
+using Shiny.Blazor.Controls.Office;
 using Shiny.Blazor.Controls.Camera.Media;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
@@ -39,6 +40,10 @@ builder.Services.AddShinyMediaService(o => o.MaxDimension = 2560);
 // The on-screen gamepad and the browser's physical controllers, reported together as IGamepadManager.
 // Replaces Shiny.Gamepad.Blazor's AddGamepads() - it registers the browser manager itself and wraps it.
 builder.Services.AddShinyGamepad();
+
+// The Office editors' File backstage: Open, Save, Save As, Export and the recent list, with no event
+// handlers on the pages. Real files in Chromium (File System Access API), upload/download elsewhere.
+builder.Services.AddShinyOfficeDocumentStore();
 
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 builder.Services.AddSingleton<Sample.Blazor.Chat.InMemoryChatSessionProvider>();

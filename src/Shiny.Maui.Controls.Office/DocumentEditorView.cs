@@ -120,6 +120,7 @@ public partial class DocumentEditorView : ContentView, IDisposable
         {
             var view = (DocumentEditorView)b;
             view.editor.Document = (WordDocument?)value;
+            view.TrackFile((WordDocument?)value);
             view.AttachController();
         });
 
@@ -248,7 +249,7 @@ public partial class DocumentEditorView : ContentView, IDisposable
         propertyChanged: (b, _, _) => ((DocumentEditorView)b).ApplyNavigationPane());
 
     /// <summary>
-    /// Show a File button at the ribbon's left, raising <see cref="FileRequested"/> — the hook for a
+    /// Show a File button at the ribbon's left, raising <see cref="FileMenuRequested"/> — the hook for a
     /// backstage view. Off by default: the editor has no File menu of its own.
     /// </summary>
     public static readonly BindableProperty ShowFileButtonProperty = BindableProperty.Create(
@@ -371,7 +372,7 @@ public partial class DocumentEditorView : ContentView, IDisposable
     public event EventHandler<string>? CurrentStyleChanged;
 
     /// <summary>Raised by the File button. See <see cref="ShowFileButton"/>.</summary>
-    public event EventHandler? FileRequested;
+    public event EventHandler? FileMenuRequested;
 
     public static readonly BindableProperty ShapeWidthProperty = BindableProperty.Create(
         nameof(ShapeWidth), typeof(double), typeof(DocumentEditorView), 160d);
@@ -855,6 +856,10 @@ public partial class DocumentEditorView : ContentView, IDisposable
         this.findBar.Find = null;
         this.editor.Dispose();
 
+        // A document this view opened and nobody took over through DocumentOpened is the view's.
+        if (this.DocumentOpened is null)
+            this.ownedDocument?.Dispose();
+
         GC.SuppressFinalize(this);
     }
 
@@ -931,15 +936,15 @@ public partial class DocumentEditorView : ContentView, IDisposable
         => Color.FromRgba(value.R / 255f, value.G / 255f, value.B / 255f, value.A / 255f);
 
     /// <summary>
-    /// The File button: the backstage's door while the shell is on (and <see cref="FileRequested"/> still
+    /// The File button: the backstage's door while the shell is on (and <see cref="FileMenuRequested"/> still
     /// fires), or the host's hook when only <see cref="ShowFileButton"/> asks for it.
     /// </summary>
     void ApplyFileButton(bool show)
     {
-        var on = show || this.ShowShell;
+        var on = show || (this.ShowShell && this.ShowFileCommands);
         this.ribbon.ApplicationButtonText = on ? "File" : null;
         // One command for the view's lifetime: a new instance is a new value, and the ribbon rebuilds for it.
-        this.ribbon.ApplicationButtonCommand = on ? this.fileCommand ??= new Command(() => this.FileRequested?.Invoke(this, EventArgs.Empty)) : null;
+        this.ribbon.ApplicationButtonCommand = on ? this.fileCommand ??= new Command(() => this.FileMenuRequested?.Invoke(this, EventArgs.Empty)) : null;
     }
 
     Command? fileCommand;

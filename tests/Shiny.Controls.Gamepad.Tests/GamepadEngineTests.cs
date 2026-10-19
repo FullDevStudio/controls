@@ -318,6 +318,50 @@ public class GamepadEngineTests
 
 
     [Fact]
+    public void Stick_FloatingRegionClaimsItsHalfOfTheView()
+    {
+        var layout = GamepadLayouts.TwinStick();
+        layout.Find("ls")!.IsFloating = true;
+        layout.Find("ls")!.FloatingRegion = GamepadFloatingRegion.LeftHalf;
+        layout.Find("rs")!.IsFloating = true;
+        layout.Find("rs")!.FloatingRegion = GamepadFloatingRegion.RightHalf;
+        var engine = this.Create(layout);
+        var ls = Visual(engine, "ls");
+        var rs = Visual(engine, "rs");
+
+        // the top-left corner is far outside the old inflate-by-90 zone
+        engine.HitTest(10, 10).ShouldBeTrue();
+        engine.PointerDown(1, 10, 10).ShouldBeTrue();
+        ls.BaseX.ShouldBe(10);
+        ls.BaseY.ShouldBe(10);
+        engine.PointerMove(1, 10 + ls.Travel, 10);
+        this.pad.GetState().LeftStick.X.ShouldBe(1, 0.001);
+
+        // just right of the midline belongs to the right stick
+        engine.PointerDown(2, W / 2 + 1, H / 2).ShouldBeTrue();
+        rs.BaseX.ShouldBe(W / 2 + 1);
+        engine.PointerMove(2, W / 2 + 1, H / 2 + rs.Travel);
+        this.pad.GetState().RightStick.Y.ShouldNotBe(0);
+        this.pad.GetState().LeftStick.X.ShouldBe(1, 0.001);
+    }
+
+
+    [Fact]
+    public void Stick_FloatingRegionStillLetsDrawnButtonsWin()
+    {
+        var layout = GamepadLayouts.Standard();
+        layout.Find("ls")!.IsFloating = true;
+        layout.Find("ls")!.FloatingRegion = GamepadFloatingRegion.Anywhere;
+        var engine = this.Create(layout);
+        var a = Visual(engine, "a");
+
+        engine.PointerDown(1, a.Bounds.CenterX, a.Bounds.CenterY).ShouldBeTrue();
+        this.pad.GetState().IsPressed(GamepadButton.A).ShouldBeTrue();
+        Visual(engine, "ls").IsActive.ShouldBeFalse();
+    }
+
+
+    [Fact]
     public void Stick_DoubleTapHoldClicks()
     {
         var engine = this.Create(GamepadLayouts.Standard());
@@ -533,12 +577,14 @@ public class GamepadEngineTests
     {
         var layout = GamepadLayouts.Standard();
         layout.Find("ls")!.IsFloating = true;
+        layout.Find("ls")!.FloatingRegion = GamepadFloatingRegion.LeftHalf;
         layout.Find("a")!.Label = "Jump";
 
         var copy = GamepadLayout.FromJson(layout.ToJson());
 
         copy.Elements.Count.ShouldBe(layout.Elements.Count);
         copy.Find("ls")!.IsFloating.ShouldBeTrue();
+        copy.Find("ls")!.FloatingRegion.ShouldBe(GamepadFloatingRegion.LeftHalf);
         copy.Find("a")!.Label.ShouldBe("Jump");
         copy.FaceStyle.ShouldBe(GamepadFaceStyle.Xbox);
         layout.ToJson().ShouldContain("\"Stick\"", customMessage: "enums are written as names so a saved layout survives reordering");

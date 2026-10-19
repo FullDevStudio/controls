@@ -119,6 +119,12 @@ public sealed class OfficeRecentFile
 
     /// <summary>Anything the host wants back when it is opened — a path, a handle, a stream factory.</summary>
     public object? Tag { get; init; }
+
+    /// <summary>
+    /// The file in an <see cref="IOfficeDocumentStore"/>. Set, the editor reopens it through the store
+    /// itself; null leaves picking it to the host's <c>RecentFileSelected</c> handler.
+    /// </summary>
+    public OfficeDocumentRef? Document { get; init; }
 }
 
 

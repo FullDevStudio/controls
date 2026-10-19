@@ -10,14 +10,16 @@
         <HorizontalStackLayout Grid.Row="0" Spacing="8">
             <Button Text="Shell" AutomationId="DocEditorShellToggle" Clicked="OnToggleShell" />
             <Button Text="Toolbar" AutomationId="DocEditorToolbarToggle" Clicked="OnToggleToolbar" />
+            <Button Text="File" AutomationId="DocEditorFileToggle" Clicked="OnToggleFileCommands" />
             <Button Text="Theme" AutomationId="DocEditorTheme" Clicked="OnToggleTheme" />
             <Button x:Name="SpellButton" AutomationId="DocEditorSpelling" Clicked="OnToggleSpelling" />
             <Button x:Name="MarginButton" AutomationId="DocEditorMargins" Clicked="OnCycleMargins" />
         </HorizontalStackLayout>
 
         <!-- Word's whole window: title bar, ribbon, ruler, navigation and comments panes, status bar
-             (page, words, language, view modes, zoom) and the File backstage. The status bar is the
-             real one now; the label below only reports what the host did with a Save or an Export. -->
+             (page, words, language, view modes, zoom) and the File backstage. Open, Save, Save As,
+             Export and the recent list are the document store MauiProgram registers; the page wires
+             none of them. -->
         <Border Grid.Row="1" StrokeThickness="1">
             <office:DocumentEditorView x:Name="Editor" AutomationId="DocEditorView" UserName="Sample User" />
         </Border>

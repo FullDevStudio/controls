@@ -40,6 +40,20 @@ public class OfficeShellTests
     }
 
     [Fact]
+    public void AnUnavailableCommandIsLeftOutOfTheResults()
+    {
+        var available = false;
+        var index = new OfficeCommandIndex();
+        index.Add(new OfficeCommand("Save", () => { }) { Category = "File", IsAvailable = () => available });
+        index.Add(new OfficeCommand("Save Selection", () => { }));
+
+        index.Search("save").Select(x => x.Command.Label).ShouldBe(["Save Selection"]);
+
+        available = true;
+        index.Search("save").Select(x => x.Command.Label).ShouldBe(["Save", "Save Selection"]);
+    }
+
+    [Fact]
     public void TiesGoToTheShorterLabel()
     {
         var index = Index("Bold all headings", "Bold");

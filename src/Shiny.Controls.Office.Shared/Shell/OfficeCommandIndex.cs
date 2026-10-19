@@ -53,6 +53,12 @@ public sealed class OfficeCommand
     /// <summary>Runs the command.</summary>
     public Func<Task> Execute { get; }
 
+    /// <summary>
+    /// Asked on every search; false leaves the command out of the results altogether — an editor whose
+    /// File commands are switched off. Null is always shown.
+    /// </summary>
+    public Func<bool>? IsAvailable { get; init; }
+
     public bool IsEnabled => this.CanExecute?.Invoke() ?? true;
 
     public override string ToString() => this.Category is null ? this.Label : $"{this.Label} ({this.Category})";
@@ -161,6 +167,7 @@ public sealed class OfficeCommandIndex
         var q = query.Trim();
 
         return this.commands
+            .Where(x => x.IsAvailable?.Invoke() ?? true)
             .Select(x => new OfficeCommandMatch(x, Score(x, q)))
             .Where(x => x.Score > 0)
             .OrderByDescending(x => x.Score)

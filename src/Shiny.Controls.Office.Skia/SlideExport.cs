@@ -6,52 +6,6 @@ using SkiaSharp;
 
 namespace Shiny.Controls.Office.Skia;
 
-/// <summary>What the user asked the File backstage (or the title bar) to do with the deck.</summary>
-public enum SlideFileAction
-{
-    /// <summary>Save, from the title bar, the backstage or Ctrl+S — always the deck itself (pptx).</summary>
-    Save,
-
-    /// <summary>Save As, in the chosen format.</summary>
-    SaveAs,
-
-    /// <summary>Export, in the chosen format.</summary>
-    Export,
-
-    /// <summary>Print: the deck as a PDF to hand to a printer or viewer.</summary>
-    Print
-}
-
-
-/// <summary>
-/// A file the slide editor's shell wants written. The host decides where it goes — a path, a share
-/// sheet, a download — and calls <see cref="WriteToAsync"/> or <see cref="ToBytesAsync"/> for the bytes.
-/// </summary>
-public sealed class SlideFileRequest(SlideDeck deck, int slideIndex, OfficeFileFormat format, string fileName, SlideFileAction action, OfficeWatermark? watermark = null)
-{
-    public SlideDeck Deck { get; } = deck;
-
-    /// <summary>The slide on screen — what a single PNG or JPEG contains.</summary>
-    public int SlideIndex { get; } = slideIndex;
-
-    public OfficeFileFormat Format { get; } = format;
-
-    /// <summary>The presentation name with the format's extension — "Presentation1.pptx", "Pitch.pdf".</summary>
-    public string FileName { get; } = fileName;
-
-    public SlideFileAction Action { get; } = action;
-
-    /// <summary>The display watermark the editor draws, stamped onto pictures and PDFs too.</summary>
-    public OfficeWatermark? Watermark { get; } = watermark;
-
-    public Task WriteToAsync(Stream destination, CancellationToken cancellationToken = default)
-        => SlideExport.WriteAsync(this.Deck, this.SlideIndex, this.Format, destination, this.Watermark, cancellationToken);
-
-    public Task<byte[]> ToBytesAsync(CancellationToken cancellationToken = default)
-        => SlideExport.ToBytesAsync(this.Deck, this.SlideIndex, this.Format, this.Watermark, cancellationToken);
-}
-
-
 /// <summary>
 /// Writes a deck out as the formats the Office shell's Save As and Export offer: the deck itself
 /// (<c>.pptx</c>), a PDF with a page per slide, the current slide as a PNG or JPEG, or every slide as

@@ -19,7 +19,7 @@
                 </HorizontalStackLayout>
                 <HorizontalStackLayout Spacing="4">
                     <Switch x:Name="FloatingSwitch" Toggled="OnTweakToggled" />
-                    <Label Text="Floating stick" VerticalOptions="Center" />
+                    <Label Text="Floating stick (left half)" VerticalOptions="Center" />
                 </HorizontalStackLayout>
                 <HorizontalStackLayout Spacing="4">
                     <Switch x:Name="TurboSwitch" Toggled="OnTweakToggled" />

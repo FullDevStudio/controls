@@ -1,7 +1,6 @@
 using Shiny.Controls.Office.Spreadsheet;
 using Shiny.Controls.Office.Spreadsheet.Commands;
 using Shiny.Controls.Office.Skia;
-using Shiny.Controls.Office.Shell;
 
 namespace Sample.Features.Office;
 
@@ -21,12 +20,8 @@ public partial class SpreadsheetPage : ContentPage
         this.workbook = Workbook.Create("Budget");
         this.Seed();
 
-        // The backstage's recent list is the host's to supply; these are placeholders.
-        this.Sheet.RecentFiles =
-        [
-            new OfficeRecentFile("Q3 forecast.xlsx", "Documents", DateTimeOffset.Now.AddHours(-3)),
-            new OfficeRecentFile("Team roster.xlsx", "OneDrive › Shared", DateTimeOffset.Now.AddDays(-2)) { IsPinned = true }
-        ];
+        // Nothing file-related is wired here: the backstage saves, opens and fills its recent list
+        // through the document store MauiProgram registers.
 
         this.Sheet.Workbook = this.workbook;
     }
@@ -87,26 +82,6 @@ public partial class SpreadsheetPage : ContentPage
     }
 
     void OnToggleShell(object? sender, EventArgs e) => this.Sheet.ShowShell = !this.Sheet.ShowShell;
-
-    /// <summary>
-    /// Save, Save As, Export and Print all arrive here. The shell writes no files itself; this sample
-    /// puts them in the cache folder — a real app would use a file picker or a share sheet.
-    /// </summary>
-    async void OnFileRequested(object? sender, SpreadsheetFileRequest request)
-    {
-        try
-        {
-            var path = Path.Combine(FileSystem.CacheDirectory, request.FileName);
-            await using (var file = File.Create(path))
-                await request.WriteToAsync(file);
-
-            this.LastFile.Text = $"{request.Action}: {path}";
-        }
-        catch (Exception ex)
-        {
-            this.LastFile.Text = $"{request.Action} failed: {ex.Message}";
-        }
-    }
 
     void OnCellChanged(object? sender, CellRef cell) { }
 

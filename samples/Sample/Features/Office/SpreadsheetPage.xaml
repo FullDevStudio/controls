@@ -24,7 +24,6 @@
                                     AutomationId="SpreadsheetView"
                                     DocumentName="Budget"
                                     UserName="Allan Ritchie"
-                                    FileRequested="OnFileRequested"
                                     CellChanged="OnCellChanged" />
         </Border>
 
@@ -33,6 +32,6 @@
                AutomationId="SpreadsheetLastFile"
                FontSize="12"
                Opacity="0.7"
-               Text="File ▸ Save, Save As, Export (xlsx, CSV, PDF) and Print write into the app's cache folder here; the path shows on this line." />
+               Text="File ▸ Open, Save, Save As and Export (xlsx, CSV, PDF) go through the app's document store (UseOfficeDocumentStore) — no event handlers on this page. Print opens the PDF in the system viewer." />
     </Grid>
 </ContentPage>

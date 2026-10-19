@@ -33,7 +33,7 @@
             </select>
         </label>
         <label><input type="checkbox" @bind="inline" /> Inline controller</label>
-        <label><input type="checkbox" @bind="floating" /> Floating left stick</label>
+        <label><input type="checkbox" @bind="floating" /> Floating left stick (left half)</label>
         <label><input type="checkbox" @bind="turbo" /> Turbo on the bottom button</label>
         <label><input type="checkbox" @bind="fade" /> Fade when idle</label>
         <label><input type="checkbox" @bind="editing" /> Edit layout (drag / pinch)</label>
@@ -170,7 +170,10 @@
         var layout = GamepadLayouts.Get(presetValue);
         var ls = layout.Elements.FirstOrDefault(e => e.Kind == GamepadElementKind.Stick);
         if (ls != null)
+        {
             ls.IsFloating = floatingValue;
+            ls.FloatingRegion = GamepadFloatingRegion.LeftHalf;
+        }
 
         var bottom = layout.Elements.FirstOrDefault(e => e.Button == GamepadButton.A);
         if (bottom != null)

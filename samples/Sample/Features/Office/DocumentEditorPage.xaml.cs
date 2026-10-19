@@ -27,7 +27,7 @@ namespace Sample.Features.Office;
 /// </remarks>
 public partial class DocumentEditorPage : ContentPage
 {
-    WordDocument? document;
+    bool opened;
     bool dark;
     int marginPreset;
 
@@ -41,80 +41,20 @@ public partial class DocumentEditorPage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
-        if (this.document is not null)
+        if (this.opened)
             return;
 
-        var bytes = SampleOfficeDocuments.BuildDocument();
-        this.document = await WordDocument.OpenAsync(new MemoryStream(bytes), editable: true);
-        this.Editor.Document = this.document;
+        // OpenAsync hands the document to the view, which owns it from then on (and disposes it when a
+        // file opened from the backstage replaces it) - and
+        // everything the File backstage does after that is MauiProgram's UseOfficeDocumentStore():
+        // Browse is the file picker, Save writes to the app's Documents folder and back over the same
+        // file next time, Save As / Export write new files, and the recent list fills itself.
+        this.opened = true;
+        await this.Editor.OpenAsync(new MemoryStream(SampleOfficeDocuments.BuildDocument()), "Welcome.docx");
         this.Editor.DocumentChanged += this.OnDocumentChanged;
         this.Editor.DropRejected += this.OnDropRejected;
-        this.Editor.SaveRequested += this.OnSaveRequested;
-        this.Editor.SaveAsRequested += this.OnSaveAsRequested;
-        this.Editor.ExportRequested += this.OnExportRequested;
-        this.Editor.PrintRequested += this.OnPrintRequested;
-        this.Editor.DocumentOpened += this.OnDocumentOpened;
-        this.Editor.RecentFiles =
-        [
-            new OfficeRecentFile("Quarterly report.docx", "Documents", DateTimeOffset.Now.AddHours(-3)) { IsPinned = true },
-            new OfficeRecentFile("Letter to landlord.docx", "Documents", DateTimeOffset.Now.AddDays(-2))
-        ];
 
         this.UpdateStatus();
-    }
-
-    // The shell does no I/O: Save, Save As, Export and Print are the host's. This sample writes to the
-    // cache directory and says where, which is enough to show each one arriving.
-
-    void OnSaveRequested(object? sender, EventArgs e)
-    {
-        if (this.document is null)
-            return;
-
-        var path = Path.Combine(FileSystem.CacheDirectory, (this.Editor.DocumentName ?? "Document1") + ".docx");
-        File.WriteAllBytes(path, this.document.ToArray());
-        this.Editor.SaveState = OfficeSaveState.SavedLocally;
-        this.StatusLabel.Text = $"Saved to {path}";
-    }
-
-    void OnSaveAsRequested(object? sender, OfficeFileFormat format)
-        => this.OnExportRequested(sender, format);
-
-    void OnExportRequested(object? sender, OfficeFileFormat format)
-    {
-        if (this.document is null)
-            return;
-
-        var path = Path.Combine(FileSystem.CacheDirectory, format.FileNameFor(this.Editor.DocumentName));
-
-        if (format.Id == OfficeFileFormats.Pdf.Id)
-        {
-            using var stream = File.Create(path);
-            var pages = this.Editor.ExportPdf(stream);
-            this.StatusLabel.Text = $"Exported {pages} page(s) to {path}";
-        }
-        else if (format.Id == OfficeFileFormats.Docx.Id)
-        {
-            File.WriteAllBytes(path, this.document.ToArray());
-            this.StatusLabel.Text = $"Saved a copy to {path}";
-        }
-        else
-        {
-            this.StatusLabel.Text = $"{format.Id} export is left to the host.";
-        }
-    }
-
-    /// <summary>MAUI has no print dialog of its own; the PDF is what a host would hand to the platform's.</summary>
-    void OnPrintRequested(object? sender, EventArgs e)
-        => this.OnExportRequested(sender, OfficeFileFormats.Pdf);
-
-    void OnDocumentOpened(object? sender, WordDocument opened)
-    {
-        // The view opened a template itself; the page owns disposal, so it takes the new one over.
-        var previous = this.document;
-        this.document = opened;
-        previous?.Dispose();
-        this.StatusLabel.Text = $"New document from a template: {this.Editor.DocumentName}";
     }
 
     void OnToggleShell(object? sender, EventArgs e) => this.Editor.ShowShell = !this.Editor.ShowShell;
@@ -132,6 +72,12 @@ public partial class DocumentEditorPage : ContentPage
             : e.Reason;
 
     void OnToggleToolbar(object? sender, EventArgs e) => this.Editor.ShowToolbar = !this.Editor.ShowToolbar;
+
+    /// <summary>
+    /// Off is an app that owns its files: no File button or backstage, no Save or AutoSave in the title
+    /// bar. Such an app calls Editor.SaveAsync() / OpenAsync(stream, name) from its own UI instead.
+    /// </summary>
+    void OnToggleFileCommands(object? sender, EventArgs e) => this.Editor.ShowFileCommands = !this.Editor.ShowFileCommands;
 
     void OnToggleTheme(object? sender, EventArgs e)
     {
@@ -177,7 +123,7 @@ public partial class DocumentEditorPage : ContentPage
         this.SpellButton.IsEnabled = available;
 
         this.MarginButton.Text = $"Margins: {PageMarginPresets.All[this.marginPreset].Name}";
-        this.MarginButton.IsEnabled = this.document is not null;
+        this.MarginButton.IsEnabled = this.Editor.Document is not null;
 
         this.StatusLabel.Text = available
             ? $"Spell checker: {SpellCheckers.Default.GetType().Name} ({SpellCheckers.Default.DefaultLanguage}). Right-click or long-press an underlined word."
@@ -189,7 +135,6 @@ public partial class DocumentEditorPage : ContentPage
     // the document there left the editor holding a dead package: the return trip's layout pass read it
     // and threw out of LayoutSubviews, and on iOS 26+ that unwinds through UIKit's observation tracking
     // and leaves it pointing at a dead stack frame - the app then spins and crashes later in
-    // setLeftBarButtonItem, nowhere near the cause. Swapping the document off the editor there instead
-    // is no better: it rebuilds the ribbon in the middle of Shell's handler teardown, leaving hosted
-    // views handler-less under live parents. The page lives as long as the Shell, so the document does too.
+    // setLeftBarButtonItem, nowhere near the cause. The view owns the document it opened, and the page
+    // lives as long as the Shell, so the document does too.
 }

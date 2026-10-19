@@ -19,10 +19,9 @@ namespace Shiny.Maui.Controls.Office;
 /// layout. With the shell off the view is the ribbon over the slide with the plain status line, as before.
 /// </para>
 /// <para>
-/// The shell does no I/O. Save, Save As, Export (the ribbon's too) and Print arrive as a
-/// <see cref="SlideFileRequest"/> through <see cref="FileRequested"/>, and the host decides where the
-/// bytes go. The one thing done here without a host is opening a built-in template when nobody handles
-/// <see cref="TemplateSelected"/>.
+/// Open, Save, Save As, Export (the ribbon's too), Print and the recent list go to the
+/// <see cref="DocumentStore"/>. A template picked with nobody handling <see cref="TemplateSelected"/>
+/// is opened here.
 /// </para>
 /// </remarks>
 public partial class SlideEditorView
@@ -41,6 +40,8 @@ public partial class SlideEditorView
 
     bool shellBuilt;
     bool syncingShell;
+    readonly OfficeDocumentSession session = new(OfficeApp.PowerPoint);
+    (SlideDeck Deck, OfficeDocumentRef File)? attaching;
     SlideDeck? ownedDeck;
     SlideDeck? trackedDeck;
     long revision;
@@ -79,6 +80,7 @@ public partial class SlideEditorView
     public static readonly BindableProperty ShowStatusBarProperty = ShellFlag(nameof(ShowStatusBar));
     public static readonly BindableProperty ShowBackstageProperty = ShellFlag(nameof(ShowBackstage));
     public static readonly BindableProperty ShowRibbonActionsProperty = ShellFlag(nameof(ShowRibbonActions));
+    public static readonly BindableProperty ShowFileCommandsProperty = ShellFlag(nameof(ShowFileCommands));
 
     public static readonly BindableProperty DocumentNameProperty = BindableProperty.Create(
         nameof(DocumentName), typeof(string), typeof(SlideEditorView), null, BindingMode.TwoWay,
@@ -106,9 +108,9 @@ public partial class SlideEditorView
         nameof(Templates), typeof(IEnumerable<OfficeTemplate>), typeof(SlideEditorView), null,
         propertyChanged: (b, _, n) => ((SlideEditorView)b).backstage.Templates = (IEnumerable<OfficeTemplate>?)n ?? SlideTemplates.All);
 
-    public static readonly BindableProperty RecentFilesProperty = BindableProperty.Create(
-        nameof(RecentFiles), typeof(IEnumerable<OfficeRecentFile>), typeof(SlideEditorView), null,
-        propertyChanged: (b, _, n) => ((SlideEditorView)b).backstage.RecentFiles = (IEnumerable<OfficeRecentFile>?)n);
+
+    public static readonly BindableProperty DocumentStoreProperty = BindableProperty.Create(
+        nameof(DocumentStore), typeof(IOfficeDocumentStore), typeof(SlideEditorView), null);
 
     /// <summary>Editing or Viewing (read-only) — the ribbon's mode dropdown. Reviewing edits as Editing does. Two-way.</summary>
     public static readonly BindableProperty EditModeProperty = BindableProperty.Create(
@@ -124,6 +126,17 @@ public partial class SlideEditorView
     /// <summary>Whether File opens the backstage. Off, File only raises <see cref="FileMenuRequested"/>.</summary>
     public bool ShowBackstage { get => (bool)this.GetValue(ShowBackstageProperty); set => this.SetValue(ShowBackstageProperty, value); }
 
+    /// <summary>
+    /// The File surface: the ribbon's File button and backstage, the Slide Show tab's Export group, the
+    /// title bar's Save and AutoSave, and Save / Export / Print / New in the command search. Off when the
+    /// app owns opening and saving — it calls <see cref="SaveAsync"/>, <see cref="OpenAsync(Stream, string, CancellationToken)"/>
+    /// and the rest itself, or reads <see cref="Deck"/> directly. File still raises <see cref="FileMenuRequested"/>
+    /// when that is handled. The rest of the shell stays.
+    /// </summary>
+    public bool ShowFileCommands { get => (bool)this.GetValue(ShowFileCommandsProperty); set => this.SetValue(ShowFileCommandsProperty, value); }
+
+    RibbonGroup? exportGroup;
+
     /// <summary>Editing/Viewing and Share at the end of the ribbon's tab strip.</summary>
     public bool ShowRibbonActions { get => (bool)this.GetValue(ShowRibbonActionsProperty); set => this.SetValue(ShowRibbonActionsProperty, value); }
 
@@ -133,14 +146,26 @@ public partial class SlideEditorView
     public string? DocumentLocation { get => (string?)this.GetValue(DocumentLocationProperty); set => this.SetValue(DocumentLocationProperty, value); }
     public OfficeSaveState? SaveState { get => (OfficeSaveState?)this.GetValue(SaveStateProperty); set => this.SetValue(SaveStateProperty, value); }
 
-    /// <summary>The title bar's AutoSave switch. On, and with <see cref="FileRequested"/> handled, edits are saved two seconds after the last one.</summary>
+    /// <summary>
+    /// The title bar's AutoSave switch. On, edits to a <see cref="DocumentStore"/> file are saved two
+    /// seconds after the last one. A new deck waits for its first Save, which asks where it goes.
+    /// </summary>
     public bool AutoSave { get => (bool)this.GetValue(AutoSaveProperty); set => this.SetValue(AutoSaveProperty, value); }
 
     /// <summary>The account in the title bar, and the author on the backstage's Info page.</summary>
     public string? UserName { get => (string?)this.GetValue(UserNameProperty); set => this.SetValue(UserNameProperty, value); }
 
     public IEnumerable<OfficeTemplate>? Templates { get => (IEnumerable<OfficeTemplate>?)this.GetValue(TemplatesProperty); set => this.SetValue(TemplatesProperty, value); }
-    public IEnumerable<OfficeRecentFile>? RecentFiles { get => (IEnumerable<OfficeRecentFile>?)this.GetValue(RecentFilesProperty); set => this.SetValue(RecentFilesProperty, value); }
+
+    /// <summary>
+    /// Where Open, Save, Save As, Export, Print and the recent list go. Null uses the app's registered
+    /// <see cref="IOfficeDocumentStore"/> (<c>UseOfficeDocumentStore()</c>), or a
+    /// <see cref="MauiOfficeDocumentStore"/> over its default folder when there is none.
+    /// </summary>
+    public IOfficeDocumentStore? DocumentStore { get => (IOfficeDocumentStore?)this.GetValue(DocumentStoreProperty); set => this.SetValue(DocumentStoreProperty, value); }
+
+    /// <summary>The store file the deck came from or was last saved as. Null for a new deck, or one the host set.</summary>
+    public OfficeDocumentRef? CurrentFile => this.session.Current;
     public OfficeEditMode EditMode { get => (OfficeEditMode)this.GetValue(EditModeProperty); set => this.SetValue(EditModeProperty, value); }
 
     /// <summary>What the title bar is showing as the save status right now.</summary>
@@ -149,21 +174,11 @@ public partial class SlideEditorView
 
     // ---- events ----
 
-    /// <summary>
-    /// Save, Save As, Export (backstage or ribbon) or Print. Write the file where it belongs with
-    /// <see cref="SlideFileRequest.WriteToAsync"/>. Unhandled, nothing is written.
-    /// </summary>
-    public event EventHandler<SlideFileRequest>? FileRequested;
-
     /// <summary>A template was picked. With no handler the view opens it itself (<see cref="SlideTemplates.OpenAsync"/>) and raises <see cref="DeckReplaced"/>.</summary>
     public event EventHandler<OfficeTemplate>? TemplateSelected;
 
     /// <summary>The view swapped in a deck of its own — a template from the backstage. The host owns it from then on.</summary>
     public event EventHandler<SlideDeck>? DeckReplaced;
-
-    public event EventHandler? OpenRequested;
-
-    public event EventHandler<OfficeRecentFile>? RecentFileSelected;
 
     public event EventHandler? ShareRequested;
 
@@ -229,12 +244,12 @@ public partial class SlideEditorView
         this.backstage.PrintPreview = this.printPreview;
         this.backstage.PropertyChanged += this.OnBackstagePropertyChanged;
         this.backstage.TemplateSelected += (_, template) => _ = this.NewFromTemplateAsync(template);
-        this.backstage.OpenRequested += (_, _) => this.OpenRequested?.Invoke(this, EventArgs.Empty);
-        this.backstage.RecentFileSelected += (_, file) => this.RecentFileSelected?.Invoke(this, file);
+        this.backstage.OpenRequested += (_, _) => _ = this.OpenAsync();
+        this.backstage.RecentFileSelected += (_, file) => _ = this.OpenRecentAsync(file);
         this.backstage.SaveRequested += (_, _) => this.Save();
-        this.backstage.SaveAsRequested += (_, format) => this.WriteFile(format, SlideFileAction.SaveAs);
-        this.backstage.ExportRequested += (_, format) => this.WriteFile(format, SlideFileAction.Export);
-        this.backstage.PrintRequested += (_, _) => this.WriteFile(OfficeFileFormats.Pdf, SlideFileAction.Print);
+        this.backstage.SaveAsRequested += (_, format) => this.WriteFile(format, OfficeFileAction.SaveAs);
+        this.backstage.ExportRequested += (_, format) => this.WriteFile(format, OfficeFileAction.Export);
+        this.backstage.PrintRequested += (_, _) => this.WriteFile(OfficeFileFormats.Pdf, OfficeFileAction.Print);
 
         // Shell
         this.shell.PropertyChanged += this.OnShellPropertyChanged;
@@ -258,12 +273,12 @@ public partial class SlideEditorView
         this.CommandIndex.Clear();
         this.CommandIndex.AddRibbon(this.ribbon);
 
-        this.CommandIndex.Add(new OfficeCommand("Save", this.Save) { Id = "slides:save", Category = "File", Shortcut = "Ctrl+S", Keywords = ["store", "pptx"] });
-        this.CommandIndex.Add(new OfficeCommand("New Presentation", () => this.shell.OpenBackstage(OfficeBackstagePage.New)) { Id = "slides:new", Category = "File", Keywords = ["template", "blank", "deck"] });
-        this.CommandIndex.Add(new OfficeCommand("Export to PDF", () => this.Export(OfficeFileFormats.Pdf)) { Id = "slides:pdf", Category = "File › Export", Keywords = ["pdf"] });
-        this.CommandIndex.Add(new OfficeCommand("Export Slide as PNG", () => this.Export(OfficeFileFormats.Png)) { Id = "slides:png", Category = "File › Export", Keywords = ["picture", "image"] });
-        this.CommandIndex.Add(new OfficeCommand("Export All Slides as PNG", () => this.Export(SlideExport.AllSlidesPng)) { Id = "slides:png-all", Category = "File › Export", Keywords = ["pictures", "images", "zip"] });
-        this.CommandIndex.Add(new OfficeCommand("Print", () => this.WriteFile(OfficeFileFormats.Pdf, SlideFileAction.Print)) { Id = "slides:print", Category = "File", Shortcut = "Ctrl+P" });
+        this.CommandIndex.Add(new OfficeCommand("Save", this.Save) { Id = "slides:save", Category = "File", IsAvailable = () => this.ShowFileCommands, Shortcut = "Ctrl+S", Keywords = ["store", "pptx"] });
+        this.CommandIndex.Add(new OfficeCommand("New Presentation", () => this.shell.OpenBackstage(OfficeBackstagePage.New)) { Id = "slides:new", Category = "File", IsAvailable = () => this.ShowFileCommands, Keywords = ["template", "blank", "deck"] });
+        this.CommandIndex.Add(new OfficeCommand("Export to PDF", () => this.Export(OfficeFileFormats.Pdf)) { Id = "slides:pdf", Category = "File › Export", IsAvailable = () => this.ShowFileCommands, Keywords = ["pdf"] });
+        this.CommandIndex.Add(new OfficeCommand("Export Slide as PNG", () => this.Export(OfficeFileFormats.Png)) { Id = "slides:png", Category = "File › Export", IsAvailable = () => this.ShowFileCommands, Keywords = ["picture", "image"] });
+        this.CommandIndex.Add(new OfficeCommand("Export All Slides as PNG", () => this.Export(SlideExport.AllSlidesPng)) { Id = "slides:png-all", Category = "File › Export", IsAvailable = () => this.ShowFileCommands, Keywords = ["pictures", "images", "zip"] });
+        this.CommandIndex.Add(new OfficeCommand("Print", () => this.WriteFile(OfficeFileFormats.Pdf, OfficeFileAction.Print)) { Id = "slides:print", Category = "File", IsAvailable = () => this.ShowFileCommands, Shortcut = "Ctrl+P" });
         this.CommandIndex.Add(new OfficeCommand("Reading View", () => this.StartPresenting()) { Id = "slides:reading", Category = "View › Presentation Views", Keywords = ["read", "present"] });
         this.CommandIndex.Add(new OfficeCommand("Zoom 100%", () => this.SetZoom(1.0)) { Id = "slides:zoom100", Category = "View › Zoom", Keywords = ["actual size", "reset zoom"] });
     }
@@ -301,9 +316,14 @@ public partial class SlideEditorView
         this.officeStatusBar.IsVisible = on && this.ShowStatusBar && this.ShowStatus;
         this.statusBar.IsVisible = !on && this.ShowStatus;
         this.ribbonActions.IsVisible = on && this.ShowRibbonActions;
-        this.backstage.IsVisible = on && this.ShowBackstage;
+        var files = this.ShowFileCommands;
+        this.backstage.IsVisible = on && this.ShowBackstage && files;
+        this.titleBar.ShowSave = files;
+        this.titleBar.ShowAutoSave = files;
+        if (this.exportGroup is { } export)
+            export.IsVisible = files;
 
-        if (!(on && this.ShowBackstage))
+        if (!(on && this.ShowBackstage && files))
             this.shell.IsBackstageOpen = false;
 
         if (!on)
@@ -321,7 +341,7 @@ public partial class SlideEditorView
     /// <summary>File: the backstage's door while the shell is on (and FileMenuRequested still fires), or the host's hook.</summary>
     void ApplyFileButton()
     {
-        var on = (this.shellBuilt && this.ShowShell) || this.fileMenuRequested is not null;
+        var on = (this.shellBuilt && this.ShowShell && this.ShowFileCommands) || this.fileMenuRequested is not null;
         this.ribbon.ApplicationButtonText = on ? "File" : null;
         // One command for the view's lifetime: a new instance is a new value, and the ribbon rebuilds for it.
         this.ribbon.ApplicationButtonCommand = on ? this.fileCommand ??= new Command(() => this.fileMenuRequested?.Invoke(this, EventArgs.Empty)) : null;
@@ -425,6 +445,10 @@ public partial class SlideEditorView
         this.savedRevision = 0;
         this.lastSaved = OfficeSaveState.None;
 
+        // A deck the host set is not a store file; one this view opened is.
+        this.session.Current = this.attaching is { } a && ReferenceEquals(a.Deck, deck) ? a.File : null;
+        this.attaching = null;
+
         if (deck is not null)
             deck.ContentChanged += this.OnDeckContentChanged;
     }
@@ -436,7 +460,7 @@ public partial class SlideEditorView
         this.revision++;
 
         // AutoSave: two seconds after the last edit, when the host is there to take the file.
-        if (!this.AutoSave || this.FileRequested is null || this.Dispatcher is not { } dispatcher)
+        if (!this.AutoSave || !this.CanAutoSave || this.Dispatcher is not { } dispatcher)
             return;
 
         if (this.autoSaveTimer is null)
@@ -500,7 +524,7 @@ public partial class SlideEditorView
         if (e.PropertyName != nameof(OfficeShell.IsBackstageOpen) || !this.shell.IsBackstageOpen)
             return;
 
-        if (!this.ShowShell || !this.ShowBackstage)
+        if (!this.ShowShell || !this.ShowBackstage || !this.ShowFileCommands)
         {
             this.shell.IsBackstageOpen = false;
             return;
@@ -512,7 +536,10 @@ public partial class SlideEditorView
     void OnBackstagePropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(OfficeBackstage.IsOpen) && this.backstage.IsOpen)
+        {
             _ = this.LoadTemplateThumbnailsAsync();
+            _ = this.LoadRecentFilesAsync();
+        }
 
         if (e.PropertyName != nameof(OfficeBackstage.SelectedPage))
             return;
@@ -590,18 +617,7 @@ public partial class SlideEditorView
         try
         {
             var deck = await SlideTemplates.OpenAsync(template);
-            var previous = this.ownedDeck;
-            this.ownedDeck = deck;
-
-            this.Deck = deck;
-            this.SlideIndex = 0;
-            this.DocumentName = template.IsBlank ? OfficeAppInfo.PowerPoint.DefaultDocumentName : template.Name;
-            this.DocumentLocation = null;
-            this.shell.IsBackstageOpen = false;
-            this.DeckReplaced?.Invoke(this, deck);
-
-            if (previous is not null && !ReferenceEquals(previous, deck) && this.DeckReplaced is null)
-                previous.Dispose();
+            this.ReplaceDeck(deck, template.IsBlank ? OfficeAppInfo.PowerPoint.DefaultDocumentName : template.Name, null);
         }
         catch (Exception ex)
         {
@@ -609,21 +625,115 @@ public partial class SlideEditorView
         }
     }
 
+    /// <summary>Shows a deck this view built or opened, taking ownership of it and disposing the one it replaces.</summary>
+    void ReplaceDeck(SlideDeck deck, string name, OfficeDocumentRef? file)
+    {
+        var previous = this.ownedDeck;
+        this.ownedDeck = deck;
+        this.attaching = file is null ? null : (deck, file);
+
+        this.Deck = deck;
+        this.SlideIndex = 0;
+        this.DocumentName = name;
+        this.DocumentLocation = file?.Location;
+        this.shell.IsBackstageOpen = false;
+        this.DeckReplaced?.Invoke(this, deck);
+
+        if (previous is not null && !ReferenceEquals(previous, deck) && this.DeckReplaced is null)
+            previous.Dispose();
+    }
+
+    // ---- open ----
+
+    async Task OpenRecentAsync(OfficeRecentFile file)
+    {
+        if (file.Document is { } document)
+            await this.OpenAsync(document);
+    }
+
+    /// <summary>
+    /// Opens a file from the <see cref="DocumentStore"/> — <paramref name="file"/>, or the one the user
+    /// picks when it is null — and shows it. The view owns the deck it opens.
+    /// </summary>
+    /// <returns>False when the user cancelled or the file would not open.</returns>
+    public async Task<bool> OpenAsync(OfficeDocumentRef? file = null, CancellationToken cancellationToken = default)
+    {
+        var store = this.ResolveDocumentStore(this.DocumentStore);
+        try
+        {
+            var opened = await this.session.OpenAsync(store, file, (s, ct) => SlideDeck.OpenAsync(s, editable: true, cancellationToken: ct), cancellationToken);
+            if (opened is not { } result)
+                return false;
+
+            this.ReplaceDeck(result.Document, result.File.DisplayName, result.File);
+            return true;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Shiny.Office] Could not open '{file?.Name}': {ex.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>Opens a deck from a stream and shows it, named after <paramref name="fileName"/>. The view owns it.</summary>
+    public async Task OpenAsync(Stream stream, string fileName, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(stream);
+        var deck = await SlideDeck.OpenAsync(stream, editable: true, cancellationToken: cancellationToken);
+        this.ReplaceDeck(deck, Path.GetFileNameWithoutExtension(fileName), null);
+    }
+
+    /// <summary>Fills the backstage's recent list from the store.</summary>
+    async Task LoadRecentFilesAsync()
+    {
+        try
+        {
+            var recent = await this.ResolveDocumentStore(this.DocumentStore).GetRecentAsync(OfficeApp.PowerPoint);
+            if (this.Dispatcher is { IsDispatchRequired: true } dispatcher)
+                dispatcher.Dispatch(() => this.backstage.RecentFiles = recent);
+            else
+                this.backstage.RecentFiles = recent;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Shiny.Office] Could not read the recent list: {ex.Message}");
+        }
+    }
+
+    /// <summary>AutoSave only overwrites: a deck with no file yet would have to ask where it goes.</summary>
+    bool CanAutoSave => this.session.Current is not null;
+
     // ---- save, export, print ----
 
-    /// <summary>Title bar ▸ Save, Backstage ▸ Save: the deck as pptx, through <see cref="FileRequested"/>.</summary>
-    public void Save() => this.WriteFile(OfficeFileFormats.Pptx, SlideFileAction.Save);
+    /// <summary>Title bar ▸ Save, Backstage ▸ Save, without waiting for it. See <see cref="SaveAsync"/>.</summary>
+    public void Save() => _ = this.SaveAsync();
 
-    /// <summary>Export in a format — the ribbon's Export group and the backstage raise this. Through <see cref="FileRequested"/>.</summary>
-    public void Export(OfficeFileFormat format) => this.WriteFile(format, SlideFileAction.Export);
+    /// <summary>The ribbon's Export group and the backstage, without waiting for it. See <see cref="ExportAsync"/>.</summary>
+    public void Export(OfficeFileFormat format) => _ = this.ExportAsync(format);
 
-    void WriteFile(OfficeFileFormat format, SlideFileAction action)
+    /// <summary>Saves the deck as pptx through the <see cref="DocumentStore"/>, back over <see cref="CurrentFile"/> when there is one.</summary>
+    public Task SaveAsync() => this.WriteFileAsync(OfficeFileFormats.Pptx, OfficeFileAction.Save);
+
+    /// <summary>Writes the deck as a new file in <paramref name="format"/>; a pptx becomes <see cref="CurrentFile"/>.</summary>
+    public Task SaveAsAsync(OfficeFileFormat format) => this.WriteFileAsync(format, OfficeFileAction.SaveAs);
+
+    /// <summary>Writes the deck (or, for a picture, the current slide) as a new file in <paramref name="format"/>.</summary>
+    public Task ExportAsync(OfficeFileFormat format) => this.WriteFileAsync(format, OfficeFileAction.Export);
+
+    /// <summary>Hands the store a PDF of the deck to print — MauiOfficeDocumentStore opens it in the system viewer.</summary>
+    public Task PrintAsync() => this.WriteFileAsync(OfficeFileFormats.Pdf, OfficeFileAction.Print);
+
+    void WriteFile(OfficeFileFormat format, OfficeFileAction action) => _ = this.WriteFileAsync(format, action);
+
+    async Task WriteFileAsync(OfficeFileFormat format, OfficeFileAction action)
     {
-        if (this.Deck is not { } deck || this.FileRequested is not { } handler)
+        if (this.Deck is not { } deck)
             return;
 
-        var request = new SlideFileRequest(deck, this.CurrentSlideIndex, format, format.FileNameFor(this.EffectiveDocumentName), action, this.Watermark);
-        var saving = action is SlideFileAction.Save or SlideFileAction.SaveAs && format.IsNative;
+        var store = this.ResolveDocumentStore(this.DocumentStore);
+        var slide = this.CurrentSlideIndex;
+        var watermark = this.Watermark;
+        var saving = action is OfficeFileAction.Save or OfficeFileAction.SaveAs && format.IsNative;
         var at = this.revision;
 
         try
@@ -631,15 +741,18 @@ public partial class SlideEditorView
             if (saving)
                 this.titleBar.SaveState = OfficeSaveState.Saving;
 
-            handler(this, request);
+            var written = await this.session.SaveAsync(store, format, action, this.EffectiveDocumentName,
+                (s, ct) => SlideExport.WriteAsync(deck, slide, format, s, watermark, ct));
 
-            if (saving)
+            if (saving && written is not null)
             {
                 this.savedRevision = at;
                 this.lastSaved = OfficeSaveState.Saved;
+                this.DocumentName = written.DisplayName;
+                this.DocumentLocation = written.Location;
             }
 
-            if (action != SlideFileAction.Print)
+            if (written is not null && action != OfficeFileAction.Print)
                 this.shell.IsBackstageOpen = false;
         }
         catch (Exception ex)

@@ -68,6 +68,19 @@ public abstract class OfficeDocument : IDisposable
         this.DirtyChanged?.Invoke(this, EventArgs.Empty);
     }
 
+    /// <summary>
+    /// Clears <see cref="IsDirty"/> after the package was written somewhere <see cref="SaveAsAsync(string, CancellationToken)"/>
+    /// does not know about — a stream an <c>IOfficeDocumentStore</c> owns.
+    /// </summary>
+    public void MarkClean()
+    {
+        if (!this.IsDirty)
+            return;
+
+        this.IsDirty = false;
+        this.DirtyChanged?.Invoke(this, EventArgs.Empty);
+    }
+
     /// <summary>Flushes pending DOM changes into the package buffer. Implementations must be idempotent.</summary>
     protected abstract void FlushToPackage();
 

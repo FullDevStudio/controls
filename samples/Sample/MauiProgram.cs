@@ -28,6 +28,9 @@ public static class MauiProgram
             // Required by Shiny.Maui.Controls.Office: the spreadsheet grid paints onto a Skia surface.
             // UseShinyOffice registers SkiaSharp and, on the AppKit head, the canvas SkiaSharp omits.
             .UseShinyOffice()
+            // Gives every Office editor File ▸ Open / Save / Save As / Export and a recent list, with no
+            // event handlers: files live in AppDataDirectory/Documents and Browse is the file picker.
+            .UseOfficeDocumentStore()
             // The floor plan paints onto a Skia surface too. Calling both is fine - SkiaSharp's own
             // registration is idempotent - and either one alone is enough for the other's canvases.
             .UseShinyFloorPlan()

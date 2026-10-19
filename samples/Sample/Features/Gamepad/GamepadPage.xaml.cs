@@ -99,7 +99,10 @@ public partial class GamepadPage : Shiny.Maui.Controls.ShinyContentPage
         var layout = GamepadLayouts.Get(preset);
         var stick = layout.Elements.FirstOrDefault(el => el.Kind == GamepadElementKind.Stick);
         if (stick != null)
+        {
             stick.IsFloating = FloatingSwitch.IsToggled;
+            stick.FloatingRegion = GamepadFloatingRegion.LeftHalf;
+        }
 
         var bottom = layout.Elements.FirstOrDefault(el => el.Button == GamepadButton.A);
         if (bottom != null)

@@ -389,6 +389,7 @@ public sealed class GamepadEngine : IDisposable
         }
 
         this.VisualScale = scale;
+        var area = this.Body ?? new GamepadRect(0, 0, this.width, this.height);
         var style = this.EffectiveFaceStyle;
 
         foreach (var v in this.visuals)
@@ -400,7 +401,7 @@ public sealed class GamepadEngine : IDisposable
 
             v.Bounds = GamepadRect.FromCenter(cx, cy, e.Width * scale, e.Height * scale);
             v.HitBounds = e.Kind == GamepadElementKind.Stick && e.IsFloating
-                ? v.Bounds.Inflate(e.FloatingZone * scale)
+                ? FloatingRegionBounds(e, v.Bounds, area, scale)
                 : v.Bounds.Inflate(this.HitSlop);
 
             var face = GamepadFaces.Get(style, e.Button);
@@ -419,6 +420,17 @@ public sealed class GamepadEngine : IDisposable
         // a finger already down keeps its capture across a rotation; its stick just recentres on the
         // next move, which is what the player expects when the screen turns under their thumb
     }
+
+
+    static GamepadRect FloatingRegionBounds(GamepadElement e, GamepadRect bounds, GamepadRect area, float scale) => e.FloatingRegion switch
+    {
+        GamepadFloatingRegion.LeftHalf => area with { Width = area.Width / 2f },
+        GamepadFloatingRegion.RightHalf => area with { X = area.CenterX, Width = area.Width / 2f },
+        GamepadFloatingRegion.TopHalf => area with { Height = area.Height / 2f },
+        GamepadFloatingRegion.BottomHalf => area with { Y = area.CenterY, Height = area.Height / 2f },
+        GamepadFloatingRegion.Anywhere => area,
+        _ => bounds.Inflate(e.FloatingZone * scale)
+    };
 
 
     static (float X, float Y) AnchorPoint(GamepadAnchor anchor, float w, float h) => anchor switch

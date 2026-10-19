@@ -30,8 +30,9 @@
         formula bar, the grid, the sheet tabs and the status bar (Ready/Edit, Average/Count/Sum, the
         three views and a zoom slider bound to Zoom). ShowShell="false" drops back to the bare ribbon.
 
-        FileRequested is left unhandled here, so Save, Save As, Export (xlsx, CSV, PDF) download in the
-        browser and Print opens the sheet as a PDF. A host that stores files handles it instead.
+        Nothing file-related is wired here: Program.cs registers the browser document store, so Open, Save, Save As and Export (xlsx, CSV, PDF) are real files in
+        Chromium and uploads/downloads elsewhere, and the recent list fills itself. Print opens the
+        sheet as a PDF.
     *@
     @* Theme left null: the grid follows the page's light/dark scheme on its own. The button above
        pins it dark, to show that an explicit Theme still wins. *@
@@ -40,7 +41,6 @@
                      @bind-Zoom="zoom"
                      DocumentName="Budget"
                      UserName="Allan Ritchie"
-                     RecentFiles="recent"
                      SelectionStatisticsChanged="OnStatistics"
                      Theme="@(dark ? SpreadsheetTheme.Dark : null)"
                      CellChanged="OnCellChanged" />
@@ -70,13 +70,6 @@
     int nextRow = 6;
     double zoom = 1;
     SelectionStatistics statistics = SelectionStatistics.Empty;
-
-    // The backstage's recent list is the host's to supply; these are placeholders.
-    readonly IReadOnlyList<Shiny.Controls.Office.Shell.OfficeRecentFile> recent =
-    [
-        new("Q3 forecast.xlsx", "Documents", DateTimeOffset.Now.AddHours(-3)),
-        new("Team roster.xlsx", "OneDrive › Shared", DateTimeOffset.Now.AddDays(-2)) { IsPinned = true }
-    ];
 
     bool CanUndo => this.workbook?.Undo.CanUndo ?? false;
     bool CanRedo => this.workbook?.Undo.CanRedo ?? false;

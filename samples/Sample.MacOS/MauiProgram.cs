@@ -27,6 +27,7 @@ public static class MauiProgram
             .AddMacOSEssentials()
             // Registers SkiaSharp plus, on this head, the AppKit canvas SkiaSharp does not ship.
             .UseShinyOffice()
+            .UseOfficeDocumentStore()
             .UseShinyFloorPlan()
             .UseShinyControls(cfg => cfg
                 .AddDefaultMauiControlFeedback()

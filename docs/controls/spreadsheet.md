@@ -65,35 +65,26 @@ Letter with Excel's Normal margins, cut at whole columns and rows from A1 to the
 (`SheetPagination`); nothing in the workbook changes. They are views of the grid, not a page-by-page
 layout with headers and footers.
 
-**Files.** The shell reads and writes nothing itself. Save (title bar, backstage, Ctrl+S), Save As,
-Export and Print each raise `FileRequested` with a `SpreadsheetFileRequest` — the format, a file name
-("Budget.csv"), the action, and `WriteToAsync(stream)` / `ToBytesAsync()`. xlsx is the whole workbook;
-**CSV** is the active sheet's formatted values (UTF-8 with a BOM, as Excel writes it); **PDF** is the
-active sheet's used range painted by the grid's own `SpreadsheetPainter` onto Letter pages through
-SkiaSharp's `SKDocument`, without headings, gridlines or the selection. On Blazor an unhandled request
-downloads the file (Print opens the PDF in a new tab for the browser to print); on MAUI handle it:
-
-```csharp
-sheet.FileRequested += async (_, request) =>
-{
-    var path = Path.Combine(FileSystem.AppDataDirectory, request.FileName);
-    await using var file = File.Create(path);
-    await request.WriteToAsync(file);
-};
-```
+**Files.** Open, Save (title bar, backstage, Ctrl+S — back over the same file), Save As, Export and
+the recent list go through the document store, with no events to wire; AutoSave runs for a store file.
+xlsx is the whole workbook; **CSV** is the active sheet's formatted values (UTF-8 with a BOM, as Excel
+writes it); **PDF** is the active sheet's used range painted by the grid's own `SpreadsheetPainter` onto
+Letter pages through SkiaSharp's `SKDocument`, without headings, gridlines or the selection. Print opens
+the PDF in the system viewer (MAUI) or a new tab (Blazor). The same actions are methods —
+`SaveAsync()`, `SaveAsAsync(format)`, `ExportAsync(format)`, `PrintAsync()`, `OpenAsync(stream,
+fileName)`, `OpenAsync(file)` — and `ShowFileCommands="false"` hides the File surface for an app that
+runs its own. See [Office Shell › Files](office-shell.md#files-the-document-store).
 
 ```razor
 <SpreadsheetView @bind-Workbook="workbook"
                  @bind-Zoom="zoom"
                  DocumentName="Budget"
-                 UserName="Allan Ritchie"
-                 RecentFiles="recent"
-                 FileRequested="SaveAsync" />
+                 UserName="Allan Ritchie" />
 ```
 
 Picking a template builds the workbook, shows it and reports it (`WorkbookChanged` on Blazor — use
 `@bind-Workbook` — `WorkbookReplaced` on MAUI); handle `TemplateSelected` to do it yourself.
-`OpenRequested`, `RecentFileSelected` and `ShareRequested` are the host's. `UserName` is also the
+`ShareRequested` is the host's. `UserName` is also the
 author written into new notes. `Commands` is the `OfficeCommandIndex` behind the search, for the app's
 own entries.
 

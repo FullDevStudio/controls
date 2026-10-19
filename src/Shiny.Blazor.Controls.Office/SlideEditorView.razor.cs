@@ -423,8 +423,8 @@ public partial class SlideEditorView
             case "link": this.OpenLinkDialog(); break;
             case "find": this.selectedTab = "home"; break;
             case "replace": this.selectedTab = "home"; this.showReplace = true; break;
-            case "save" when this.ShellOn: await this.SaveAsync(); break;
-            case "print" when this.ShellOn: await this.PrintAsync(); break;
+            case "save" when this.ShellOn && this.ShowFileCommands: await this.SaveAsync(); break;
+            case "print" when this.ShellOn && this.ShowFileCommands: await this.PrintAsync(); break;
         }
 
         this.StateHasChanged();

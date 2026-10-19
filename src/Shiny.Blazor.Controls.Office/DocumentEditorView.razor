@@ -46,7 +46,7 @@
                      LeftPane="@(ReadModeOn ? null : NavigationSlot)"
                      RightPane="@(ReadModeOn ? null : CommentsSlot)"
                      StatusBar="@(ShowStatusBar ? StatusSlot : null)"
-                     Backstage="BackstageSlot"
+                     Backstage="@(ShowFileCommands ? BackstageSlot : null)"
                      ChildContent="BodySlot" />
     }
     else
@@ -86,7 +86,7 @@
                 @ref="ribbonRef"
                 DisplayMode="ribbonMode"
                 DisplayModeChanged="m => this.ribbonMode = m"
-                ApplicationButtonText="@(ShellOn || FileClicked.HasDelegate ? "File" : null)"
+                ApplicationButtonText="@((ShellOn && ShowFileCommands) || FileMenuRequested.HasDelegate ? "File" : null)"
                 ApplicationButtonClicked="OnFileButtonAsync"
                 QuickAccess="@(ShellOn && ShowTitleBar ? null : QuickAccessSlot)"
                 HeaderEnd="@(ShellOn ? HeaderEndSlot : null)"
@@ -791,10 +791,12 @@
     {
         <OfficeTitleBar DocumentName="@EffectiveDocumentName"
                         DocumentNameChanged="OnDocumentNameChangedAsync"
-                        DocumentLocation="@DocumentLocation"
+                        DocumentLocation="@EffectiveDocumentLocation"
                         SaveState="EffectiveSaveState"
                         AutoSave="AutoSave"
                         AutoSaveChanged="OnAutoSaveChangedAsync"
+                        ShowSave="ShowFileCommands"
+                        ShowAutoSave="ShowFileCommands"
                         CanUndo="@(!Disabled && (C?.CanUndo ?? false))"
                         CanRedo="@(!Disabled && (C?.CanRedo ?? false))"
                         SaveRequested="SaveAsync"
@@ -928,11 +930,11 @@
                          SelectedPage="backstagePage"
                          SelectedPageChanged="OnBackstagePageChangedAsync"
                          Templates="@(Templates ?? TemplateThumbnailCache.Word ?? WordTemplates.All)"
-                         RecentFiles="RecentFiles"
+                         RecentFiles="storeRecent"
                          DocumentInfo="backstageInfo"
                          TemplateSelected="NewFromTemplateAsync"
-                         RecentFileSelected="RecentFileSelected"
-                         OpenRequested="OpenRequested"
+                         RecentFileSelected="OpenRecentAsync"
+                         OpenRequested="() => OpenAsync()"
                          SaveRequested="SaveAsync"
                          SaveAsRequested="SaveAsAsync"
                          ExportRequested="ExportAsync"
@@ -978,10 +980,11 @@
     [Parameter] public EventCallback<bool> ReadModeChanged { get; set; }
 
     /// <summary>
-    /// Raised when the File button is pressed. The File button is only drawn when this is bound — it is
-    /// the hook for a host's backstage.
+    /// Raised when the File button is pressed (after the backstage opens, with the shell on). With the
+    /// shell off, or <see cref="ShowFileCommands"/> off, the File button is only drawn when this is bound —
+    /// it is the hook for a host's own file menu.
     /// </summary>
-    [Parameter] public EventCallback FileClicked { get; set; }
+    [Parameter] public EventCallback FileMenuRequested { get; set; }
 
     /// <summary>Raised with fresh figures whenever the word count or current page may have changed.</summary>
     [Parameter] public EventCallback<DocumentStatistics> StatisticsChanged { get; set; }

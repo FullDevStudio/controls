@@ -32,7 +32,7 @@
                      TitleBar="@(ShowTitleBar ? TitleBarSlot : null)"
                      Ribbon="@(ShowToolbar ? RibbonSlot : null)"
                      StatusBar="@(ShowStatusBar && ShowStatus ? StatusSlot : null)"
-                     Backstage="@(ShowBackstage ? BackstageSlot : null)"
+                     Backstage="@(ShowBackstage && ShowFileCommands ? BackstageSlot : null)"
                      ChildContent="BodySlot" />
     }
     else
@@ -95,7 +95,7 @@
                 SelectedKeyChanged="OnTabChanged"
                 DisplayMode="ribbonMode"
                 DisplayModeChanged="m => this.ribbonMode = m"
-                ApplicationButtonText="@(ShellOn || FileMenuRequested.HasDelegate ? "File" : null)"
+                ApplicationButtonText="@((ShellOn && ShowFileCommands) || FileMenuRequested.HasDelegate ? "File" : null)"
                 ApplicationButtonClicked="OnFileClicked"
                 QuickAccess="@(ShellOn && ShowTitleBar ? null : QuickAccessSlot)"
                 HeaderEnd="@(ShellOn && ShowRibbonActions ? HeaderEndSlot : null)"
@@ -506,13 +506,16 @@
                                             Checked="@(Controller?.Current?.IsHidden == true)" Disabled="@(Disabled || SlideCount == 0)"
                                             Clicked="_ => Run(c => c.ToggleHideSlide())" />
                     </RibbonGroup>
-                    <RibbonGroup Title="Export" Priority="70">
-                        <RibbonButton Size="RibbonItemSize.Large" Text="PDF" Tooltip="Export the deck as a PDF, a page per slide"
-                                      Icon="@Ico(SlideIcon.Export)" Disabled="@(Deck is null)"
-                                      Clicked="() => ExportAsync(OfficeFileFormats.Pdf)" />
-                        <RibbonMenuButton Size="RibbonItemSize.Large" Text="Pictures" Tooltip="Export slides as pictures"
-                                          Icon="@Ico(OfficeIcon.Picture)" Disabled="@(SlideCount == 0)" Menu="ExportPictureMenu" />
-                    </RibbonGroup>
+                    @if (ShowFileCommands)
+                    {
+                        <RibbonGroup Title="Export" Priority="70">
+                            <RibbonButton Size="RibbonItemSize.Large" Text="PDF" Tooltip="Export the deck as a PDF, a page per slide"
+                                          Icon="@Ico(SlideIcon.Export)" Disabled="@(Deck is null)"
+                                          Clicked="() => ExportAsync(OfficeFileFormats.Pdf)" />
+                            <RibbonMenuButton Size="RibbonItemSize.Large" Text="Pictures" Tooltip="Export slides as pictures"
+                                              Icon="@Ico(OfficeIcon.Picture)" Disabled="@(SlideCount == 0)" Menu="ExportPictureMenu" />
+                        </RibbonGroup>
+                    }
                 </RibbonTab>
 
                 @* ---------------------------------------------------------------- View *@
@@ -1038,10 +1041,12 @@
     {
         <OfficeTitleBar DocumentName="@EffectiveDocumentName"
                         DocumentNameChanged="OnDocumentNameChangedAsync"
-                        DocumentLocation="@(DocumentLocation ?? Deck?.Path)"
+                        DocumentLocation="@(session.Current?.Location ?? DocumentLocation ?? Deck?.Path)"
                         SaveState="EffectiveSaveState"
                         AutoSave="AutoSave"
                         AutoSaveChanged="OnAutoSaveChangedAsync"
+                        ShowSave="ShowFileCommands"
+                        ShowAutoSave="ShowFileCommands"
                         CanUndo="@(!Disabled && (Controller?.CanUndo ?? false))"
                         CanRedo="@(!Disabled && (Controller?.CanRedo ?? false))"
                         SaveRequested="SaveAsync"
@@ -1085,16 +1090,16 @@
                          SelectedPage="backstagePage"
                          SelectedPageChanged="OnBackstagePageChangedAsync"
                          Templates="@(Templates ?? builtInTemplates ?? SlideTemplates.All)"
-                         RecentFiles="RecentFiles"
+                         RecentFiles="storeRecent"
                          DocumentInfo="backstageInfo"
                          SaveAsFormats="SlideExport.SaveAsFormats"
                          ExportFormats="SlideExport.ExportFormats"
                          TemplateSelected="NewFromTemplateAsync"
-                         RecentFileSelected="RecentFileSelected"
-                         OpenRequested="OpenRequested"
+                         RecentFileSelected="OpenRecentAsync"
+                         OpenRequested="() => OpenAsync()"
                          SaveRequested="SaveAsync"
-                         SaveAsRequested="f => WriteFileAsync(f, SlideFileAction.SaveAs)"
-                         ExportRequested="f => WriteFileAsync(f, SlideFileAction.Export)"
+                         SaveAsRequested="SaveAsAsync"
+                         ExportRequested="ExportAsync"
                          PrintRequested="PrintAsync"
                          PrintPreview="@(printPreview is null ? null : PrintPreviewSlot)" />
     }

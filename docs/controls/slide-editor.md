@@ -284,36 +284,26 @@ canvas. Unpinning removes it.
 | Status bar | **"Slide 3 of 12"** ("Slide Master" in that view), the proofing language, **Notes** (toggles `ShowNotes`), the three views — **Normal**, **Slide Sorter**, **Reading View** (plays the show from the current slide; the button stays pressed while it runs) — the zoom slider, two-way with `Zoom` (10–400%, following the fitted zoom when `Zoom` is null), and **Fit slide to current window**, pressed while the zoom is fitted |
 | Backstage | New (Blank presentation plus **Project update** on Slate, **Pitch deck** on Midnight and **Lesson** on Botanical — built in code by `SlideTemplates`, each a real .pptx with PowerPoint's five layouts; Blazor draws each one's title slide as its thumbnail), Open, Info (slides, hidden slides, words, slides with notes, author), Save, Save As (pptx, PDF, PNG), Print (with a preview of the current slide), Export (PDF, PNG of this slide, PNG of every slide as a .zip, JPEG) |
 
-**Files.** The shell reads and writes nothing itself. Save (title bar, backstage, Ctrl+S), Save As,
-Export (backstage or ribbon) and Print each raise `FileRequested` with a `SlideFileRequest` — the deck,
-the current slide, the format, a file name ("Pitch deck.pdf"), the action, and `WriteToAsync(stream)` /
-`ToBytesAsync()` (`SlideExport` does the writing: pptx through `SaveToAsync`, the rest through
-`SlideExporter`). On Blazor an unhandled request downloads the file and Print opens the PDF in the
-browser's print dialog, as Word and Excel do; on MAUI handle it:
-
-```csharp
-slides.FileRequested += async (_, request) =>
-{
-    var path = Path.Combine(FileSystem.AppDataDirectory, request.FileName);
-    await using var file = File.Create(path);
-    await request.WriteToAsync(file);
-};
-```
+**Files.** Open, Save (title bar, backstage, Ctrl+S — back over the same file), Save As, Export
+(backstage or ribbon) and the recent list go through the document store, with no events to wire;
+`SlideExport` does the writing (pptx through `SaveToAsync`, the rest through `SlideExporter`). Print opens
+the PDF in the system viewer (MAUI) or the browser's print dialog (Blazor). The same actions are methods —
+`SaveAsync()`, `SaveAsAsync(format)`, `ExportAsync(format)`, `PrintAsync()`, `OpenAsync(stream,
+fileName)`, `OpenAsync(file)` — and `ShowFileCommands="false"` hides the File surface (including the
+Slide Show tab's Export group) for an app that runs its own. See
+[Office Shell › Files](office-shell.md#files-the-document-store).
 
 ```razor
 <SlideEditorView Deck="deck"
                  DeckReplaced="d => deck = d"
                  @bind-Zoom="zoom"
                  DocumentName="Quarterly Review"
-                 UserName="Allan Ritchie"
-                 RecentFiles="recent"
-                 FileRequested="SaveAsync" />
+                 UserName="Allan Ritchie" />
 ```
 
 Picking a template opens it, shows it and reports it through `DeckReplaced` (both hosts; the host owns
-that deck from then on); handle `TemplateSelected` to do it yourself. `OpenRequested`,
-`RecentFileSelected` and `ShareRequested` are the host's. With `AutoSave` on and `FileRequested`
-handled, edits are saved two seconds after the last one. `Commands` (Blazor) / `CommandIndex` (MAUI) is
+that deck from then on); handle `TemplateSelected` to do it yourself. `ShareRequested` is the host's. With `AutoSave` on,
+edits to a store file are saved two seconds after the last one. `Commands` (Blazor) / `CommandIndex` (MAUI) is
 the `OfficeCommandIndex` behind the search, for the app's own entries. MAUI also exposes the parts —
 `Shell`, `TitleBar`, `StatusBar`, `Backstage`, `RibbonActions`, `Ribbon` — and the seams `Save()`,
 `Export(format)`, `SelectViewMode(id)` and `SearchSlides(text)`.

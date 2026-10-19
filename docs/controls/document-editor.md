@@ -46,47 +46,32 @@ Every part is wired to the editor already, and each has its own switch:
 | **Navigation pane** | `ShowNavigationPane` | The headings (click to jump; the one the caret is under is marked) and a search box whose Results tab lists every hit with its context. View › Navigation Pane, Ctrl+F and the status bar's page count open it |
 | **Comments pane** | `ShowCommentsPane` | Every comment with its author, date and the text it is anchored to. Click a card to select that text; delete one with its button; **New** comments on the selection |
 | **Status bar** | `ShowStatusBar` | "Page 2 of 5", "197 words" ("12 of 197 words" with a selection — click for Word Count), the proofing language; Focus; Read / Print / Web view buttons; the zoom slider (25–400%, the editor's own range), − / + and the percentage (which opens the Zoom dialog with page-width / text-width / whole-page presets) |
-| **Backstage** | File | Home and New offer `Templates` (null = the built-in **Blank**, **Report** and **Letter**, generated in code, each tile a picture of the template's first page drawn by the editor's own painter the first time the backstage opens — `OfficeTemplateThumbnails.Word()`), `RecentFiles` (your list), Info with the document's statistics, Save, Save As, Print with a preview of the first page, Export |
+| **Backstage** | File | Home and New offer `Templates` (null = the built-in **Blank**, **Report** and **Letter**, generated in code, each tile a picture of the template's first page drawn by the editor's own painter the first time the backstage opens — `OfficeTemplateThumbnails.Word()`), the recent list (from the document store), Info with the document's statistics, Save, Save As, Print with a preview of the first page, Export |
 
 The command search (`CommandIndex`) holds the ribbon's commands plus the ones people look for on tabs
 not yet opened (Table, Page Break, Link, Comment, Header, Table of Contents, Track Changes, Landscape…).
 A query that matches no command searches the document instead.
 
-### Files are the host's
+### Files
 
-The shell reads and writes nothing on its own; these are events. What happens when you leave one unhandled:
+Open, Save (back over the same file), Save As, Export, Print and the recent list go through the
+document store — no events to wire (see [Office Shell › Files](office-shell.md#files-the-document-store)):
 
-| Event | Unhandled on Blazor | Unhandled on MAUI |
-|---|---|---|
-| `SaveRequested` | downloads the `.docx` | nothing |
-| `SaveAsRequested(OfficeFileFormat)` / `ExportRequested(…)` | downloads `.docx`, `.pdf`, `.txt` or `.html` | nothing |
-| `PrintRequested` | opens the browser's print dialog over a PDF of the document | nothing |
-| `NewDocumentRequested(OfficeTemplate)` | opens the template in place, raises `DocumentOpened(WordDocument)` | same |
-| `OpenRequested`, `RecentFileSelected(OfficeRecentFile)`, `ShareRequested`, `DocumentRenamed(string)` | — | — |
-
-```razor
-<div style="height:760px">
-    <DocumentEditorView Document="document"
-                        @bind-DocumentName="name"
-                        SaveState="saveState"
-                        UserName="Allan Ritchie"
-                        RecentFiles="recent"
-                        SaveRequested="SaveAsync"
-                        RecentFileSelected="OpenAsync" />
-</div>
+```csharp
+// Both optional — without them each editor uses its host's default store:
+builder.UseShinyOffice().UseOfficeDocumentStore();   // MAUI: AppDataDirectory/Documents, Browse = FilePicker, Print = system PDF viewer
+builder.Services.AddShinyOfficeDocumentStore();      // Blazor: real files in Chrome/Edge, upload/download elsewhere. Scoped
 ```
 
 ```csharp
-editor.SaveRequested += async (_, _) => await File.WriteAllBytesAsync(path, editor.Document!.ToArray());
-editor.ExportRequested += (_, format) =>
-{
-    if (format.Id == OfficeFileFormats.Pdf.Id)
-    {
-        using var file = File.Create(Path.ChangeExtension(path, ".pdf"));
-        editor.ExportPdf(file);
-    }
-};
+await editor.OpenAsync(stream, "Welcome.docx");   // instead of WordDocument.OpenAsync + Document = …; the view owns it
+await editor.SaveAsync();                          // also SaveAsAsync / ExportAsync / PrintAsync / OpenAsync(file)
 ```
+
+An app with its own open/save UI sets `ShowFileCommands="false"` (File button, backstage, title-bar
+Save/AutoSave and the file commands go; the rest of the shell stays) and calls those methods itself.
+Still events: `NewDocumentRequested(OfficeTemplate)` (unhandled, the template opens in place and
+`DocumentOpened(WordDocument)` fires), `ShareRequested`, `DocumentRenamed(string)`.
 
 ### PDF
 
@@ -140,9 +125,9 @@ it — so a host with its own chrome gets all of it without the ribbon.
 | **Shapes** | Rectangles · Basic · Arrows — a gallery of the twenty preset shapes, each drawn as the shape it inserts (see [Shapes are a tab](#shapes-are-a-tab-not-a-dropdown)) |
 | **Table** *(contextual)* | Rows & Columns (Insert Above/Below/Left/Right, Delete Rows/Columns/Table) · Merge (Merge Cells, Split Cells) |
 
-The **File** button opens the backstage (see [The Word window](#the-word-window)). It still raises
-`FileRequested` on MAUI and `FileClicked` on Blazor; with the shell off it is shown only when one of
-those is wired (`ShowFileButton` on MAUI), as before.
+The **File** button opens the backstage (see [The Word window](#the-word-window)), then raises
+`FileMenuRequested`; with the shell off, or `ShowFileCommands` off, it is shown only when that is wired
+(`ShowFileButton` on MAUI).
 
 ### Tables you can type in
 

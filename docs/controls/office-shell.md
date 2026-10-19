@@ -151,6 +151,65 @@ Public seams for tests and keyboard shortcuts: `OfficeTitleBar.Search/SubmitSear
 `OfficeStatusBar.ZoomIn/ZoomOut/SetZoomFromSlider/OpenZoomDialog`, `OfficeRuler.BeginDrag/DragTo/EndDrag/TapAt`,
 `OfficeBackstage.SelectPage/ChooseTemplate/ChooseSaveAs/ChooseExport/Save/Close`, `OfficeShell.ToggleFocusMode/OpenBackstage`.
 
+## Files: the document store
+
+The parts raise events and do no I/O. The three editors (`DocumentEditorView`, `SpreadsheetView`,
+`SlideEditorView`) raise **no file events**: every file action goes to an **`IOfficeDocumentStore`**, and
+one store serves all three (each call names its `OfficeApp`, so pickers filter and recent lists stay per
+app). Browse picks a file and the editor opens and owns it, a recent file reopens, Save writes back over
+the file it came from (a new document's first Save is a Save As), Save As and Export write new files, the
+recent list fills itself, and the title bar's name, location and save state follow.
+
+```csharp
+// Both optional — without them each editor uses its host's default store:
+builder.UseShinyOffice().UseOfficeDocumentStore();   // MAUI: AppDataDirectory/Documents, Browse = FilePicker, Print = system PDF viewer
+builder.Services.AddShinyOfficeDocumentStore();      // Blazor: real files in Chrome/Edge, upload/download elsewhere. Scoped
+```
+
+```csharp
+await editor.OpenAsync(stream, "Welcome.docx");   // the view owns what it opens
+await editor.OpenAsync(file);                      // an OfficeDocumentRef from the store; null = Browse
+editor.DocumentStore = new MyCloudStore(http);     // per view, instead of the registered one
+```
+
+```csharp
+public interface IOfficeDocumentStore
+{
+    Task<OfficeDocumentRef?> PickOpenAsync(OfficeApp app, CancellationToken ct = default);          // null = cancelled
+    Task<Stream> OpenReadAsync(OfficeDocumentRef document, CancellationToken ct = default);
+    Task<OfficeDocumentRef?> SaveAsync(OfficeDocumentRef? target, OfficeSaveRequest request, CancellationToken ct = default);
+    Task<IReadOnlyList<OfficeRecentFile>> GetRecentAsync(OfficeApp app, CancellationToken ct = default);
+}
+```
+
+- A store deals in **files**, not documents: `OfficeSaveRequest` carries `App`, `Format`, `FileName`,
+  `Action` (`OfficeFileAction` Save / SaveAs / Export / Print) and `WriteToAsync(stream)` /
+  `ToBytesAsync()`. `target` is the open file on a plain Save and **null** for a new file — that is when
+  to show a save dialog. Return null for a cancel.
+- `OfficeDocumentRef(Id, Name)` — `Id` is the store's own key, never read by the editors; `Location`
+  shows in the title bar and Info page. Set `OfficeRecentFile.Document` in `GetRecentAsync` so a pick
+  reopens through the store.
+- `FileSystemOfficeDocumentStore` (Office.Shared) is a folder-backed store with no platform code: atomic
+  writes, no overwriting on a new file (`Report (2).docx`), recent list in `.recent.json`. Derive from it
+  and override `PickOpenAsync` to add a picker (`MauiOfficeDocumentStore` does exactly that; picked files
+  from elsewhere are copied into the folder).
+- **The app runs the files instead:** `ShowFileCommands="false"` hides the File button and backstage,
+  the title bar's Save and AutoSave, the slide editor's Export group, the file commands in the search
+  (`OfficeCommand.IsAvailable`) and, on Blazor, Ctrl+S / Ctrl+P. The app calls `SaveAsync` /
+  `SaveAsAsync` / `ExportAsync` / `PrintAsync` / `OpenAsync(...)` or reads the document itself.
+  `FileMenuRequested` still fires from File when handled. Blazor Print is always the browser's dialog.
+- **Removed** (breaking): the editors' `SaveRequested`, `SaveAsRequested`, `ExportRequested`,
+  `PrintRequested`, `FileRequested`, `OpenRequested`, `RecentFileSelected`, `RecentFiles`;
+  `SpreadsheetFileRequest` / `SlideFileRequest` and their action enums (use `OfficeFileAction`); Blazor
+  Word `DownloadAsync`. Word's File-button event is `FileMenuRequested` on both hosts (was MAUI
+  `FileRequested`, Blazor `FileClicked`). The bare parts below keep their events.
+- `CurrentFile` is the open store file (null for a new document or one the host set). The view disposes
+  documents it opened when the next replaces them, unless the host took them over through
+  `DocumentOpened` / `WorkbookReplaced` / `DeckReplaced` (Blazor: `WorkbookChanged` / `DeckReplaced`).
+- `DocumentExport` (Office.Skia) writes a `WordDocument` as docx / pdf / txt / html — the Word sibling of
+  `SpreadsheetExport` and `SlideExport`. `OfficeDocument.MarkClean()` clears `IsDirty` after a save that
+  did not go through `SaveAsAsync(path)`.
+
 ## Command search
 
 `OfficeCommandIndex` is the list the title bar searches. Fill it from the ribbon

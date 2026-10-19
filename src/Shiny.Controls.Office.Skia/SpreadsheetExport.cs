@@ -6,49 +6,6 @@ using SkiaSharp;
 
 namespace Shiny.Controls.Office.Skia;
 
-/// <summary>What the user asked the File backstage (or the title bar) to do with the workbook.</summary>
-public enum SpreadsheetFileAction
-{
-    /// <summary>Save, from the title bar or the backstage — always the workbook itself (xlsx).</summary>
-    Save,
-
-    /// <summary>Save As, in the chosen format.</summary>
-    SaveAs,
-
-    /// <summary>Export, in the chosen format.</summary>
-    Export,
-
-    /// <summary>Print: the active sheet as a PDF to hand to a printer or viewer.</summary>
-    Print
-}
-
-
-/// <summary>
-/// A file the spreadsheet's shell wants written. The host decides where it goes — a path, a share
-/// sheet, a download — and calls <see cref="WriteToAsync"/> or <see cref="ToBytesAsync"/> for the bytes.
-/// </summary>
-public sealed class SpreadsheetFileRequest(Workbook workbook, Worksheet sheet, OfficeFileFormat format, string fileName, SpreadsheetFileAction action)
-{
-    public Workbook Workbook { get; } = workbook;
-
-    /// <summary>The sheet on screen — what CSV and PDF contain. xlsx always carries every sheet.</summary>
-    public Worksheet Sheet { get; } = sheet;
-
-    public OfficeFileFormat Format { get; } = format;
-
-    /// <summary>The document name with the format's extension — "Book1.xlsx", "Budget.csv".</summary>
-    public string FileName { get; } = fileName;
-
-    public SpreadsheetFileAction Action { get; } = action;
-
-    public Task WriteToAsync(Stream destination, CancellationToken cancellationToken = default)
-        => SpreadsheetExport.WriteAsync(this.Workbook, this.Sheet, this.Format, destination, cancellationToken);
-
-    public Task<byte[]> ToBytesAsync(CancellationToken cancellationToken = default)
-        => SpreadsheetExport.ToBytesAsync(this.Workbook, this.Sheet, this.Format, cancellationToken);
-}
-
-
 /// <summary>
 /// Writes a workbook out as the formats the Office shell's Save As and Export offer: the workbook itself
 /// (<c>.xlsx</c>), the active sheet as CSV, or the active sheet as a PDF.
