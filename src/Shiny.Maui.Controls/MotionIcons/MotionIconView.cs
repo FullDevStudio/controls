@@ -136,7 +136,7 @@ public class MotionIconView : GraphicsView
         this.SetDynamicResource(ThemeColorProperty, ShinyThemeKeys.Color.OnSurface);
 
         Loaded += (_, _) => OnLoadedInternal();
-        Unloaded += (_, _) => Detach();
+        Unloaded += (_, _) => OnUnloadedInternal();
 
         ApplyTriggerGestures();
     }
@@ -457,9 +457,21 @@ public class MotionIconView : GraphicsView
             SyncVisibility();
     }
 
-    void Detach()
+    // Internal so tests can stand in for Unloaded, which only a real handler raises.
+    internal void OnUnloadedInternal()
     {
         loaded = false;
+
+        // A play cut off by the view leaving the tree comes back at the next Loaded with the cycle
+        // count it was started with. IsPlaying stays true across the gap, and Loaded reads a bare
+        // IsPlaying as the app's busy flag, which loops: so without this a finite Play() or Appear
+        // that is mid-cycle when its parent moves (a tab bar following the navigation onto the next
+        // page) comes back looping forever.
+        if (player is not null)
+        {
+            pendingAutoPlay = true;
+            pendingIterations = PlayIterations;
+        }
 
         player?.Stop();
         DetachPlayer();
