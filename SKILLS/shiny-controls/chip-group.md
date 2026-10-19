@@ -70,7 +70,9 @@ has chips for.
 - `SelectedItem` and `SelectedItems` are both kept accurate in every mode.
 - The bound `SelectedItems` list is written **into** rather than replaced, so an `ObservableCollection`
   on a view model keeps its identity. A read-only or fixed-size list (an array) is left alone.
-- Anything selected that the source no longer offers is dropped.
+- Anything selected that the source no longer offers is dropped. A `null` `ItemsSource` is no source rather
+  than an empty one: the selection is held and checked against the next items, so a binding context that
+  briefly goes away (re-parenting) does not write `null` back into the view model.
 - `SelectedItem` may arrive before `ItemsSource` (attribute order, lazy view-model lists): it is applied as
   soon as the items contain it. No need to call `Select` after binding.
 - A `null` item gets no chip.

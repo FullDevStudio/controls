@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
+using Shiny.Maui.Controls.Infrastructure;
 using Shouldly;
 using Xunit;
 
@@ -475,6 +476,101 @@ public class ChipGroupTests
 
         group.SelectedItems!.Count.ShouldBe(0);
         group.Chips.Any(x => x.IsSelected).ShouldBeFalse();
+    }
+
+
+    // ---------------------------------------------------------------------------------------------
+    // A binding context that goes away and comes back
+    // ---------------------------------------------------------------------------------------------
+
+    /// <summary>
+    /// A group bound the way a page binds it: both properties on the inherited context, in the order
+    /// the markup declares them.
+    /// </summary>
+    static (ChipGroup Group, ContentPage Page) BoundOnAPage(Model model, bool itemsSourceFirst)
+    {
+        var group = new ChipGroup { SelectionMode = ChipSelectionMode.Single };
+        if (itemsSourceFirst)
+        {
+            group.SetBinding(ChipGroup.ItemsSourceProperty, nameof(Model.Items));
+            group.SetBinding(ChipGroup.SelectedItemProperty, new Binding(nameof(Model.Selected), BindingMode.TwoWay));
+        }
+        else
+        {
+            group.SetBinding(ChipGroup.SelectedItemProperty, new Binding(nameof(Model.Selected), BindingMode.TwoWay));
+            group.SetBinding(ChipGroup.ItemsSourceProperty, nameof(Model.Items));
+        }
+
+        var page = new ContentPage { Content = new VerticalStackLayout { Children = { group } } };
+        page.BindingContext = model;
+        return (group, page);
+    }
+
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void APresetSelectionIsShownWhenThePageContextArrives(bool itemsSourceFirst)
+    {
+        var model = new Model();
+        var (group, _) = BoundOnAPage(model, itemsSourceFirst);
+
+        group.IsSelected("Second").ShouldBeTrue();
+        group.Chips[1].IsSelected.ShouldBeTrue();
+        model.Selected.ShouldBe("Second");
+    }
+
+
+    /// <summary>
+    /// Moving the page's content into the overlay root - which a progress line, a toast or a tooltip
+    /// does on first use - takes the inherited context away and brings it back. With ItemsSource
+    /// declared first, the null source used to publish a null selection while the SelectedItem binding
+    /// still pointed at the view model: the model lost its preset and no chip was selected afterwards.
+    /// </summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void ReParentingThePageContentKeepsTheSelection(bool itemsSourceFirst)
+    {
+        var model = new Model();
+        var (group, page) = BoundOnAPage(model, itemsSourceFirst);
+
+        PageOverlay.GetOrCreateRoot(page);
+
+        model.Selected.ShouldBe("Second");
+        group.SelectedItem.ShouldBe("Second");
+        group.IsSelected("Second").ShouldBeTrue();
+        group.Chips[1].IsSelected.ShouldBeTrue();
+        group.SelectedItems!.Cast<object>().ShouldBe(["Second"]);
+    }
+
+
+    [Fact]
+    public void ANullSourceHoldsTheSelectionUntilTheNextItems()
+    {
+        var group = Group("design", "engineering");
+        group.SelectedItem = "engineering";
+
+        group.ItemsSource = null;
+        group.SelectedItem.ShouldBe("engineering");
+
+        group.ItemsSource = new[] { "design", "engineering", "sales" };
+        group.IsSelected("engineering").ShouldBeTrue();
+        group.Chips[1].IsSelected.ShouldBeTrue();
+    }
+
+
+    [Fact]
+    public void ANullSourceFollowedByItemsWithoutTheSelectionStillDropsIt()
+    {
+        var group = Group("design", "engineering");
+        group.SelectedItem = "engineering";
+
+        group.ItemsSource = null;
+        group.ItemsSource = new[] { "design", "sales" };
+
+        group.SelectedItem.ShouldBeNull();
+        group.SelectedItems!.Count.ShouldBe(0);
     }
 
 

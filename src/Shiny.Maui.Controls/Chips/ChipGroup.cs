@@ -193,7 +193,18 @@ public partial class ChipGroup : ContentView
             // Anything selected that is no longer in the source goes: leaving it would report a
             // selection with no chip to show for it, which a view model cannot act on and the user
             // cannot undo.
-            var pruned = this.selection.RemoveAll(x => this.IndexIn(this.items, x) < 0);
+            //
+            // No source at all is not a source that dropped the item, though. It is the state before
+            // the items arrive, and also a moment MAUI passes through whenever the group is re-parented
+            // (a page's content moved into an overlay root, say): the inherited binding context is
+            // briefly null and the bindings are re-applied in declaration order. With ItemsSource
+            // declared first, publishing null here would reach the view model through a two-way
+            // SelectedItem binding that has not been re-applied yet - and the context would come back
+            // to a view model that now says "nothing selected". So the selection is held, and checked
+            // against the next items instead.
+            var pruned = this.ItemsSource is null
+                ? 0
+                : this.selection.RemoveAll(x => this.IndexIn(this.items, x) < 0);
 
             // A SelectedItem that arrived before the items it names (XAML attribute order, or a view
             // model that picks a default while building its list) was refused then for not being in the
