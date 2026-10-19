@@ -1,5 +1,7 @@
+using System.Runtime.CompilerServices;
 using Microsoft.Maui.Controls;
 using Shiny.Controls.Keyboard;
+using Shiny.Maui.Controls.Dialogs;
 using Shouldly;
 using Xunit;
 
@@ -215,6 +217,103 @@ public class KeyboardShortcutTests
         KeyboardShortcutManager.Process(new KeyStroke { Code = "F9", IsKeyUp = true }, window);
 
         log.ShouldBe(["down", "up"]);
+    }
+
+    static KeyStroke CtrlShift(string code) => new() { Code = code, Modifiers = KeyModifiers.Control | KeyModifiers.Shift };
+
+    static void Collect()
+    {
+        TestDispatcherProvider.Instance.Timers.Clear();
+        for (var i = 0; i < 3; i++)
+        {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+        }
+        GC.Collect();
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    static WeakReference ShowThenSwapOut(Func<ContentPage, VisualElement> build, KeyStroke stroke, bool fires)
+    {
+        var page = new ContentPage();
+        var element = build(page);
+        var window = new Window(page);
+
+        KeyboardShortcutManager.Process(stroke, window).ShouldBe(fires);
+
+        // What a Shell switch or a pop does to the page that leaves.
+        window.Page = new ContentPage();
+        return new WeakReference(element);
+    }
+
+    [Fact]
+    public void A_page_that_leaves_its_window_is_not_kept_alive()
+    {
+        // The engine is static. Its scope held the binding, the binding the shortcut, the shortcut
+        // the command, and the command the page — so every page that ever had a shortcut survived.
+        var weak = ShowThenSwapOut(page =>
+        {
+            KeyboardShortcuts.GetShortcuts(page).Add(new KeyboardShortcut
+            {
+                Gesture = "Ctrl+Shift+F1",
+                Command = new Command(() => page.Title = "saved")
+            });
+            return page;
+        }, CtrlShift("F1"), fires: true);
+
+        Collect();
+
+        weak.IsAlive.ShouldBeFalse("the shortcut engine still holds the page");
+    }
+
+    [Fact]
+    public void A_dialog_on_a_page_that_leaves_its_window_is_not_kept_alive()
+    {
+        // DialogView is modal and binds Escape to its own cancel — the same chain, for every dialog.
+        TestDispatcherProvider.Install();
+        var weak = ShowThenSwapOut(page =>
+        {
+            var dialog = new DialogView(
+                new DialogConfig { Kind = DialogKind.Confirm, Title = "t", OkText = "OK", CancelText = "Cancel" },
+                new DialogOptions()
+            );
+            page.Content = new Grid { Children = { dialog } };
+            return dialog;
+        }, CtrlShift("F2"), fires: false);
+
+        Collect();
+
+        weak.IsAlive.ShouldBeFalse("the shortcut engine still holds the dialog");
+    }
+
+    [Fact]
+    public void A_page_back_in_its_window_has_its_shortcuts_again()
+    {
+        var log = new List<string>();
+        var view = new ContentView();
+        var page = new ContentPage { Content = view };
+
+        var pageShortcut = new KeyboardShortcut { Gesture = "Ctrl+Shift+F3" };
+        pageShortcut.Pressed += (_, _) => log.Add("page");
+        KeyboardShortcuts.GetShortcuts(page).Add(pageShortcut);
+
+        var viewShortcut = new KeyboardShortcut { Gesture = "Ctrl+Shift+F4" };
+        viewShortcut.Pressed += (_, _) => log.Add("view");
+        KeyboardShortcuts.GetShortcuts(view).Add(viewShortcut);
+
+        var window = new Window(page);
+        KeyboardShortcutManager.Process(CtrlShift("F3"), window).ShouldBeTrue();
+
+        window.Page = new ContentPage();
+        KeyboardShortcutManager.Process(CtrlShift("F3"), window).ShouldBeFalse();
+        KeyboardShortcutManager.Process(CtrlShift("F4"), window).ShouldBeFalse();
+
+        // A tab or Shell switched back to: the same page, the same collections, a fresh scope.
+        window.Page = page;
+        KeyboardShortcutManager.Process(CtrlShift("F3"), window).ShouldBeTrue();
+        KeyboardShortcutManager.Process(CtrlShift("F4"), window).ShouldBeTrue();
+
+        log.ShouldBe(["page", "page", "view"]);
     }
 
     [Fact]
