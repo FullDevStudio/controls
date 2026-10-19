@@ -4,7 +4,7 @@
 
 A service-first dialog system that emulates the classic `alert`, `confirm`, `prompt`, and `action sheet` primitives — with **owned (non-native), animated, themeable** dialogs on **both MAUI and Blazor**. Inject `IDialogService` and `await` a result — no markup per call. Calls are queued, so awaiting several in a row shows them one at a time.
 
-- **MAUI**: registered by `UseShinyControls()`. The overlay auto-attaches to whichever page is current **at the time of each call** (no XAML or OverlayHost required), so dialogs keep working across navigation.
+- **MAUI**: registered by `UseShinyControls()`. The overlay auto-attaches to whichever page is current **at the time of each call** (no XAML or OverlayHost required), so dialogs keep working across navigation. The service can be called from any thread — after `ConfigureAwait(false)` or inside `Task.Run` it switches to the UI thread itself, so there is no need to wrap calls in `MainThread.InvokeOnMainThreadAsync`. If a dialog cannot be shown (for example the current page is not a `ContentPage`), the returned task fails with the exception rather than never completing.
 - **Blazor**: register `AddShinyDialogs()` in DI and place a single `<DialogHost />` in your layout.
 
 ```csharp

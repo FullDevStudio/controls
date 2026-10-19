@@ -1,3 +1,4 @@
+using Microsoft.Maui.Dispatching;
 using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls.Dialogs;
@@ -66,6 +67,21 @@ public sealed class DialogService(DialogOptions options) : IDialogService
     }
 
     Task<DialogOutcome> ShowAsync(DialogConfig config)
+    {
+        // The service is injected into view models and services, so it gets called from wherever an
+        // await resumed - a thread-pool thread after ConfigureAwait(false) or inside Task.Run. Everything
+        // past this point is UI work (the feedback hook, the per-window queue, the overlay on the page),
+        // and off the UI thread the platform rejects the first view it is handed. The queue runs
+        // fire-and-forget, so that failure reached nobody: the dialog never showed and the caller's task
+        // never finished. Hopping here keeps "inject it anywhere" true from any thread.
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher is { IsDispatchRequired: true })
+            return dispatcher.DispatchAsync<DialogOutcome>(() => this.ShowOnUiThreadAsync(config));
+
+        return this.ShowOnUiThreadAsync(config);
+    }
+
+    Task<DialogOutcome> ShowOnUiThreadAsync(DialogConfig config)
     {
         if (config.UseFeedback)
             FeedbackHelper.Execute(this, "Show", config.Title);

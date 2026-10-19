@@ -94,7 +94,17 @@ sealed class DialogManager
             while (this.queue.Count > 0)
             {
                 var (config, options, tcs) = this.queue.Dequeue();
-                await this.ShowSingleAsync(config, options, tcs);
+                try
+                {
+                    await this.ShowSingleAsync(config, options, tcs);
+                }
+                catch (Exception ex)
+                {
+                    // Nobody awaits this loop, so an exception left to escape is lost and the caller
+                    // waits forever for a dialog that will never come. Hand it to that caller instead,
+                    // and keep going so the dialogs queued behind it still get their turn.
+                    tcs.TrySetException(ex);
+                }
             }
         }
         finally
