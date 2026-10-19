@@ -4,7 +4,8 @@ namespace Shiny.Maui.Controls.Dialogs;
 /// A service-first dialog system that emulates the classic <c>alert</c>, <c>confirm</c>, and
 /// <c>prompt</c> primitives with owned (non-native), animated, themeable dialogs. Inject
 /// <see cref="IDialogService"/> anywhere and await a result — the overlay auto-attaches to the current
-/// page (no XAML or OverlayHost required). Registered by <c>UseShinyControls()</c>.
+/// page (no XAML or OverlayHost required). Registered by <c>UseShinyControls()</c>. The built-in
+/// implementation may be called from any thread; it switches to the UI thread before it touches the page.
 /// </summary>
 public interface IDialogService
 {
