@@ -33,6 +33,17 @@ namespace Shiny.Maui.Controls;
 /// </example>
 public partial class ChipGroup : ContentView
 {
+    /// <summary>
+    /// Appended to the group's own <see cref="Element.AutomationId"/>, with the item's index, to name each
+    /// chip: <c>&lt;id&gt;_Chip_&lt;index&gt;</c>, in <see cref="ItemsSource"/> order.
+    /// </summary>
+    public const string ChipAutomationIdSuffix = "_Chip";
+
+    /// <summary>
+    /// Appended to a chip's id to name its remove button: <c>&lt;id&gt;_Chip_&lt;index&gt;_Remove</c>.
+    /// </summary>
+    public const string RemoveAutomationIdSuffix = "_Remove";
+
     readonly TagWrapLayout wrap;
     readonly List<ChipView> chips = new();
     readonly List<object> items = new();
@@ -74,6 +85,17 @@ public partial class ChipGroup : ContentView
         // Last line: replays any styled property that was applied before the children existed.
         // See StyleGuard.
         StyleGuard.MarkReady(this, typeof(ChipGroup));
+
+        // Chips are rebuilt with the items, so they are named there too; this renames the ones on
+        // screen when the group's own id arrives (XAML sets it after the constructor) or changes.
+        AutomationIds.Track(this, this.NameChips);
+    }
+
+
+    void NameChips()
+    {
+        for (var i = 0; i < this.chips.Count; i++)
+            AutomationIds.Set(this.chips[i], AutomationIds.For(this, ChipAutomationIdSuffix, i));
     }
 
 
@@ -189,6 +211,7 @@ public partial class ChipGroup : ContentView
                 this.chips.Add(chip);
                 this.wrap.Add(chip);
             }
+            this.NameChips();
 
             // Anything selected that is no longer in the source goes: leaving it would report a
             // selection with no chip to show for it, which a view model cannot act on and the user

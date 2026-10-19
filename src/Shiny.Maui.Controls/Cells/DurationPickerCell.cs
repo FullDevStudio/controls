@@ -10,13 +10,32 @@ namespace Shiny.Maui.Controls.Cells;
 
 public class DurationPickerCell : CellBase
 {
+    /// <summary>Appended to the cell's <see cref="Element.AutomationId"/> to name the root of the duration panel it opens.</summary>
+    public const string PopupAutomationIdSuffix = "_Popup";
+
+    /// <summary>Appended to the cell's <see cref="Element.AutomationId"/> to name the panel's hour picker.</summary>
+    public const string HoursAutomationIdSuffix = "_Hours";
+
+    /// <summary>Appended to the cell's <see cref="Element.AutomationId"/> to name the panel's minute picker.</summary>
+    public const string MinutesAutomationIdSuffix = "_Minutes";
+
+    /// <summary>Appended to the cell's <see cref="Element.AutomationId"/> to name the panel's Done button.</summary>
+    public const string DoneAutomationIdSuffix = "_Done";
+
+    /// <summary>Appended to the cell's <see cref="Element.AutomationId"/> to name the panel's Cancel button.</summary>
+    public const string CancelAutomationIdSuffix = "_Cancel";
+
     /// <summary>
     /// Children are built by CellBase's constructor (BuildLayout -> the virtual
     /// CreateAccessoryView override above), so by the time this body runs they exist.
     /// Marking ready here replays any property an implicit Style applied before
     /// construction - see StyleGuard.
     /// </summary>
-    public DurationPickerCell() => StyleGuard.MarkReady(this, typeof(DurationPickerCell));
+    public DurationPickerCell()
+    {
+        AutomationIds.Link(this, valueLabel, ValueAutomationIdSuffix);
+        StyleGuard.MarkReady(this, typeof(DurationPickerCell));
+    }
 
     Label valueLabel = default!;
     FloatingPanel.FloatingPanel? panel;
@@ -175,6 +194,9 @@ public class DurationPickerCell : CellBase
         var hourPicker = new Picker { Title = "Hours", HorizontalOptions = LayoutOptions.Fill };
         var minutePicker = new Picker { Title = "Minutes", HorizontalOptions = LayoutOptions.Fill };
 
+        AutomationIds.Set(hourPicker, AutomationIds.For(this, HoursAutomationIdSuffix));
+        AutomationIds.Set(minutePicker, AutomationIds.For(this, MinutesAutomationIdSuffix));
+
         for (var h = 0; h <= maxHours; h++)
             hourPicker.Items.Add(h.ToString());
 
@@ -211,6 +233,7 @@ public class DurationPickerCell : CellBase
         pickerGrid.Add(minuteUnit, 3);
 
         var doneButton = new Button { HorizontalOptions = LayoutOptions.Fill }.Neutralize();
+        AutomationIds.Set(doneButton, AutomationIds.For(this, DoneAutomationIdSuffix));
         doneButton.SetBinding(Button.TextProperty, static (DurationPickerCell c) => c.DoneText, source: this);
         doneButton.Clicked += (_, _) =>
         {
@@ -233,6 +256,7 @@ public class DurationPickerCell : CellBase
         {
             HorizontalOptions = LayoutOptions.Fill
         }.Neutralize();
+        AutomationIds.Set(cancelButton, AutomationIds.For(this, CancelAutomationIdSuffix));
         cancelButton.SetBinding(Button.TextProperty, static (DurationPickerCell c) => c.CancelText, source: this);
         cancelButton.SetDynamicResource(Button.BackgroundColorProperty, ShinyThemeKeys.Color.SecondaryContainer);
         cancelButton.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnSecondaryContainer);
@@ -250,7 +274,8 @@ public class DurationPickerCell : CellBase
         buttonGrid.Add(cancelButton, 0);
         buttonGrid.Add(doneButton, 1);
 
-        return new VerticalStackLayout
+        // Rebuilt on every open, so the ids are read from the cell's current one each time.
+        var root = new VerticalStackLayout
         {
             Padding = new Thickness(20),
             Spacing = 16,
@@ -267,6 +292,8 @@ public class DurationPickerCell : CellBase
                 buttonGrid
             }
         };
+        AutomationIds.Set(root, AutomationIds.For(this, PopupAutomationIdSuffix));
+        return root;
     }
 
     void UpdateDisplayText()

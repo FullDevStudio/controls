@@ -113,3 +113,17 @@ What the wizard adds beyond switching views:
 
 Turn `ShowNavigationBar` off when each step carries its own buttons; `NavigationBar` (MAUI) /
 `<NavigationBar>` (Blazor) replaces the built-in bar while keeping the wizard's own navigation logic.
+
+### Automation ids (MAUI)
+
+Set `AutomationId` on the `Wizard` and its built-in buttons are named after it, so two wizards on one
+page don't share ids:
+
+| Part | Id |
+|---|---|
+| Next / Finish | `<id>_Next` |
+| Back | `<id>_Back` |
+| Cancel | `<id>_Cancel` |
+
+A wizard without an id keeps the fixed ids it always had: `WizardNextButton`, `WizardBackButton` and
+`WizardCancelButton`.

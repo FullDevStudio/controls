@@ -19,6 +19,16 @@ public class TimeRangeSelectedEventArgs(TimeRange? range) : EventArgs
 /// </summary>
 public partial class TimeRangePicker : RangePickerBase
 {
+    /// <summary>
+    /// Appended to the picker's <see cref="Element.AutomationId"/>, then the time as <c>HHmm</c>, to name
+    /// each row of the start column: <c>&lt;id&gt;_Start_0930</c>. Keyed by time, not position, because the
+    /// column's first row moves with <see cref="MinTime"/> and the interval.
+    /// </summary>
+    public const string StartAutomationIdSuffix = "_Start";
+
+    /// <summary>Appended to the picker's <see cref="Element.AutomationId"/>, then the time as <c>HHmm</c>, to name each row of the end column.</summary>
+    public const string EndAutomationIdSuffix = "_End";
+
     VerticalStackLayout? startColumn;
     VerticalStackLayout? endColumn;
     ScrollView? startScroll;
@@ -199,6 +209,34 @@ public partial class TimeRangePicker : RangePickerBase
                 .WithFontSize(ShinyThemeKeys.Type.BodySmallSize);
             hint.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
             this.endColumn.Add(hint);
+        }
+
+        this.NameRows();
+    }
+
+
+    protected override void ApplyPopupAutomationIds()
+    {
+        base.ApplyPopupAutomationIds();
+        this.NameRows();
+    }
+
+
+    void NameRows()
+    {
+        Name(this.startColumn, AutomationIds.For(this, StartAutomationIdSuffix));
+        Name(this.endColumn, AutomationIds.For(this, EndAutomationIdSuffix));
+
+        static void Name(VerticalStackLayout? column, string? prefix)
+        {
+            if (column is null)
+                return;
+
+            foreach (var row in column.Children.OfType<Border>())
+            {
+                if (row.BindingContext is TimeOnly time)
+                    AutomationIds.Set(row, prefix is null ? null : $"{prefix}_{time.ToString("HHmm", System.Globalization.CultureInfo.InvariantCulture)}");
+            }
         }
     }
 

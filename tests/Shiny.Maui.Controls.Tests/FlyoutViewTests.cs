@@ -202,6 +202,35 @@ public class FlyoutViewTests
 
 
     /// <summary>
+    /// Issue #20: WinUI hands the measure and the arrange widths a fraction of a pixel apart. When
+    /// both passes reported the width it flipped between the two on every pass, each flip counted as
+    /// a resize that re-targeted the panels and invalidated the measure, and WinUI killed the app with
+    /// a layout cycle. Only the first measure learns the width now; after that the arrange owns it.
+    /// </summary>
+    [Fact]
+    public void MeasureAndArrangeWidthsAFractionApartSettle()
+    {
+        var (view, _, panel) = Build(FlyoutPresentation.Push);
+        panel.CollapsedState = FlyoutPanelState.Hidden;
+        panel.CollapseBelow = 900;
+        panel.CompactWidth = 900;
+
+        var layout = (Microsoft.Maui.ILayout)view;
+        for (var i = 0; i < 5; i++)
+        {
+            layout.CrossPlatformMeasure(894.7, 812.7);
+            if (i > 0)
+                view.HostWidth.ShouldBe(895.3, "the measure moved the host width again");
+
+            layout.CrossPlatformArrange(new Rect(0, 0, 895.3, 812.7));
+            view.HostWidth.ShouldBe(895.3);
+        }
+
+        panel.State.ShouldBe(FlyoutPanelState.Hidden);
+    }
+
+
+    /// <summary>
     /// Compaction is a response to the viewport; a deliberate choice outranks it. Widening the host
     /// after the user has closed the panel themselves must not re-open it.
     /// </summary>

@@ -9,13 +9,20 @@ namespace Shiny.Maui.Controls.Cells;
 
 public class RadioCell : CellBase
 {
+    /// <summary>Appended to the cell's <see cref="Element.AutomationId"/> to name its radio button.</summary>
+    public const string RadioAutomationIdSuffix = "_Radio";
+
     /// <summary>
     /// Children are built by CellBase's constructor (BuildLayout -> the virtual
     /// CreateAccessoryView override above), so by the time this body runs they exist.
     /// Marking ready here replays any property an implicit Style applied before
     /// construction - see StyleGuard.
     /// </summary>
-    public RadioCell() => StyleGuard.MarkReady(this, typeof(RadioCell));
+    public RadioCell()
+    {
+        AutomationIds.Link(this, radioButton, RadioAutomationIdSuffix);
+        StyleGuard.MarkReady(this, typeof(RadioCell));
+    }
 
     RadioButton radioButton = default!;
 

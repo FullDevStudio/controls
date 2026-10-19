@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls.ImageEditor;
 
@@ -623,6 +624,7 @@ public partial class ImageEditor
             Margin = new Thickness(screen.X, screen.Y, 0, 0)
         };
 
+        AutomationIds.Set(activeTextEntry, AutomationIds.For(this, TextEntryAutomationIdSuffix));
         activeTextEntry.Completed += OnTextEntryCompleted;
         activeTextEntry.Unfocused += OnTextEntryUnfocused;
 

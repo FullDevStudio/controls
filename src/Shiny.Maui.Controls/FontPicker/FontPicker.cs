@@ -8,6 +8,9 @@ namespace Shiny.Maui.Controls.FontPicker;
 
 public class FontPicker : ContentView
 {
+    /// <summary>Appended to the picker's <see cref="Element.AutomationId"/> to name each font row, by its index in <see cref="AvailableFonts"/>: <c>&lt;id&gt;_Font_0</c>.</summary>
+    public const string FontAutomationIdSuffix = "_Font";
+
     readonly VerticalStackLayout listLayout;
     readonly ScrollView scrollView;
 
@@ -22,6 +25,7 @@ public class FontPicker : ContentView
         };
 
         Content = scrollView;
+        AutomationIds.Track(this, NameRows);
 
         // Last line: replays any styled property that was applied before the
         // children existed. See StyleGuard.
@@ -152,7 +156,17 @@ public class FontPicker : ContentView
             listLayout.Children.Add(border);
         }
 
+        NameRows();
         UpdateSelectionHighlight();
+    }
+
+    void NameRows()
+    {
+        for (var i = 0; i < listLayout.Children.Count; i++)
+        {
+            if (listLayout.Children[i] is Element row)
+                AutomationIds.Set(row, AutomationIds.For(this, FontAutomationIdSuffix, i));
+        }
     }
 
     void UpdateSelectionHighlight()

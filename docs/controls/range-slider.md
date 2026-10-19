@@ -99,3 +99,13 @@ thumb. It is not raised when the range ends up where it started.
 The thumbs do **not** grow to fit their content — the travel is measured from the thumb, so the box has
 to be known before anything is laid out. Size them with `ThumbSize`, or with `ThumbWidth`/`ThumbHeight`
 when the content is not square; `ThumbCornerRadius` turns the default pill into any other shape.
+
+## Automation ids (MAUI)
+
+Set `AutomationId` on the control and its parts are named after it, for UI tests (Appium, UI Automation, DevFlow). With no id on the control, the parts get none.
+
+| Part | Id |
+|---|---|
+| Track (tap moves the nearer thumb) | `<id>_Track` |
+| Lower / upper thumb (dragged) | `<id>_LowerThumb / <id>_UpperThumb` |
+| Lower / upper tooltip value label | `<id>_LowerValue / <id>_UpperValue` |

@@ -8,13 +8,20 @@ namespace Shiny.Maui.Controls.Cells;
 
 public class SwitchCell : CellBase
 {
+    /// <summary>Appended to the cell's <see cref="Element.AutomationId"/> to name its switch.</summary>
+    public const string SwitchAutomationIdSuffix = "_Switch";
+
     /// <summary>
     /// Children are built by CellBase's constructor (BuildLayout -> the virtual
     /// CreateAccessoryView override above), so by the time this body runs they exist.
     /// Marking ready here replays any property an implicit Style applied before
     /// construction - see StyleGuard.
     /// </summary>
-    public SwitchCell() => StyleGuard.MarkReady(this, typeof(SwitchCell));
+    public SwitchCell()
+    {
+        AutomationIds.Link(this, switchControl, SwitchAutomationIdSuffix);
+        StyleGuard.MarkReady(this, typeof(SwitchCell));
+    }
 
     Switch switchControl = default!;
 

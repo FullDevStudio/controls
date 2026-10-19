@@ -98,6 +98,9 @@ class TagChipView : ContentView
     /// <summary>The tag this chip stands for.</summary>
     public string Tag { get; private set; } = String.Empty;
 
+    /// <summary>The remove affordance, which TagEntry names for UI tests.</summary>
+    internal View RemoveButton => this.removeHost;
+
     /// <summary>Raised when the remove affordance is tapped.</summary>
     public event EventHandler? RemoveRequested;
 

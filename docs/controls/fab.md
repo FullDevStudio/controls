@@ -123,3 +123,13 @@ Colors default to the theme CSS variables (`--shiny-color-primary`, `--shiny-col
     };
 }
 ```
+
+### Automation ids (MAUI)
+
+Set `AutomationId` on a `FabMenu` and its parts are named after it, for UI tests. An item with its own `AutomationId` keeps it. A plain `Fab` is a single tap target, so its own id is the one to tap.
+
+| Part | Id |
+|---|---|
+| Main button (opens / closes) | `<id>_Fab` |
+| Backdrop (closes when tapped) | `<id>_Backdrop` |
+| Each unnamed item, by index in `Items` | `<id>_Item_<index>` |

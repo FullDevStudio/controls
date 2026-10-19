@@ -4,6 +4,18 @@ namespace Shiny.Maui.Controls;
 
 public class CountryPicker : ContentView
 {
+    /// <summary>Appended to the picker's <see cref="Element.AutomationId"/> to name the search entry.</summary>
+    public const string EntryAutomationIdSuffix = AutoCompleteEntry.EntryAutomationIdSuffix;
+
+    /// <summary>Names the floating list of matching countries.</summary>
+    public const string DropDownAutomationIdSuffix = AutoCompleteEntry.DropDownAutomationIdSuffix;
+
+    /// <summary>Names each country in the list by its ISO 3166 alpha-2 code: <c>&lt;id&gt;_Suggestion_CA</c>.</summary>
+    public const string SuggestionAutomationIdSuffix = AutoCompleteEntry.SuggestionAutomationIdSuffix;
+
+    /// <summary>Names the flag of the selected country.</summary>
+    public const string FlagAutomationIdSuffix = "_Flag";
+
     static readonly bool showFlags = DeviceInfo.Platform != DevicePlatform.WinUI;
 
     readonly AutoCompleteEntry autoComplete;
@@ -50,6 +62,8 @@ public class CountryPicker : ContentView
             })
         };
         autoComplete.ItemSelected += OnItemSelected;
+        // Keyed by code rather than index, so a test picks the same country whatever was typed.
+        autoComplete.SuggestionKey = static item => (item as Country)?.Code2;
 
         selectedFlagLabel = new Label
         {
@@ -72,6 +86,10 @@ public class CountryPicker : ContentView
         rootGrid.Add(autoComplete, 1, 0);
 
         Content = rootGrid;
+
+        // The inner field's parts are named after this control, not after a second id of its own.
+        AutomationIds.Track(this, () => autoComplete.NamePartsAfter(AutomationId));
+        AutomationIds.Link(this, selectedFlagLabel, FlagAutomationIdSuffix);
 
         // Last line: replays any styled property that was applied before the
         // children existed. See StyleGuard.

@@ -30,6 +30,9 @@ sealed class DialogView : ContentView
         this.config = config;
         this.context = new DialogContext(config, this.OnConfirm, this.OnCancel, this.OnSelect);
 
+        // named first: every part below takes its id from this one through AutomationIds.For
+        AutomationIds.Set(this, config.AutomationId);
+
         this.backdrop = new BoxView
         {
             Color = Colors.Black,
@@ -41,6 +44,7 @@ sealed class DialogView : ContentView
             tap.Tapped += (_, _) => this.OnCancel();
             this.backdrop.GestureRecognizers.Add(tap);
         }
+        AutomationIds.Set(this.backdrop, AutomationIds.For(this, DialogConfig.BackdropAutomationIdSuffix));
 
         this.card = options.ContentTemplate is { } template
             ? this.BuildTemplatedCard(template)
@@ -104,6 +108,7 @@ sealed class DialogView : ContentView
                 FontAttributes = FontAttributes.Bold
             };
             ApplyColor(title, Label.TextColorProperty, this.config.TitleColor, ShinyThemeKeys.Color.OnSurface, FallbackOnSurface);
+            AutomationIds.Set(title, AutomationIds.For(this, DialogConfig.TitleAutomationIdSuffix));
             stack.Add(title);
         }
 
@@ -113,6 +118,7 @@ sealed class DialogView : ContentView
             {
                 Text = this.config.Message}.WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
             ApplyColor(message, Label.TextColorProperty, this.config.MessageColor, ShinyThemeKeys.Color.OnSurfaceVariant, FallbackOnSurfaceVariant);
+            AutomationIds.Set(message, AutomationIds.For(this, DialogConfig.MessageAutomationIdSuffix));
             stack.Add(message);
         }
 
@@ -134,6 +140,7 @@ sealed class DialogView : ContentView
                 };
                 entry.SetBinding(Entry.TextProperty, static (DialogContext c) => c.PromptValue, BindingMode.TwoWay);
                 entry.Completed += (_, _) => this.OnConfirm();
+                AutomationIds.Set(entry, AutomationIds.For(this, DialogConfig.EntryAutomationIdSuffix));
                 stack.Add(entry);
             }
 
@@ -151,6 +158,7 @@ sealed class DialogView : ContentView
                     this.config.CancelButtonTextColor, ShinyThemeKeys.Color.OnSurfaceVariant, FallbackOnSurfaceVariant
                 );
                 cancel.Clicked += (_, _) => this.OnCancel();
+                AutomationIds.Set(cancel, AutomationIds.For(this, DialogConfig.CancelAutomationIdSuffix));
                 buttons.Add(cancel);
             }
 
@@ -160,6 +168,7 @@ sealed class DialogView : ContentView
                 this.config.OkButtonTextColor, ShinyThemeKeys.Color.OnPrimary, FallbackOnPrimary
             );
             ok.Clicked += (_, _) => this.OnConfirm();
+            AutomationIds.Set(ok, AutomationIds.For(this, DialogConfig.OkAutomationIdSuffix));
             buttons.Add(ok);
 
             stack.Add(buttons);
@@ -182,6 +191,7 @@ sealed class DialogView : ContentView
     void AddActionSheetBody(VerticalStackLayout stack)
     {
         var list = new VerticalStackLayout { Spacing = 8 };
+        var index = 0;
         foreach (var option in this.config.Actions)
         {
             var button = new Button
@@ -200,6 +210,7 @@ sealed class DialogView : ContentView
 
             var captured = option;
             button.Clicked += (_, _) => this.OnSelect(captured);
+            AutomationIds.Set(button, AutomationIds.For(this, DialogConfig.ActionAutomationIdSuffix, index++));
             list.Add(button);
         }
 
@@ -216,6 +227,7 @@ sealed class DialogView : ContentView
             cancel.HorizontalOptions = LayoutOptions.Fill;
             cancel.Margin = new Thickness(0, 4, 0, 0);
             cancel.Clicked += (_, _) => this.OnCancel();
+            AutomationIds.Set(cancel, AutomationIds.For(this, DialogConfig.CancelAutomationIdSuffix));
             stack.Add(cancel);
         }
     }

@@ -580,7 +580,7 @@ public partial class DataGrid
     }
 
     /// <summary>Wraps a tree column's cell with its indent and expand caret.</summary>
-    View WrapTreeCell(View cell)
+    View WrapTreeCell(View cell, out View toggle)
     {
         var indent = new BoxView { BackgroundColor = Colors.Transparent, HeightRequest = 1 };
         indent.SetBinding(VisualElement.WidthRequestProperty, static (DataGridRow r) => r.Level,
@@ -606,6 +606,7 @@ public partial class DataGrid
                 this.ToggleRow(row.Data);
         };
         caretHost.GestureRecognizers.Add(tap);
+        toggle = caretHost;
 
         var grid = new Grid
         {

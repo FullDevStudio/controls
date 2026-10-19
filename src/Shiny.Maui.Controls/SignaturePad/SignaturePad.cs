@@ -7,6 +7,24 @@ namespace Shiny.Maui.Controls.SignaturePad;
 
 public partial class SignaturePad : ContentView
 {
+    /// <summary>
+    /// Appended to the pad's own <see cref="Element.AutomationId"/> to name the sheet's content. The sheet
+    /// is a <see cref="FloatingPanel.FloatingPanel"/>, so it is not under the pad in the tree.
+    /// </summary>
+    public const string PopupAutomationIdSuffix = "_Popup";
+
+    /// <summary>Names the drawing surface.</summary>
+    public const string CanvasAutomationIdSuffix = "_Canvas";
+
+    /// <summary>Names the sign (accept) button.</summary>
+    public const string SignAutomationIdSuffix = "_Sign";
+
+    /// <summary>Names the cancel button.</summary>
+    public const string CancelAutomationIdSuffix = "_Cancel";
+
+    /// <summary>Names the clear button.</summary>
+    public const string ClearAutomationIdSuffix = "_Clear";
+
     readonly SignaturePadDrawable drawable;
     readonly GraphicsView graphicsView;
     readonly Button signButton;
@@ -109,6 +127,12 @@ public partial class SignaturePad : ContentView
         Grid.SetRow(canvasGrid, 1);
         contentGrid.Children.Add(buttonBar);
         Grid.SetRow(buttonBar, 2);
+
+        AutomationIds.Link(this, contentGrid, PopupAutomationIdSuffix);
+        AutomationIds.Link(this, graphicsView, CanvasAutomationIdSuffix);
+        AutomationIds.Link(this, signButton, SignAutomationIdSuffix);
+        AutomationIds.Link(this, cancelButton, CancelAutomationIdSuffix);
+        AutomationIds.Link(this, clearButton, ClearAutomationIdSuffix);
 
         floatingPanel = new FloatingPanel.FloatingPanel
         {

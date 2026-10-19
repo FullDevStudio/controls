@@ -77,3 +77,10 @@ same property itself, so one odd expander in the list stays odd. `ItemStyle` (MA
     <Expander HeaderText="Billing">…</Expander>
 </Accordion>
 ```
+
+### Automation ids (MAUI)
+
+Set `AutomationId` on an `Expander` and its header row, which carries the tap, is named after it:
+`<id>_Header` (`Expander.HeaderAutomationIdSuffix`). Drive the header id in a UI test; the expander's own
+id finds nothing to tap. The header follows the expander's id when it changes, so a bound id in a
+`BindableLayout` / `ItemsSource` template is fine across rebuilds.

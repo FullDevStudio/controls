@@ -43,3 +43,13 @@ public class MyGeoProvider : IAddressSearchProvider
     }
 }
 ```
+
+### Automation ids (MAUI)
+
+Set `AutomationId` on the control and its parts are named after it, for UI tests (Appium, UI Automation, DevFlow). Without an id, the parts get none.
+
+| Part | Id |
+|---|---|
+| The text field | `<id>_Entry` |
+| The results dropdown | `<id>_DropDown` |
+| Each matching address, by position | `<id>_Suggestion_0` |

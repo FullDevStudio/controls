@@ -483,3 +483,15 @@ token cannot reach a gradient stop, so the brush is rebuilt from the colour the 
 with. On Blazor `ribbon.js` marks each scroller with which side overflows and the stylesheet draws an
 inset shadow in the surface colour — an inset shadow rather than a mask, which would fade the bar's own
 background out and show the page through its edge.
+
+### Automation ids (MAUI)
+
+Set `AutomationId` on the `Ribbon` and its chrome is named after it. Tabs, groups and items with their own `AutomationId` keep it; an unnamed tab is named by its position in `Tabs`. Without an id on the ribbon the chevron and File button keep `RibbonCollapseToggle` / `RibbonApplicationButton`.
+
+| Part | Id |
+|---|---|
+| Collapse chevron | `<id>_CollapseToggle` |
+| Application (File) button | `<id>_ApplicationButton` |
+| Each unnamed tab | `<id>_Tab_<index>` |
+| An open dropdown or group popup card | `<id>_Menu` |
+| Each line of an open dropdown | `<id>_MenuItem_<index>` |

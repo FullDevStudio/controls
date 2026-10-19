@@ -77,3 +77,14 @@ Method: `ReloadAsync()` re-fetches, skipping both cache tiers.
 - Remote loading with caching, progress ring and placeholder/error artwork (MAUI)
 
 On Blazor, `Source` is a URL string handed straight to `<img>` — the loading pipeline is MAUI-only for now.
+
+### Automation ids (MAUI)
+
+Set `AutomationId` on the control and its parts are named after it, for UI tests (Appium, UI Automation, DevFlow). Without an id the parts get none.
+
+| Part | Id |
+|---|---|
+| Thumbnail (tap to open) | `<id>_Thumbnail` |
+| Full-screen overlay (lives in the page's overlay layer) | `<id>_Popup` |
+| Zoomable image | `<id>_Image` |
+| Close button (default or `CloseButtonTemplate` root) | `<id>_Close` |

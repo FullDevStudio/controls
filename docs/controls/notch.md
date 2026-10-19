@@ -94,3 +94,11 @@ await notchWindow.SetContentAsync(new NowPlayingView());
 - The window never takes keyboard focus. It is for glancing and clicking, not typing.
 
 <!-- TODO: capture screenshots for notch -->
+
+## Automation ids (MAUI)
+
+Set `AutomationId` on the notch and its surface is named after it, for UI tests:
+
+| Part | Id |
+|---|---|
+| Surface (the morphing card, tap target) | `<id>_Surface` |

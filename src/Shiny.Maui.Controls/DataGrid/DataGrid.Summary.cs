@@ -210,8 +210,10 @@ public partial class DataGrid
             return;
 
         var items = this.ProcessedData();
-        foreach (var definition in definitions)
+        for (var d = 0; d < definitions.Count; d++)
         {
+            var definition = definitions[d];
+            var summaryIndex = d;
             var grid = new Grid
             {
                 ColumnDefinitions = this.BuildColumnDefinitions(),
@@ -222,7 +224,12 @@ public partial class DataGrid
             this.LayoutCells(
                 grid,
                 this.LeadingPlaceholders(),
-                column => this.BuildSummaryCell(column, definition, item),
+                column =>
+                {
+                    var cell = this.BuildSummaryCell(column, definition, item);
+                    this.NamePart(cell, FooterAutomationIdSuffix, summaryIndex, this.ColumnIndex(column));
+                    return cell;
+                },
                 this.StyleSurfacePane
             );
             this.footerStack.Children.Add(grid);

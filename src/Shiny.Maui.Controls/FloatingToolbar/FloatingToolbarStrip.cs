@@ -1,3 +1,4 @@
+using Shiny.Maui.Controls.Infrastructure;
 using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls;
@@ -53,6 +54,14 @@ class FloatingToolbarStrip : Border
         this.SetDynamicResource(BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceContainerHigh);
         this.SetDynamicResource(StrokeProperty, ShinyThemeKeys.Color.OutlineVariant);
     }
+
+
+    /// <summary>
+    /// The id the strip's items are named after (<c>&lt;base&gt;_&lt;index&gt;</c>, the overflow button
+    /// <c>&lt;base&gt;_Overflow</c>), set by the owning toolbar before <see cref="Build"/>. Null keeps the
+    /// <c>toolbar-item-&lt;text&gt;</c> ids an earlier release shipped.
+    /// </summary>
+    public string? ItemAutomationIdBase { get; set; }
 
 
     /// <summary>A leaf item was pressed.</summary>
@@ -117,8 +126,8 @@ class FloatingToolbarStrip : Border
             visible = visible.Take(keep).ToList();
         }
 
-        foreach (var item in visible)
-            this.items.Children.Add(this.BuildItem(item));
+        for (var i = 0; i < visible.Count; i++)
+            this.items.Children.Add(this.BuildItem(visible[i], this.ItemAutomationIdBase is { } b ? $"{b}_{i}" : null));
 
         if (overflow.Count > 0 && overflowItem is not null)
         {
@@ -126,7 +135,7 @@ class FloatingToolbarStrip : Border
             foreach (var item in overflow)
                 overflowItem.Children.Add(item);
 
-            this.items.Children.Add(this.BuildItem(overflowItem));
+            this.items.Children.Add(this.BuildItem(overflowItem, this.ItemAutomationIdBase is { } b ? b + FloatingToolbar.OverflowAutomationIdSuffix : null));
             visible.Add(overflowItem);
         }
 
@@ -134,7 +143,7 @@ class FloatingToolbarStrip : Border
     }
 
 
-    View BuildItem(ShinyToolbarItem item)
+    View BuildItem(ShinyToolbarItem item, string? automationId)
     {
         if (item.IsSeparator)
             return this.BuildSeparator();
@@ -208,8 +217,9 @@ class FloatingToolbarStrip : Border
             ? (View)this.WithBadge(button, item.Badge)
             : button;
 
-        // AutomationId is set-once in MAUI, so it is stamped here and never re-stamped on rebuild.
-        host.AutomationId = "toolbar-item-" + (item.Text ?? item.Tooltip ?? "item");
+        // Through AutomationIds, never the set-once setter. The text-based id is the fallback that
+        // shipped first, for a toolbar that has no id of its own.
+        AutomationIds.Set(host, automationId ?? "toolbar-item-" + (item.Text ?? item.Tooltip ?? "item"));
 
         if (item.IsEnabled)
         {

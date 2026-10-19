@@ -247,6 +247,21 @@ row instead, positioned at the rectangle the engine computed.
   MAUI colour string or any CSS colour) — it wins over the palette but not over the critical
   highlight, which is a statement about the plan rather than about the task.
 
+## Automation ids (MAUI)
+
+Set `AutomationId` on the control and its parts are named after it, for UI tests (Appium, UI Automation, DevFlow). With no id on the control, the parts get none.
+
+| Part | Id |
+|---|---|
+| Task-pane row, by `GanttTask.Id` | `<id>_Task_<task id>` |
+| A row's cell, by column index | `<id>_Task_<task id>_Cell_0` |
+| A summary row's expand/collapse chevron | `<id>_Task_<task id>_Expand` |
+| Timeline (takes every bar tap, drag and pinch) | `<id>_Timeline` |
+| Task-pane splitter | `<id>_Splitter` |
+| A `BarTemplate` bar, by `GanttTask.Id` | `<id>_Bar_<task id>` |
+
+Rows are keyed by task id rather than row number, because collapsing a summary renumbers everything below it. Default bars are drawn, not views, so they have no id of their own; drive them through `<id>_Timeline`.
+
 ## Validation
 
 A plan that fails validation still renders. `GanttModel.Issues` reports dangling dependencies,

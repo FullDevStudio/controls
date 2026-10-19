@@ -32,6 +32,12 @@ namespace Shiny.Maui.Controls;
 /// </remarks>
 public partial class TimelineView : ContentView
 {
+    /// <summary>
+    /// Appended to the timeline's <see cref="Element.AutomationId"/>, then the item's index, to name each
+    /// row - the view <see cref="NodeTapped"/> listens on: <c>&lt;id&gt;_Node_0</c>.
+    /// </summary>
+    public const string NodeAutomationIdSuffix = "_Node";
+
     readonly VerticalStackLayout stack;
     readonly List<NodeVisual> visuals = new();
 
@@ -56,6 +62,16 @@ public partial class TimelineView : ContentView
     {
         this.stack = new VerticalStackLayout { Spacing = 0 };
         this.BuildShell();
+        AutomationIds.Track(this, this.NameRows);
+    }
+
+    void NameRows()
+    {
+        for (var i = 0; i < this.stack.Count; i++)
+        {
+            if (this.stack[i] is Element row)
+                AutomationIds.Set(row, AutomationIds.For(this, NodeAutomationIdSuffix, i));
+        }
     }
 
     void BuildShell()
@@ -120,6 +136,8 @@ public partial class TimelineView : ContentView
 
         for (var i = 0; i < items.Count; i++)
             this.stack.Add(this.BuildRow(items[i], i, items.Count));
+
+        this.NameRows();
     }
 
     View BuildRow(object item, int index, int count)

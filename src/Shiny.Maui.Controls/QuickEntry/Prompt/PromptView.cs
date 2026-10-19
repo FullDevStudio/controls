@@ -26,6 +26,30 @@ namespace Shiny.Maui.Controls.QuickEntry;
 /// </remarks>
 public class PromptView : ContentView, IQuickEntryKeyHandler, IQuickEntryPresentationAware, IQuickEntryBusyState, IQuickEntryAutoSize
 {
+    /// <summary>Appended to the prompt's <see cref="Element.AutomationId"/> to name the entry a test types into.</summary>
+    public const string EntryAutomationIdSuffix = "_Entry";
+
+    /// <summary>Names the submit (stop, while busy) button.</summary>
+    public const string SubmitAutomationIdSuffix = "_Submit";
+
+    /// <summary>Names the microphone button.</summary>
+    public const string MicrophoneAutomationIdSuffix = "_Microphone";
+
+    /// <summary>Names the busy status line.</summary>
+    public const string BusyAutomationIdSuffix = "_Busy";
+
+    /// <summary>Names the built-in label that shows a string <see cref="Response"/>.</summary>
+    public const string ResponseAutomationIdSuffix = "_Response";
+
+    /// <summary>Names each suggestion row, with its position: <c>&lt;id&gt;_Suggestion_0</c>.</summary>
+    public const string SuggestionAutomationIdSuffix = "_Suggestion";
+
+    /// <summary>Names each leading tool without an id of its own, with its position: <c>&lt;id&gt;_LeadingTool_0</c>.</summary>
+    public const string LeadingToolAutomationIdSuffix = "_LeadingTool";
+
+    /// <summary>Names each trailing tool without an id of its own, with its position: <c>&lt;id&gt;_TrailingTool_0</c>.</summary>
+    public const string TrailingToolAutomationIdSuffix = "_TrailingTool";
+
     // -----------------------------------------------------------------------------------------
     // Content
     // -----------------------------------------------------------------------------------------
@@ -271,6 +295,9 @@ public class PromptView : ContentView, IQuickEntryKeyHandler, IQuickEntryPresent
     readonly List<PromptTool> attachedLeadingTools = new();
     readonly List<PromptTool> attachedTrailingTools = new();
     int highlightIndex = -1;
+
+    // Views this prompt named itself; a tool or templated row that brought its own id keeps it.
+    readonly HashSet<View> namedParts = new();
     bool built;
     bool measuring;
 
@@ -424,6 +451,14 @@ public class PromptView : ContentView, IQuickEntryKeyHandler, IQuickEntryPresent
         // told about.
         this.card.SizeChanged += (_, _) => this.RaiseDesiredHeightChanged();
         this.card.MeasureInvalidated += (_, _) => this.RaiseDesiredHeightChanged();
+
+        // Through SetValue, not the AutomationId setter: that throws the second time. See AutomationIds.
+        AutomationIds.Link(this, this.entry, EntryAutomationIdSuffix);
+        AutomationIds.Link(this, this.submitButton, SubmitAutomationIdSuffix);
+        AutomationIds.Link(this, this.micButton, MicrophoneAutomationIdSuffix);
+        AutomationIds.Link(this, this.busyLabel, BusyAutomationIdSuffix);
+        AutomationIds.Link(this, this.responseLabel, ResponseAutomationIdSuffix);
+        AutomationIds.Track(this, this.NameRepeatedParts);
 
         this.built = true;
 
@@ -1198,6 +1233,7 @@ public class PromptView : ContentView, IQuickEntryKeyHandler, IQuickEntryPresent
     void RebuildSuggestions()
     {
         this.suggestionList.Children.Clear();
+        this.namedParts.ExceptWith(this.suggestionRows);
         this.suggestionRows.Clear();
         this.suggestionItems.Clear();
         this.highlightIndex = -1;
@@ -1219,9 +1255,43 @@ public class PromptView : ContentView, IQuickEntryKeyHandler, IQuickEntryPresent
             }
         }
 
+        this.NameSuggestions();
         this.UpdateTextColors();
         this.UpdateHighlight();
         this.UpdateBodyVisibility();
+    }
+
+    void NameRepeatedParts()
+    {
+        this.NameSuggestions();
+        this.NameTools(this.leadingToolsLayout, LeadingToolAutomationIdSuffix);
+        this.NameTools(this.trailingToolsLayout, TrailingToolAutomationIdSuffix);
+    }
+
+    void NameSuggestions()
+    {
+        for (var i = 0; i < this.suggestionRows.Count; i++)
+            this.NamePart(this.suggestionRows[i], AutomationIds.For(this, SuggestionAutomationIdSuffix, i));
+    }
+
+    void NameTools(HorizontalStackLayout layout, string suffix)
+    {
+        var i = 0;
+        foreach (var tool in layout.Children.OfType<PromptTool>())
+            this.NamePart(tool, AutomationIds.For(this, suffix, i++));
+    }
+
+    // Names a part unless it arrived with an id of its own.
+    void NamePart(View part, string? id)
+    {
+        if (!String.IsNullOrEmpty(part.AutomationId) && !this.namedParts.Contains(part))
+            return;
+
+        AutomationIds.Set(part, id);
+        if (id is null)
+            this.namedParts.Remove(part);
+        else
+            this.namedParts.Add(part);
     }
 
     View BuildRow(object item)
@@ -1337,6 +1407,8 @@ public class PromptView : ContentView, IQuickEntryKeyHandler, IQuickEntryPresent
 
         attached.Clear();
         attached.AddRange(current);
+
+        this.NameTools(layout, ReferenceEquals(layout, this.leadingToolsLayout) ? LeadingToolAutomationIdSuffix : TrailingToolAutomationIdSuffix);
 
         this.RaiseDesiredHeightChanged();
     }

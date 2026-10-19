@@ -146,4 +146,11 @@ public sealed class QuickEntryOptions
     /// is borderless) but it shows up in accessibility tooling and window lists. Default "Quick Entry".
     /// </summary>
     public string WindowTitle { get; set; } = "Quick Entry";
+
+    /// <summary>
+    /// AutomationId given to the popup's content when it is built, so a UI test can reach it — and,
+    /// for the default <see cref="PromptView"/>, its parts (<c>&lt;id&gt;_Entry</c>, <c>&lt;id&gt;_Submit</c>, …).
+    /// Default null. Content from <see cref="ContentFactory"/> that already carries an id keeps its own.
+    /// </summary>
+    public string? AutomationId { get; set; }
 }

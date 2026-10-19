@@ -47,3 +47,12 @@ right, deliberately.
 Triggers are `Manual` / `Tap` / `LongPress` / `Hover` / `Focus` on MAUI, and `Manual` / `Hover` / `Click` /
 `Focus` / `HoverOrFocus` (the default) / `LongPress` on Blazor — `HoverOrFocus` being the accessible one,
 since a hover-only tooltip is unreachable by keyboard.
+
+## Automation ids (MAUI)
+
+The bubble opens in the page's overlay layer, not under the tooltip, so it is named after the tooltip's `AutomationId`. An attached tooltip (`TooltipProperties.Text`) has no id of its own and uses its target view's.
+
+| Part | Id |
+|---|---|
+| The bubble (tap target) | `<id>_Bubble` |
+| Title / text labels | `<id>_Title`, `<id>_Text` |

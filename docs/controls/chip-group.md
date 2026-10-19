@@ -159,3 +159,12 @@ Set `ChipBackgroundColor` or `SelectedChipBackgroundColor` and the chip's ink is
 - Use `SelectionMode="None"` plus `ChipTappedCommand` for a row of action chips; do not fake it with a selection mode you then clear.
 - Set `MaxSelectionCount` when the backend has a limit — the cap is visible behaviour rather than a validation error after submit.
 - Leave the colour properties unset so the theme carries through.
+
+### Automation ids (MAUI)
+
+Set `AutomationId` on the group and its chips are named after it, for UI tests, in `ItemsSource` order:
+
+| Part | Id |
+|---|---|
+| Each chip | `<id>_Chip_<index>` |
+| A chip's remove button (`CanRemove`) | `<id>_Chip_<index>_Remove` |

@@ -99,6 +99,19 @@ public static class ControlsMauiAppBuilderExtensions
         });
 #endif
 
+#if ANDROID || IOS || WINDOWS
+        // Button semantics for the controls that are buttons drawn from a tap gesture - see ITapTarget.
+        // Not on the net10.0 build, whose AppKit/GTK4 heads bring their own content-view handler.
+        builder.ConfigureMauiHandlers(handlers =>
+        {
+            handlers.AddHandler<ShinyButton, TapTargetHandler>();
+            handlers.AddHandler<Fab, TapTargetHandler>();
+            handlers.AddHandler<FabMenuItem, TapTargetHandler>();
+            handlers.AddHandler<IconTextTool, TapTargetHandler>();
+            handlers.AddHandler<ChipView, TapTargetHandler>();
+        });
+#endif
+
 #if ANDROID
         // In-page overlays (ribbon dropdowns, the Office backstage and dialogs) take the back button
         // while they are open - see AndroidBackButton.

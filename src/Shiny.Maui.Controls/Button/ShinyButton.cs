@@ -23,7 +23,7 @@ namespace Shiny.Maui.Controls;
 /// arbitrary <see cref="View"/>, in ascending order of precedence. Motion icons get their colour and
 /// their playback from the button for free: they play a cycle on tap and loop while busy.</para>
 /// </remarks>
-public partial class ShinyButton : ContentView
+public partial class ShinyButton : ContentView, ITapTarget
 {
     const double DefaultIconSize = 20;
     const double DefaultIconSpacing = 8;
@@ -761,6 +761,8 @@ public partial class ShinyButton : ContentView
     /// Everything a tap does. Separated from the gesture handler so it can be driven without one —
     /// same shape as <see cref="IconTextTool.Invoke"/>.
     /// </summary>
+    void ITapTarget.Invoke() => this.Invoke();
+
     internal void Invoke()
     {
         if (!this.IsEnabled)

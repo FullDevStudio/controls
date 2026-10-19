@@ -58,6 +58,9 @@ public sealed class DataGridGroupHeader
     /// </summary>
     public string Path { get; }
 
+    /// <summary>Position among the grid's group headers in display order; names the header for UI tests.</summary>
+    internal int Index { get; init; }
+
     public string CaretGlyph => this.Collapsed ? "▸" : "▾";
 
     public string Display => $"{this.Title}: {this.KeyText ?? this.Key?.ToString()} ({this.Count})";

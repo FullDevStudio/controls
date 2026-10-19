@@ -8,6 +8,24 @@ namespace Shiny.Maui.Controls.Tree;
 
 public partial class TreeView : ContentView
 {
+    /// <summary>Appended to the tree's <see cref="Element.AutomationId"/>, with the row's index in visible order, to name each node's row (the selection tap target).</summary>
+    public const string NodeAutomationIdSuffix = "_Node";
+
+    /// <summary>Appended to the tree's <see cref="Element.AutomationId"/>, with the row's index, to name each node's expand/collapse chevron.</summary>
+    public const string ExpandAutomationIdSuffix = "_Expand";
+
+    /// <summary>
+    /// Appended to the tree's <see cref="Element.AutomationId"/>, with the row's index, to name each node's
+    /// multi-select checkbox. Without a tree id every checkbox keeps the fixed <c>ShinyTreeNodeCheckBox</c>.
+    /// </summary>
+    public const string CheckBoxAutomationIdSuffix = "_CheckBox";
+
+    /// <summary>Appended to the tree's <see cref="Element.AutomationId"/> to name the root loading indicator.</summary>
+    public const string LoadingAutomationIdSuffix = "_Loading";
+
+    /// <summary>Appended to the tree's <see cref="Element.AutomationId"/> to name the label shown when the root load fails.</summary>
+    public const string ErrorAutomationIdSuffix = "_Error";
+
     readonly ScrollView scrollView;
     internal readonly VerticalStackLayout rowLayout;
     readonly ActivityIndicator rootLoadingIndicator;
@@ -46,6 +64,11 @@ public partial class TreeView : ContentView
 
         root = new Grid { Children = { scrollView, rootLoadingIndicator, rootErrorLabel } };
         Content = root;
+
+        AutomationIds.Link(this, rootLoadingIndicator, LoadingAutomationIdSuffix);
+        AutomationIds.Link(this, rootErrorLabel, ErrorAutomationIdSuffix);
+        // Rows are rebuilt on every change and named as they are built; this renames the current ones.
+        AutomationIds.Track(this, NameRows);
 
         // Last line: replays any styled property that was applied before the
         // children existed. See StyleGuard.
@@ -200,9 +223,11 @@ public partial class TreeView : ContentView
 
             rowLayout.Children.Clear();
             var newViews = new Dictionary<TreeNode, TreeNodeView>();
-            foreach (var node in flatNodes)
+            for (var i = 0; i < flatNodes.Count; i++)
             {
+                var node = flatNodes[i];
                 var view = new TreeNodeView(this, node);
+                view.ApplyAutomationIds(i);
                 newViews[node] = view;
                 rowLayout.Children.Add(view);
             }
@@ -213,6 +238,16 @@ public partial class TreeView : ContentView
         finally
         {
             isRebuilding = false;
+        }
+    }
+
+    void NameRows()
+    {
+        var i = 0;
+        foreach (var child in rowLayout.Children)
+        {
+            if (child is TreeNodeView row)
+                row.ApplyAutomationIds(i++);
         }
     }
 

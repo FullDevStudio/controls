@@ -50,3 +50,7 @@ With nothing reported, the line **trickles**: it decelerates toward `TrickleCeil
 | RespectSafeArea | bool | true | **Blazor** - clear the notch/home indicator via `env(safe-area-inset-*)` |
 
 `ProgressLineConfig` (the `Start` argument) carries the same appearance settings plus `Trickle`, `StartProgress`, `TrickleCeiling`, `TrickleInterval` and `TrickleRate`.
+
+## Automation ids (MAUI)
+
+A placed `ProgressLine` carries its own `AutomationId`. The service's line sits in the page's overlay layer, so name it through the config: `progress.Start(c => c.AutomationId = "PageLoading")`. Overlapping runs share one line, and the last run's id wins.

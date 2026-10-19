@@ -9,6 +9,21 @@ namespace Shiny.Maui.Controls;
 [ContentProperty(nameof(RightTools))]
 public partial class TextEntry : ContentView, IKeyboardAccessoryHost
 {
+    /// <summary>Appended to the field's <see cref="Element.AutomationId"/> to name the native entry a test types into.</summary>
+    public const string EntryAutomationIdSuffix = "_Entry";
+
+    /// <summary>Appended to the field's <see cref="Element.AutomationId"/> to name the hint / error / character-count label.</summary>
+    public const string HintAutomationIdSuffix = "_Hint";
+
+    /// <summary>Appended to the field's <see cref="Element.AutomationId"/> to name a <see cref="ClearButtonTool"/>.</summary>
+    public const string ClearAutomationIdSuffix = "_Clear";
+
+    /// <summary>Names each other left tool, with its index: <c>&lt;id&gt;_LeftTool_0</c>.</summary>
+    public const string LeftToolAutomationIdSuffix = "_LeftTool";
+
+    /// <summary>Names each other right tool, with its index: <c>&lt;id&gt;_RightTool_0</c>.</summary>
+    public const string RightToolAutomationIdSuffix = "_RightTool";
+
     // Floating-label animation. The floated label is an M3 outlined "notch": it rides up onto the
     // top border line and paints the field background behind itself, so it never shares vertical
     // space with the text being typed.
@@ -44,6 +59,10 @@ public partial class TextEntry : ContentView, IKeyboardAccessoryHost
 
     IDisposable? leftToolsSubscription;
     IDisposable? rightToolsSubscription;
+
+    // Tools this field named itself. A tool the app gave its own AutomationId keeps it; one we named
+    // follows the field's id, including back to none.
+    readonly HashSet<TextEntryTool> namedTools = new();
 
     bool suppressTextChanged;
     bool isPlaceholderUp;
@@ -173,6 +192,13 @@ public partial class TextEntry : ContentView, IKeyboardAccessoryHost
         placeholderLabel.SizeChanged += (_, _) => UpdatePlaceholderGeometry();
 
         Content = rootGrid;
+
+        // Through SetValue, not the AutomationId setter: that throws the second time. See AutomationIds.
+        AutomationIds.Track(this, () =>
+        {
+            if (idOwner is null)
+                NameParts();
+        });
 
         // Initialize tool collections
         LeftTools = new ObservableCollection<TextEntryTool>();
@@ -650,7 +676,56 @@ public partial class TextEntry : ContentView, IKeyboardAccessoryHost
             }
         }
 
+        NameTools();
         ApplyToolStyle();
+    }
+
+    // Whose id the parts are named after: this field's, or a composing control's (PasswordStrength), so
+    // they read <password id>_Entry rather than carrying a second, made-up id for the inner field.
+    // Null means this field.
+    Element? idOwner;
+    Element IdOwner => idOwner ?? this;
+
+    /// <summary>Names the parts after <paramref name="owner"/>'s id instead of this field's, from then on.</summary>
+    internal void NamePartsAfter(Element owner)
+    {
+        idOwner = owner;
+        NameParts();
+    }
+
+    void NameParts()
+    {
+        AutomationIds.Set(entry, AutomationIds.For(IdOwner, EntryAutomationIdSuffix));
+        AutomationIds.Set(hintLabel, AutomationIds.For(IdOwner, HintAutomationIdSuffix));
+        NameTools();
+    }
+
+    // The clear tool gets _Clear; every other tool its rail and index. Runs on every rebuild and
+    // whenever the field's own id changes.
+    void NameTools()
+    {
+        NameTools(leftToolsLayout, LeftToolAutomationIdSuffix);
+        NameTools(rightToolsLayout, RightToolAutomationIdSuffix);
+    }
+
+    void NameTools(HorizontalStackLayout layout, string suffix)
+    {
+        var i = 0;
+        foreach (var tool in layout.Children.OfType<TextEntryTool>())
+        {
+            var index = i++;
+            if (!String.IsNullOrEmpty(tool.AutomationId) && !namedTools.Contains(tool))
+                continue;
+
+            var id = tool is ClearButtonTool
+                ? AutomationIds.For(IdOwner, ClearAutomationIdSuffix)
+                : AutomationIds.For(IdOwner, suffix, index);
+            AutomationIds.Set(tool, id);
+            if (id is null)
+                namedTools.Remove(tool);
+            else
+                namedTools.Add(tool);
+        }
     }
 
     // Paints the tool rails for the current ToolStyle. Inline is the default: no addon block, no

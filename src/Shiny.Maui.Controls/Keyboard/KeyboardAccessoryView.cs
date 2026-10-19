@@ -20,11 +20,26 @@ public class KeyboardAccessoryView : ContentView
 {
     const double DefaultBarHeight = 44;
 
+    /// <summary>Appended to the bar's <see cref="Element.AutomationId"/> to name a previous-field <see cref="KeyboardNavigationItem"/>.</summary>
+    public const string PreviousAutomationIdSuffix = "_Previous";
+
+    /// <summary>Names a next-field <see cref="KeyboardNavigationItem"/>.</summary>
+    public const string NextAutomationIdSuffix = "_Next";
+
+    /// <summary>Names a <see cref="KeyboardDismissItem"/>.</summary>
+    public const string DoneAutomationIdSuffix = "_Done";
+
+    /// <summary>Names every other <see cref="KeyboardAccessoryItem"/>, with its position among the items: <c>&lt;id&gt;_Item_0</c>.</summary>
+    public const string ItemAutomationIdSuffix = "_Item";
+
     readonly Grid root;
     readonly Grid itemsGrid;
     readonly BoxView topLine;
 
     IDisposable? itemsSubscription;
+
+    // Items this bar named itself; one the app gave its own AutomationId keeps it.
+    readonly HashSet<KeyboardAccessoryItem> namedItems = new();
 
     public KeyboardAccessoryView()
     {
@@ -45,6 +60,10 @@ public class KeyboardAccessoryView : ContentView
         SetDynamicResource(BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceContainerHigh);
 
         Items = new ObservableCollection<View>();
+
+        // The bar sits outside the field's tree (the iOS input accessory view, Android's content frame)
+        // and can be shared between fields, so its items are named after the bar, not a field.
+        AutomationIds.Track(this, NameItems);
 
         StyleGuard.MarkReady(this, typeof(KeyboardAccessoryView));
     }
@@ -222,6 +241,7 @@ public class KeyboardAccessoryView : ContentView
                 nested.Bar = this;
                 nested.OnOwnerChanged(CurrentOwner);
             }
+            NameItems();
             return;
         }
 
@@ -239,6 +259,33 @@ public class KeyboardAccessoryView : ContentView
 
             itemsGrid.Add(item, column, 0);
             column++;
+        }
+
+        NameItems();
+    }
+
+    // Stock items by what they do, anything else by its position among the items.
+    void NameItems()
+    {
+        var i = 0;
+        foreach (var item in EnumerateItems().OfType<KeyboardAccessoryItem>())
+        {
+            var index = i++;
+            if (!String.IsNullOrEmpty(item.AutomationId) && !namedItems.Contains(item))
+                continue;
+
+            var id = item switch
+            {
+                KeyboardNavigationItem { Direction: KeyboardNavigationDirection.Previous } => AutomationIds.For(this, PreviousAutomationIdSuffix),
+                KeyboardNavigationItem => AutomationIds.For(this, NextAutomationIdSuffix),
+                KeyboardDismissItem => AutomationIds.For(this, DoneAutomationIdSuffix),
+                _ => AutomationIds.For(this, ItemAutomationIdSuffix, index)
+            };
+            AutomationIds.Set(item, id);
+            if (id is null)
+                namedItems.Remove(item);
+            else
+                namedItems.Add(item);
         }
     }
 

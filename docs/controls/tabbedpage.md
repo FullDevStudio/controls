@@ -100,6 +100,19 @@ The bar respects the bottom safe area by default (`RespectSafeArea`): docked, th
 
 Every tab cell carries an `AutomationId` of `tab-<route>`, with `tab-center` on the centre button and `tab-more` on the overflow tab, so UI tests address tabs by name.
 
+### Automation ids (MAUI)
+
+Set `AutomationId` on the bar, or on a `ShinyTabbedPage` (whose bar is then `<page id>_TabBar`), and its parts are named after it instead of the fixed ids above:
+
+| Part | Id |
+|---|---|
+| Each tab cell, by index among the drawn tabs | `<id>_Tab_<index>` |
+| The More (overflow) tab | `<id>_More` |
+| Centre button | `<id>_Center` |
+| The menu card (centre or overflow) | `<id>_Menu` |
+| Each centre-menu action, by index (separators count) | `<id>_MenuItem_<index>` |
+| Each tab folded into the overflow menu | `<id>_OverflowItem_<index>` |
+
 Badges live wherever the count does: on the `ShinyTabItem` or `ShellContent` when it must show on a tab the user has never opened, and on the page when the page computes it. The page's value wins, but only for the tab that page is showing. `Badge=""` draws a dot; `Badge=null` draws nothing.
 
 **In Shell**, add the behavior and keep everything else:

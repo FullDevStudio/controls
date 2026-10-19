@@ -105,3 +105,13 @@ Every `ShinyContentPage` also has a **built-in `LoadingOverlay`** — no need to
 | LoadingOverlay | LoadingOverlay | The underlying overlay instance for advanced use |
 
 `Overlay` also gained `CloseOnBackdropTap` (default `true`) — set `false` to keep an overlay up until dismissed in code.
+
+## Automation ids (MAUI)
+
+Set `AutomationId` on the panel (or the host) and its parts are named after it, for UI tests:
+
+| Part | Id |
+|---|---|
+| Drag handle strip (pan between detents) | `<panel id>_Handle` |
+| Header (tap toggles the panel) | `<panel id>_Header` |
+| `OverlayHost` backdrop (tap closes) | `<host id>_Backdrop` |

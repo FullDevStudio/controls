@@ -133,6 +133,9 @@ public partial class Ribbon
         card.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceContainerHigh);
         card.WithElevation(ShinyThemeKeys.Elevation.Level2);
 
+        // In the page's overlay layer, not under the ribbon, so it carries a name of its own.
+        AutomationIds.Set(card, AutomationIds.For(this, MenuAutomationIdSuffix));
+
         // Not a scrim: a dropdown that dims the document behind it reads as a modal, which it is not.
         // It still has to be painted rather than fully transparent, or some heads never hit-test it.
         var backdrop = new BoxView { Color = Color.FromRgba(0, 0, 0, 0.01) };
@@ -197,8 +200,14 @@ public partial class Ribbon
     {
         var stack = new VerticalStackLayout { Spacing = 0, MinimumWidthRequest = 180 };
 
-        foreach (var entry in entries)
-            stack.Children.Add(this.BuildMenuLine(entry, onPicked));
+        for (var i = 0; i < entries.Count; i++)
+        {
+            var line = this.BuildMenuLine(entries[i], onPicked);
+            if (!entries[i].IsSeparator)
+                AutomationIds.Set(line, AutomationIds.For(this, MenuItemAutomationIdSuffix, i));
+
+            stack.Children.Add(line);
+        }
 
         return stack;
     }

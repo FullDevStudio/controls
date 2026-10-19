@@ -148,8 +148,9 @@ public partial class Expander : Grid
 
         this.Children.Add(this.rootBorder);
 
-        if (!String.IsNullOrEmpty(this.AutomationId))
-            this.headerRow.AutomationId = this.AutomationId + HeaderAutomationIdSuffix;
+        // Through SetValue, not the AutomationId setter: that throws the second time, and a bound id
+        // changes every time a list rebuild re-binds this expander. See AutomationIds.
+        AutomationIds.Link(this, this.headerRow, HeaderAutomationIdSuffix);
 
         this.ApplyLayoutOrder();
         this.RebuildHeader();
@@ -447,23 +448,6 @@ public partial class Expander : Grid
         }
         this.ApplyIndicator(animate: true);
     }
-
-
-    protected override void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string? propertyName = null)
-    {
-        base.OnPropertyChanged(propertyName);
-
-        // A style can set AutomationId before the constructor has built the header, so this cannot
-        // assume the children exist. It is not routed through StyleGuard because there is nothing to
-        // replay: whoever set it will still be holding the value when the header does appear.
-        if (propertyName != AutomationIdProperty.PropertyName || this.headerRow is null)
-            return;
-
-        this.headerRow.AutomationId = String.IsNullOrEmpty(this.AutomationId)
-            ? null
-            : this.AutomationId + HeaderAutomationIdSuffix;
-    }
-
 
     protected override void OnHandlerChanged()
     {

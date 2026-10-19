@@ -5,6 +5,7 @@ namespace Shiny.Maui.Controls.Tree.Internal;
 
 internal class TreeNodeView : Grid
 {
+    /// <summary>The checkbox's id while the tree has none of its own - shipped before ids followed the tree's.</summary>
     internal const string CheckBoxAutomationId = "ShinyTreeNodeCheckBox";
 
     readonly TreeView owner;
@@ -96,7 +97,6 @@ internal class TreeNodeView : Grid
             checkStrokeProbe = strokeProbe;
             checkBox = new Border
             {
-                AutomationId = CheckBoxAutomationId,
                 Stroke = strokeBrush,
                 WidthRequest = 20,
                 HeightRequest = 20,
@@ -164,6 +164,15 @@ internal class TreeNodeView : Grid
     }
 
     public TreeNode Node { get; }
+
+    /// <summary>Names this row's parts after the tree, at <paramref name="index"/> in the visible (flattened) order.</summary>
+    internal void ApplyAutomationIds(int index)
+    {
+        AutomationIds.Set(background, AutomationIds.For(owner, TreeView.NodeAutomationIdSuffix, index));
+        AutomationIds.Set(chevronHost, AutomationIds.For(owner, TreeView.ExpandAutomationIdSuffix, index));
+        if (checkBox != null)
+            AutomationIds.Set(checkBox, AutomationIds.For(owner, TreeView.CheckBoxAutomationIdSuffix, index) ?? CheckBoxAutomationId);
+    }
 
     Grid BuildIndent()
     {

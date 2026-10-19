@@ -108,6 +108,7 @@ public partial class DataGrid : ContentView
         host.Add(this.editActionsBar);
         this.Content = host;
 
+        this.InitAutomationIds();
         this.ApplyTheme();
         this.RebuildAll();
 
@@ -196,6 +197,7 @@ public partial class DataGrid : ContentView
         {
             // Grouping owns the whole list: it pages nothing (a page of rows would slice groups in
             // half) and walks every level itself, rows included.
+            this.nextGroupIndex = 0;
             this.AppendGroupRows(this.ProcessedData(), 0, string.Empty, ref index);
         }
         else if (this.TreeEnabled)
@@ -400,6 +402,8 @@ public partial class DataGrid : ContentView
             this.BuildEditCellView,
             this.StyleContainerPane
         );
+        // Only one row is edited at a time, so the edit row needs no index.
+        this.NamePart(grid, EditRowAutomationIdSuffix);
         return grid;
     }
 
@@ -412,6 +416,7 @@ public partial class DataGrid : ContentView
         {
             var content = (View)column.EditTemplate.CreateContent();
             content.SetBinding(BindableObject.BindingContextProperty, static (DataGridRow r) => r.Data);
+            this.NamePart(content, EditAutomationIdSuffix, this.ColumnIndex(column));
             return content;
         }
 
@@ -423,6 +428,7 @@ public partial class DataGrid : ContentView
             VerticalOptions = LayoutOptions.Center
         };
         entry.TextChanged += (_, e) => this.editValues[capture.Id] = e.NewTextValue;
+        this.NamePart(entry, EditAutomationIdSuffix, this.ColumnIndex(column));
         return entry;
     }
 
@@ -641,6 +647,7 @@ public partial class DataGrid : ContentView
         {
             var check = new CheckBox { HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center };
             check.CheckedChanged += (_, e) => this.ToggleSelectAll(e.Value);
+            this.NamePart(check, SelectAllAutomationIdSuffix);
             leading.Add(check);
         }
 
@@ -654,10 +661,12 @@ public partial class DataGrid : ContentView
     {
         {
             var capture = column;
+            var columnIndex = this.ColumnIndex(column);
             View headerView;
             if (column.HeaderTemplate is not null)
             {
                 headerView = (View)column.HeaderTemplate.CreateContent();
+                this.NamePart(headerView, HeaderAutomationIdSuffix, columnIndex);
                 if (this.EffectiveSortable(column))
                 {
                     var t = new TapGestureRecognizer();
@@ -701,6 +710,7 @@ public partial class DataGrid : ContentView
                 };
                 sortablePart.Add(title, 0, 0);
                 sortablePart.Add(sortGlyph, 1, 0);
+                this.NamePart(sortablePart, HeaderAutomationIdSuffix, columnIndex);
                 if (this.EffectiveSortable(column))
                 {
                     var t = new TapGestureRecognizer();
@@ -734,6 +744,7 @@ public partial class DataGrid : ContentView
                     var ft = new TapGestureRecognizer();
                     ft.Tapped += (_, _) => this.OpenFilterMenu(capture);
                     filterGlyph.GestureRecognizers.Add(ft);
+                    this.NamePart(filterGlyph, HeaderFilterAutomationIdSuffix, columnIndex);
                     AddGlyph(filterGlyph);
                 }
 
@@ -754,13 +765,18 @@ public partial class DataGrid : ContentView
                     var gt = new TapGestureRecognizer();
                     gt.Tapped += (_, _) => this.ToggleGroupBy(capture);
                     groupGlyph.GestureRecognizers.Add(gt);
+                    this.NamePart(groupGlyph, HeaderGroupAutomationIdSuffix, columnIndex);
                     AddGlyph(groupGlyph);
                 }
 
                 if (this.AllowColumnReorder)
                 {
-                    AddGlyph(this.ReorderArrow("‹", capture, -1));
-                    AddGlyph(this.ReorderArrow("›", capture, +1));
+                    var left = this.ReorderArrow("‹", capture, -1);
+                    var right = this.ReorderArrow("›", capture, +1);
+                    this.NamePart(left, HeaderMoveLeftAutomationIdSuffix, columnIndex);
+                    this.NamePart(right, HeaderMoveRightAutomationIdSuffix, columnIndex);
+                    AddGlyph(left);
+                    AddGlyph(right);
                 }
 
                 // The glyphs take only the width they measure and the title gets the rest, with the
@@ -786,7 +802,11 @@ public partial class DataGrid : ContentView
                     this.AttachColumnDrag(capture, container);
 
                 if (resizable)
-                    container.Add(this.ResizeHandle(capture, container));
+                {
+                    var handle = this.ResizeHandle(capture, container);
+                    this.NamePart(handle, HeaderResizeAutomationIdSuffix, columnIndex);
+                    container.Add(handle);
+                }
 
                 headerView = container;
             }
@@ -828,6 +848,7 @@ public partial class DataGrid : ContentView
             capture,
             this.DefaultOperator(capture.GetDataType(this.ItemTypeOrString())),
             string.IsNullOrEmpty(e.NewTextValue) ? null : e.NewTextValue);
+        this.NamePart(entry, FilterEntryAutomationIdSuffix, this.ColumnIndex(column));
         return entry;
     }
 
@@ -966,6 +987,11 @@ public partial class DataGrid : ContentView
             this.RebuildHeader();
         };
 
+        this.NamePart(picker, FilterOperatorAutomationIdSuffix);
+        this.NamePart(valueEntry, FilterValueAutomationIdSuffix);
+        this.NamePart(clear, FilterClearAutomationIdSuffix);
+        this.NamePart(apply, FilterApplyAutomationIdSuffix);
+
         var title = new Label { Text = col.Title, FontAttributes = FontAttributes.Bold };
         title.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurface);
 
@@ -1087,18 +1113,36 @@ public partial class DataGrid : ContentView
         var bottomLine = new BoxView { HeightRequest = 1, VerticalOptions = LayoutOptions.End };
         bottomLine.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.OutlineVariant);
 
+        // Named from the row the view is bound to once it is wrapped below - see NameRow.
+        var parts = new List<(Element Part, string Suffix, int Column)>();
+        var columns = this.VisibleColumns;
+
         var leading = new List<View>();
         if (this.HasExpanderColumn)
-            leading.Add(this.BuildExpanderCell());
+        {
+            var expander = this.BuildExpanderCell();
+            parts.Add((expander, RowExpandAutomationIdSuffix, -1));
+            leading.Add(expander);
+        }
 
         if (this.HasMultiSelect)
         {
             var box = new CheckBox { HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center };
             box.SetBinding(CheckBox.IsCheckedProperty, static (DataGridRow r) => r.IsSelected, BindingMode.TwoWay);
+            parts.Add((box, RowCheckBoxAutomationIdSuffix, -1));
             leading.Add(box);
         }
 
-        this.LayoutCells(grid, leading, this.BuildCellView, pane =>
+        View BuildNamedCell(DataGridColumn column)
+        {
+            var view = this.BuildCellView(column, out var named, out var toggle);
+            parts.Add((named, CellAutomationIdSuffix, IndexOf(columns, column)));
+            if (toggle is not null)
+                parts.Add((toggle, RowToggleAutomationIdSuffix, -1));
+            return view;
+        }
+
+        this.LayoutCells(grid, leading, BuildNamedCell, pane =>
         {
             this.StyleRowPane(pane);
             if (this.Bordered)
@@ -1120,6 +1164,7 @@ public partial class DataGrid : ContentView
         };
         container.GestureRecognizers.Add(tap);
 
+        this.NameRow(container, parts);
         return container;
     }
 
@@ -1138,11 +1183,19 @@ public partial class DataGrid : ContentView
     bool IsTreeColumn(DataGridColumn column)
         => this.TreeEnabled && ReferenceEquals(this.VisibleColumns.FirstOrDefault(), column);
 
-    View BuildCellView(DataGridColumn column)
+    View BuildCellView(DataGridColumn column) => this.BuildCellView(column, out _, out _);
+
+    /// <summary>
+    /// <paramref name="named"/> is the part a UI test reads the cell through - the text label, or a
+    /// template's root - and <paramref name="treeToggle"/> the tree caret when this is the tree column.
+    /// </summary>
+    View BuildCellView(DataGridColumn column, out View named, out View? treeToggle)
     {
         var content = this.BuildPlainCellView(column, out var label);
+        named = (View?)label ?? content;
+        treeToggle = null;
         if (this.IsTreeColumn(column))
-            content = this.WrapTreeCell(content);
+            content = this.WrapTreeCell(content, out treeToggle);
 
         return this.HasCellStyling ? this.WrapHighlight(content, label, column) : content;
     }
@@ -1399,6 +1452,9 @@ public partial class DataGrid : ContentView
         save.SetDynamicResource(Button.BackgroundColorProperty, ShinyThemeKeys.Color.Primary);
         save.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnPrimary);
         save.Clicked += (_, _) => this.CommitEdit();
+
+        AutomationIds.Link(this, cancel, CancelAutomationIdSuffix);
+        AutomationIds.Link(this, save, SaveAutomationIdSuffix);
 
         var bar = new Border
         {

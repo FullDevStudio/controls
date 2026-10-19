@@ -50,3 +50,10 @@ Inherits all `CollectionControlBase` properties: `ItemsSource`, `ItemTemplate`, 
 - Built-in load-more button with loading state
 - Item visibility tracking for analytics or lazy loading
 - Full header, footer, and empty view templates
+
+### Automation ids (MAUI)
+
+Set `AutomationId` on the `VirtualizedGrid` and each item view that has no id of its own is named
+`<id>_Item_<index>`, by the item's position in `ItemsSource` (numbered straight across the groups when grouping is on); the Load More button is `<id>_LoadMore`. Recycled views are renamed as they
+are re-bound, and again when an insert or remove shifts the items. An id your `ItemTemplate` sets (or
+binds) is left alone.

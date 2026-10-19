@@ -87,3 +87,14 @@ On MAUI it is drawn with plain MAUI transforms (`TranslationX`, `RotationY`, `Sc
 - On MAUI, a tap with no position (an accessibility activation, or UI automation such as DevFlow) counts as a tap on the centre cover, so it selects that item.
 - Item templates are for display. The control handles every tap itself, so a button inside a cover does not get the tap.
 - With `ShowReflection` on MAUI, the template is created twice per cover. The reflection fades into the theme's Surface colour, so place the control on a Surface-coloured background.
+
+### Automation ids (MAUI)
+
+Set `AutomationId` on the control and its parts are named after it, for UI tests (Appium, UI Automation, DevFlow). Without an id the parts get none.
+
+| Part | Id |
+|---|---|
+| Each realized cover (index in `ItemsSource`) | `<id>_Item_<index>` |
+| Caption area | `<id>_Caption` |
+
+Only covers near the centre exist at any moment, and covers take no touches of their own: tap a cover's bounds and the control hit-tests it.

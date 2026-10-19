@@ -167,6 +167,9 @@ partial class ChatBubbleView : ContentView
 
         this.Content = this.rootLayout;
         this.TrackThemeTextColors();
+
+        // Named after the chat, not this row: the row is recycled, and the chat is what a test knows.
+        AutomationIds.Track(chatView, this.ApplyAutomationIds);
     }
 
     protected override void OnBindingContextChanged()
@@ -174,6 +177,20 @@ partial class ChatBubbleView : ContentView
         base.OnBindingContextChanged();
         if (this.BindingContext is ChatMessage message)
             this.Configure(message);
+        this.ApplyAutomationIds();
+    }
+
+    void ApplyAutomationIds()
+    {
+        var key = (this.BindingContext as ChatMessage)?.MessageId;
+        string? Id(string suffix)
+            => key is not null && AutomationIds.For(this.chatView, suffix) is { } prefix ? $"{prefix}_{key}" : null;
+
+        AutomationIds.Set(this.bubbleBorder, Id(ChatView.MessageAutomationIdSuffix));
+        AutomationIds.Set(this.textLabel, Id(ChatView.MessageTextAutomationIdSuffix));
+        AutomationIds.Set(this.imageView, Id(ChatView.MessageImageAutomationIdSuffix));
+        AutomationIds.Set(this.actionsButton, Id(ChatView.MessageActionsAutomationIdSuffix));
+        AutomationIds.Set(this.statusLabel, Id(ChatView.MessageStatusAutomationIdSuffix));
     }
 
     void Configure(ChatMessage message)

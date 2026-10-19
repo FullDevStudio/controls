@@ -95,11 +95,15 @@ public partial class ImageEditor
             DisplayMode = this.userDisplayMode ?? RibbonDisplayMode.Expanded
         };
 
+        // Named after the editor, so the ribbon's own parts are too, rather than falling back to the
+        // fixed ids a standalone ribbon uses.
+        AutomationIds.Set(bar, AutomationIds.For(this, RibbonAutomationIdSuffix));
+
         // Undo, redo and reset live in the quick access strip rather than a group: they apply to every
         // tool, so they should not move or disappear when the tab does.
-        bar.QuickAccessItems.Add(QuickCommand(ImageEditorIcon.Undo, "Undo", this.CanUndo, this.Undo));
-        bar.QuickAccessItems.Add(QuickCommand(ImageEditorIcon.Redo, "Redo", this.CanRedo, this.Redo));
-        bar.QuickAccessItems.Add(QuickCommand(ImageEditorIcon.Reset, "Reset", this.CanUndo, this.Reset));
+        bar.QuickAccessItems.Add(QuickCommand(ImageEditorIcon.Undo, "Undo", UndoAutomationIdSuffix, this.CanUndo, this.Undo));
+        bar.QuickAccessItems.Add(QuickCommand(ImageEditorIcon.Redo, "Redo", RedoAutomationIdSuffix, this.CanRedo, this.Redo));
+        bar.QuickAccessItems.Add(QuickCommand(ImageEditorIcon.Reset, "Reset", ResetAutomationIdSuffix, this.CanUndo, this.Reset));
 
         bar.Tabs.Add(this.BuildHomeTab());
 
@@ -176,13 +180,13 @@ public partial class ImageEditor
         var image = new RibbonGroup { Title = "Image", Priority = 200, CanCollapse = false };
 
         if (this.AllowRotate)
-            image.Items.Add(this.Command(ImageEditorIcon.Rotate, "Rotate", true, () => this.Rotate(90)));
+            image.Items.Add(this.Command(ImageEditorIcon.Rotate, "Rotate", RotateAutomationIdSuffix, true, () => this.Rotate(90)));
 
         if (this.SaveCommand is not null)
         {
             // Check, not a save glyph: the icon set is the editor's own and has no disk. It reads as
             // "commit what you have done", which is what saving is here.
-            image.Items.Add(this.Command(ImageEditorIcon.Check, this.SaveText, true, this.ExecuteSave));
+            image.Items.Add(this.Command(ImageEditorIcon.Check, this.SaveText, SaveAutomationIdSuffix, true, this.ExecuteSave));
         }
 
         if (image.Items.Count > 0)
@@ -196,9 +200,9 @@ public partial class ImageEditor
         var tab = new RibbonTab { Title = "View", Key = ViewTabKey };
         var zoom = new RibbonGroup { Title = "Zoom" };
 
-        zoom.Items.Add(this.Command(ImageEditorIcon.ZoomOut, "Zoom out", true, this.ZoomOut));
-        zoom.Items.Add(this.Command(ImageEditorIcon.ZoomIn, "Zoom in", true, this.ZoomIn));
-        zoom.Items.Add(this.Command(ImageEditorIcon.ZoomFit, "Fit", true, this.ZoomToFit));
+        zoom.Items.Add(this.Command(ImageEditorIcon.ZoomOut, "Zoom out", ZoomOutAutomationIdSuffix, true, this.ZoomOut));
+        zoom.Items.Add(this.Command(ImageEditorIcon.ZoomIn, "Zoom in", ZoomInAutomationIdSuffix, true, this.ZoomIn));
+        zoom.Items.Add(this.Command(ImageEditorIcon.ZoomFit, "Fit", ZoomFitAutomationIdSuffix, true, this.ZoomToFit));
 
         // The readout is a value, not a command, so it is hosted rather than made into a button.
         this.zoomReadout = new Label
@@ -209,6 +213,7 @@ public partial class ImageEditor
             VerticalTextAlignment = TextAlignment.Center
         }.WithFontSize(ShinyThemeKeys.Type.LabelSmallSize);
 
+        AutomationIds.Set(this.zoomReadout, AutomationIds.For(this, ZoomReadoutAutomationIdSuffix));
         this.zoomReadout.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
         zoom.Items.Add(new RibbonContentItem { Content = this.zoomReadout });
 
@@ -240,12 +245,17 @@ public partial class ImageEditor
         };
 
         var appearance = new RibbonGroup { Title = isShape ? "Border" : "Colour", Priority = 100 };
-        appearance.Items.Add(new RibbonContentItem { Content = this.CreateDrawColorButton() });
+        appearance.Items.Add(new RibbonContentItem { Content = this.Named(this.CreateDrawColorButton(), StrokeColorAutomationIdSuffix) });
 
         if ((isInk || isShape) && this.ShowStrokeWidthPicker)
         {
+            var i = 0;
             foreach (var width in this.StrokeWidthPresets)
-                appearance.Items.Add(new RibbonContentItem { Content = this.CreateStrokeWidthButton(width) });
+            {
+                var button = this.CreateStrokeWidthButton(width);
+                AutomationIds.Set(button, AutomationIds.For(this, StrokeWidthAutomationIdSuffix, i++));
+                appearance.Items.Add(new RibbonContentItem { Content = button });
+            }
         }
 
         tab.Groups.Add(appearance);
@@ -253,8 +263,8 @@ public partial class ImageEditor
         if (isShape && this.ShowShapeFillPicker)
         {
             var fill = new RibbonGroup { Title = "Fill", Priority = 80 };
-            fill.Items.Add(new RibbonContentItem { Content = this.CreateShapeFillButton() });
-            fill.Items.Add(new RibbonContentItem { Content = this.CreateShapeFillToggle() });
+            fill.Items.Add(new RibbonContentItem { Content = this.Named(this.CreateShapeFillButton(), FillColorAutomationIdSuffix) });
+            fill.Items.Add(new RibbonContentItem { Content = this.Named(this.CreateShapeFillToggle(), FillToggleAutomationIdSuffix) });
             tab.Groups.Add(fill);
         }
 
@@ -263,10 +273,10 @@ public partial class ImageEditor
             var font = new RibbonGroup { Title = "Font", Priority = 80 };
 
             if (this.AllowFontSelection && this.AvailableFonts is { Count: > 0 })
-                font.Items.Add(new RibbonContentItem { Content = this.CreateFontPickerButton() });
+                font.Items.Add(new RibbonContentItem { Content = this.Named(this.CreateFontPickerButton(), FontAutomationIdSuffix) });
 
             if (this.AllowFontSizeSelection && this.AvailableFontSizes is { Count: > 0 })
-                font.Items.Add(new RibbonContentItem { Content = this.CreateFontSizePickerButton() });
+                font.Items.Add(new RibbonContentItem { Content = this.Named(this.CreateFontSizePickerButton(), FontSizeAutomationIdSuffix) });
 
             if (font.Items.Count > 0)
                 tab.Groups.Add(font);
@@ -289,9 +299,14 @@ public partial class ImageEditor
             Tooltip = text,
             Size = size,
             IsChecked = selected,
-            IconTemplate = IconTemplateFor(icon),
-            AutomationId = $"ImageEditorTool{mode}"
+            IconTemplate = IconTemplateFor(icon)
         };
+
+        // Keyed by the tool, not its position: which tools appear depends on the Allow* flags, so an
+        // index would shift under a test. ImageEditorTool{mode} shipped before owner-derived ids did.
+        item.SetValue(RibbonItem.AutomationIdProperty, AutomationIds.For(this, ToolAutomationIdSuffix) is { } prefix
+            ? $"{prefix}_{mode}"
+            : $"ImageEditorTool{mode}");
 
         // Pressing the tool you are already using returns to Move, which is how the previous bar
         // behaved - there is otherwise no way to put a tool down.
@@ -299,8 +314,9 @@ public partial class ImageEditor
         return item;
     }
 
-    RibbonButton Command(ImageEditorIcon icon, string text, bool enabled, Action action, RibbonItemSize size = RibbonItemSize.Small)
-        => new()
+    RibbonButton Command(ImageEditorIcon icon, string text, string automationSuffix, bool enabled, Action action, RibbonItemSize size = RibbonItemSize.Small)
+    {
+        var button = new RibbonButton
         {
             Text = text,
             Tooltip = text,
@@ -309,16 +325,31 @@ public partial class ImageEditor
             IconTemplate = IconTemplateFor(icon),
             Command = new Command(action)
         };
+        button.SetValue(RibbonItem.AutomationIdProperty, AutomationIds.For(this, automationSuffix));
+        return button;
+    }
 
-    RibbonButton QuickCommand(ImageEditorIcon icon, string tooltip, bool enabled, Action action)
-        => new()
+    RibbonButton QuickCommand(ImageEditorIcon icon, string tooltip, string automationSuffix, bool enabled, Action action)
+    {
+        var button = new RibbonButton
         {
             Tooltip = tooltip,
-            AutomationId = $"ImageEditorQuick{icon}",
             IsEnabled = enabled,
             IconTemplate = IconTemplateFor(icon),
             Command = new Command(action)
         };
+
+        // ImageEditorQuick{icon} shipped first, so it stays the id while the editor has none of its own.
+        button.SetValue(RibbonItem.AutomationIdProperty, AutomationIds.For(this, automationSuffix) ?? $"ImageEditorQuick{icon}");
+        return button;
+    }
+
+    /// <summary>Names a hosted option view after the editor and hands it back.</summary>
+    T Named<T>(T view, string suffix) where T : View
+    {
+        AutomationIds.Set(view, AutomationIds.For(this, suffix));
+        return view;
+    }
 
     /// <summary>
     /// Wraps one of the editor's vector icons as a ribbon icon.

@@ -6,6 +6,27 @@ namespace Shiny.Maui.Controls.Pickers;
 
 public class DurationPicker : ContentView
 {
+    /// <summary>Appended to the picker's <see cref="Element.AutomationId"/> to name the field that opens it.</summary>
+    public const string TriggerAutomationIdSuffix = "_Trigger";
+
+    /// <summary>Names the label showing the chosen duration (or the placeholder).</summary>
+    public const string ValueAutomationIdSuffix = "_Value";
+
+    /// <summary>Names the popup's content, which lives in the page's overlay host rather than under the picker.</summary>
+    public const string PopupAutomationIdSuffix = "_Popup";
+
+    /// <summary>Names the popup's hours picker.</summary>
+    public const string HoursAutomationIdSuffix = "_Hours";
+
+    /// <summary>Names the popup's minutes picker.</summary>
+    public const string MinutesAutomationIdSuffix = "_Minutes";
+
+    /// <summary>Names the popup's Done button.</summary>
+    public const string DoneAutomationIdSuffix = "_Done";
+
+    /// <summary>Names the popup's Cancel button.</summary>
+    public const string CancelAutomationIdSuffix = "_Cancel";
+
     readonly Label valueLabel;
     readonly Border tapArea;
     FloatingPanel.FloatingPanel? panel;
@@ -216,6 +237,10 @@ public class DurationPicker : ContentView
         Content = tapArea;
         UpdateDisplayText();
 
+        // Through SetValue, not the AutomationId setter: that throws the second time. See AutomationIds.
+        AutomationIds.Link(this, tapArea, TriggerAutomationIdSuffix);
+        AutomationIds.Link(this, valueLabel, ValueAutomationIdSuffix);
+
         // Last line: replays any styled property that was applied before the
         // children existed. See StyleGuard.
         StyleGuard.MarkReady(this, typeof(DurationPicker));
@@ -365,7 +390,13 @@ public class DurationPicker : ContentView
         buttonGrid.Add(cancelButton, 0);
         buttonGrid.Add(doneButton, 1);
 
-        return new VerticalStackLayout
+        // The popup is rebuilt on every open, so naming it here always follows the picker's current id.
+        AutomationIds.Set(hourPicker, AutomationIds.For(this, HoursAutomationIdSuffix));
+        AutomationIds.Set(minutePicker, AutomationIds.For(this, MinutesAutomationIdSuffix));
+        AutomationIds.Set(doneButton, AutomationIds.For(this, DoneAutomationIdSuffix));
+        AutomationIds.Set(cancelButton, AutomationIds.For(this, CancelAutomationIdSuffix));
+
+        var popup = new VerticalStackLayout
         {
             Padding = new Thickness(20),
             Spacing = 16,
@@ -382,6 +413,8 @@ public class DurationPicker : ContentView
                 buttonGrid
             }
         };
+        AutomationIds.Set(popup, AutomationIds.For(this, PopupAutomationIdSuffix));
+        return popup;
     }
 
     /// <summary>Uses the explicit colour when one was supplied, otherwise binds to the theme token.</summary>

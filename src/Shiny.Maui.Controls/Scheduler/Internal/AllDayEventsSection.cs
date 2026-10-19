@@ -1,3 +1,4 @@
+using Shiny.Maui.Controls.Infrastructure;
 using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls.Scheduler.Internal;
@@ -5,6 +6,7 @@ namespace Shiny.Maui.Controls.Scheduler.Internal;
 class AllDayEventsSection : ContentView
 {
     readonly HorizontalStackLayout stack;
+    readonly List<(View View, SchedulerEvent Event)> eventViews = [];
 
     public AllDayEventsSection()
     {
@@ -17,11 +19,15 @@ class AllDayEventsSection : ContentView
         };
         Content = scroll;
         IsVisible = false;
+
+        // Named by the agenda view; the chips follow this section's id.
+        AutomationIds.Track(this, () => SchedulerAutomationIds.NameEvents(this, eventViews));
     }
 
     public void SetEvents(IReadOnlyList<SchedulerEvent> events, DataTemplate? template, Action<SchedulerEvent>? onTapped)
     {
         stack.Children.Clear();
+        eventViews.Clear();
         IsVisible = events.Count > 0;
 
         foreach (var evt in events)
@@ -66,6 +72,8 @@ class AllDayEventsSection : ContentView
                 view.GestureRecognizers.Add(tap);
             }
             stack.Children.Add(view);
+            eventViews.Add((view, evt));
         }
+        SchedulerAutomationIds.NameEvents(this, eventViews);
     }
 }

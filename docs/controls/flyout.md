@@ -59,3 +59,12 @@ Each page builds its own panel from the template — sharing one instance would 
 **Pushing shifts rather than crushes.** `PushMode` defaults to `Shift`: the content keeps its full width and is simply translated aside, so its far edge slides out of view and is clipped. Nothing inside it re-lays out — text does not rewrap and columns do not collapse as the panel moves, which is both the drawer feel most apps want and a great deal less work per frame than re-measuring the whole content tree. `PushMode="Resize"` restores the narrow-and-reflow behaviour, which is what a responsive master/detail beside a permanent sidebar actually wants. Note the mode governs *every* displacement including the rail's, so an app whose rail is permanent chrome should use `Resize`.
 
 `CollapseBelow` drops an expanded panel to its `CollapsedState` when the flyout gets narrow and restores it when there is room again — unless the user has changed the state themselves in the meantime, which always wins. Panels take `MinExpandedWidth`/`MaxExpandedWidth` with a drag-to-resize handle (`IsResizable`), edge-swipe-to-open, tap- or drag-the-scrim-to-close, theme-following colours, and `HeaderContent`/`FooterContent` that stay pinned while the body scrolls.
+
+### Automation ids (MAUI)
+
+Set `AutomationId` on a `FlyoutView` and its scrim is named after it. The panels are yours, so give them ids directly. On a `ShinyFlyoutPage`, or a page that `ShinyFlyout` installs on, the view is named after the page.
+
+| Part | Id |
+|---|---|
+| Scrim (closes an overlaid panel) | `<id>_Scrim` |
+| The FlyoutView on a page with an id | `<page id>_Flyout` (scrim `<page id>_Flyout_Scrim`) |

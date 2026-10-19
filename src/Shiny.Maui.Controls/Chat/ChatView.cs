@@ -13,6 +13,56 @@ namespace Shiny.Maui.Controls.Chat;
 /// </summary>
 public partial class ChatView : ContentView
 {
+    /// <summary>
+    /// Appended to the chat's own <see cref="Element.AutomationId"/> to name the built-in composer. Its
+    /// parts follow from that: <c>&lt;id&gt;_Composer_Entry</c>, <c>&lt;id&gt;_Composer_Send</c> - see
+    /// <see cref="ChatEntryView"/>. A composer you assign to <see cref="InputBar"/> keeps its own id.
+    /// </summary>
+    public const string ComposerAutomationIdSuffix = "_Composer";
+
+    /// <summary>
+    /// Names each message bubble, followed by its <see cref="ChatMessage.MessageId"/>:
+    /// <c>&lt;id&gt;_Message_m42</c>. The id rather than the row index, because loading older messages
+    /// shifts every index while the rows already on screen keep theirs.
+    /// </summary>
+    public const string MessageAutomationIdSuffix = "_Message";
+
+    /// <summary>Names a bubble's text label, followed by the message id.</summary>
+    public const string MessageTextAutomationIdSuffix = "_MessageText";
+
+    /// <summary>Names a bubble's image, followed by the message id.</summary>
+    public const string MessageImageAutomationIdSuffix = "_MessageImage";
+
+    /// <summary>Names a bubble's actions (⋮) button, followed by the message id.</summary>
+    public const string MessageActionsAutomationIdSuffix = "_MessageActions";
+
+    /// <summary>Names a bubble's delivery status label, followed by the message id.</summary>
+    public const string MessageStatusAutomationIdSuffix = "_MessageStatus";
+
+    /// <summary>Names the "new messages" pill that scrolls back to the bottom.</summary>
+    public const string NewMessagesAutomationIdSuffix = "_NewMessages";
+
+    /// <summary>Names the connection state banner.</summary>
+    public const string ConnectionBannerAutomationIdSuffix = "_ConnectionBanner";
+
+    /// <summary>Names the error message shown when the session fails to load.</summary>
+    public const string ErrorAutomationIdSuffix = "_Error";
+
+    /// <summary>Names the error overlay's retry button.</summary>
+    public const string RetryAutomationIdSuffix = "_Retry";
+
+    /// <summary>
+    /// Names the hidden <see cref="Shiny.Maui.Controls.ImageViewer"/> behind the photo lightbox, so its overlay is
+    /// <c>&lt;id&gt;_ImageViewer_Popup</c> and its close button <c>&lt;id&gt;_ImageViewer_Close</c>.
+    /// </summary>
+    public const string ImageViewerAutomationIdSuffix = "_ImageViewer";
+
+    /// <summary>Names the reaction picker popup.</summary>
+    public const string ReactionPickerAutomationIdSuffix = "_ReactionPicker";
+
+    /// <summary>Names each glyph in the reaction picker, indexed in display order.</summary>
+    public const string ReactionAutomationIdSuffix = "_Reaction";
+
     /// <summary>Raised when a non-image bubble is tapped (image taps open the viewer).</summary>
     public event EventHandler<ChatMessage>? MessageTapped;
 
@@ -207,6 +257,13 @@ public partial class ChatView : ContentView
 
         this.Content = this.rootGrid;
 
+        AutomationIds.Link(this, this.defaultInputBar, ComposerAutomationIdSuffix);
+        AutomationIds.Link(this, this.toastPill, NewMessagesAutomationIdSuffix);
+        AutomationIds.Link(this, this.connectionBanner, ConnectionBannerAutomationIdSuffix);
+        AutomationIds.Link(this, this.errorLabel, ErrorAutomationIdSuffix);
+        AutomationIds.Link(this, errorRetry, RetryAutomationIdSuffix);
+        AutomationIds.Link(this, this.imageViewer, ImageViewerAutomationIdSuffix);
+
         // collections initialised so XAML can Add() directly
         this.InputActions = new ObservableCollection<ChatInputAction>();
         this.CustomBubbleActions = new ObservableCollection<ChatBubbleAction>();
@@ -372,6 +429,7 @@ public partial class ChatView : ContentView
             Content = pickerGrid
         };
         container.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceContainerLowest);
+        AutomationIds.Set(container, AutomationIds.For(this, ReactionPickerAutomationIdSuffix));
 
         void Close(string? result)
         {
@@ -404,6 +462,7 @@ public partial class ChatView : ContentView
             var tap = new TapGestureRecognizer();
             tap.Tapped += (_, _) => Close(glyph);
             cell.GestureRecognizers.Add(tap);
+            AutomationIds.Set(cell, AutomationIds.For(this, ReactionAutomationIdSuffix, i));
 
             pickerGrid.Add(cell, i % columns, i / columns);
         }

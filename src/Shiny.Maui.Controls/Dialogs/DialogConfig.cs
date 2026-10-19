@@ -10,6 +10,38 @@ public enum DialogKind
 
 public class DialogConfig
 {
+    /// <summary>Appended to <see cref="AutomationId"/> to name the dimmed backdrop (tapping it cancels).</summary>
+    public const string BackdropAutomationIdSuffix = "_Backdrop";
+
+    /// <summary>Appended to <see cref="AutomationId"/> to name the title label.</summary>
+    public const string TitleAutomationIdSuffix = "_Title";
+
+    /// <summary>Appended to <see cref="AutomationId"/> to name the message label.</summary>
+    public const string MessageAutomationIdSuffix = "_Message";
+
+    /// <summary>Appended to <see cref="AutomationId"/> to name the Prompt entry.</summary>
+    public const string EntryAutomationIdSuffix = "_Entry";
+
+    /// <summary>Appended to <see cref="AutomationId"/> to name the OK (confirm) button.</summary>
+    public const string OkAutomationIdSuffix = "_Ok";
+
+    /// <summary>Appended to <see cref="AutomationId"/> to name the Cancel button.</summary>
+    public const string CancelAutomationIdSuffix = "_Cancel";
+
+    /// <summary>
+    /// Appended to <see cref="AutomationId"/>, plus <c>_&lt;index&gt;</c>, to name each ActionSheet option
+    /// in <see cref="Actions"/> order: <c>&lt;id&gt;_Action_0</c>, <c>&lt;id&gt;_Action_1</c>, …
+    /// </summary>
+    public const string ActionAutomationIdSuffix = "_Action";
+
+    /// <summary>
+    /// Names the dialog for UI tests. A dialog has no owner element a test could find it under, so the id
+    /// goes on the dialog's root and its parts are named after it with the <c>*AutomationIdSuffix</c>
+    /// constants. Parts inside a <see cref="DialogOptions.ContentTemplate"/> are the template's to name.
+    /// Null (the default) leaves the dialog unnamed.
+    /// </summary>
+    public string? AutomationId { get; set; }
+
     public DialogKind Kind { get; set; }
     public string Title { get; set; } = string.Empty;
     public string Message { get; set; } = string.Empty;

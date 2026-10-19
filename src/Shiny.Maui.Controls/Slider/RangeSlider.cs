@@ -11,6 +11,21 @@ namespace Shiny.Maui.Controls;
 /// </summary>
 public partial class RangeSlider : ContentView
 {
+    /// <summary>Appended to the slider's <see cref="Element.AutomationId"/> to name the track, which takes the tap that moves the nearer thumb.</summary>
+    public const string TrackAutomationIdSuffix = "_Track";
+
+    /// <summary>Appended to the slider's <see cref="Element.AutomationId"/> to name the lower thumb (the one dragged).</summary>
+    public const string LowerThumbAutomationIdSuffix = "_LowerThumb";
+
+    /// <summary>Appended to the slider's <see cref="Element.AutomationId"/> to name the upper thumb (the one dragged).</summary>
+    public const string UpperThumbAutomationIdSuffix = "_UpperThumb";
+
+    /// <summary>Appended to the slider's <see cref="Element.AutomationId"/> to name the lower tooltip's value label.</summary>
+    public const string LowerValueAutomationIdSuffix = "_LowerValue";
+
+    /// <summary>Appended to the slider's <see cref="Element.AutomationId"/> to name the upper tooltip's value label.</summary>
+    public const string UpperValueAutomationIdSuffix = "_UpperValue";
+
     readonly BoxView trackBackground;
     readonly BoxView trackFill;
     readonly Border lowerThumb;
@@ -108,6 +123,12 @@ public partial class RangeSlider : ContentView
         rootGrid.Add(trackLayout, 0, 1);
 
         Content = rootGrid;
+
+        AutomationIds.Link(this, trackLayout, TrackAutomationIdSuffix);
+        AutomationIds.Link(this, lowerThumb, LowerThumbAutomationIdSuffix);
+        AutomationIds.Link(this, upperThumb, UpperThumbAutomationIdSuffix);
+        AutomationIds.Link(this, lowerTooltipLabel, LowerValueAutomationIdSuffix);
+        AutomationIds.Link(this, upperTooltipLabel, UpperValueAutomationIdSuffix);
 
         // Per-thumb drag
         AddThumbPan(lowerThumb, isUpper: false);

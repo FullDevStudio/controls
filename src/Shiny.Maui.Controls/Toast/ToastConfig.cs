@@ -4,6 +4,16 @@ namespace Shiny.Maui.Controls.Toast;
 
 public class ToastConfig
 {
+    /// <summary>Appended to <see cref="AutomationId"/> to name the toast's text label.</summary>
+    public const string TextAutomationIdSuffix = "_Text";
+
+    /// <summary>
+    /// Names the toast for UI tests. A toast has no owner element a test could find it under, so the id
+    /// goes on the toast's tappable chrome and its label is named after it (<see cref="TextAutomationIdSuffix"/>).
+    /// Null (the default) leaves the toast unnamed.
+    /// </summary>
+    public string? AutomationId { get; set; }
+
     public string Text { get; set; } = string.Empty;
     public TimeSpan Duration { get; set; } = TimeSpan.FromSeconds(3);
     public ToastPosition Position { get; set; } = ToastPosition.Bottom;

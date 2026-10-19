@@ -13,7 +13,11 @@ public class NumberPickerCell : CellBase
     /// Marking ready here replays any property an implicit Style applied before
     /// construction - see StyleGuard.
     /// </summary>
-    public NumberPickerCell() => StyleGuard.MarkReady(this, typeof(NumberPickerCell));
+    public NumberPickerCell()
+    {
+        AutomationIds.Link(this, valueLabel, ValueAutomationIdSuffix);
+        StyleGuard.MarkReady(this, typeof(NumberPickerCell));
+    }
 
     Label valueLabel = default!;
 

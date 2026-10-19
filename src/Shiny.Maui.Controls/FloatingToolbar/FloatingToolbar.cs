@@ -38,6 +38,27 @@ public record FloatingToolbarItemEventArgs(ShinyToolbarItem Item, View? Target, 
 /// </example>
 public partial class FloatingToolbar : ContentView
 {
+    /// <summary>
+    /// Appended to the toolbar's own <see cref="Element.AutomationId"/> to name the bar it floats over the
+    /// page. The bar lives in the page's overlay layer, not under this element.
+    /// </summary>
+    public const string BarAutomationIdSuffix = "_Bar";
+
+    /// <summary>
+    /// Appended to the toolbar's id, with the item's index among the drawn items, to name each bar
+    /// button: <c>&lt;id&gt;_Item_&lt;index&gt;</c>. Without an id they stay <c>toolbar-item-&lt;text&gt;</c>.
+    /// </summary>
+    public const string ItemAutomationIdSuffix = "_Item";
+
+    /// <summary>Appended to the item base to name the overflow (⋯) button: <c>&lt;id&gt;_Item_Overflow</c>.</summary>
+    public const string OverflowAutomationIdSuffix = "_Overflow";
+
+    /// <summary>
+    /// Appended to the toolbar's id, with the menu's depth (0 for one opened from the bar), to name an
+    /// open dropdown: <c>&lt;id&gt;_Menu_0</c>, whose items are <c>&lt;id&gt;_Menu_0_Item_&lt;index&gt;</c>.
+    /// </summary>
+    public const string MenuAutomationIdSuffix = "_Menu";
+
     readonly Dictionary<View, AnchorTriggerBinder> attached = new();
     readonly List<FloatingToolbarStrip> menus = new();
 
@@ -65,6 +86,9 @@ public partial class FloatingToolbar : ContentView
 
         this.Loaded += (_, _) => this.RewireTriggers();
         this.Unloaded += (_, _) => this.OnUnloaded();
+
+        // The bar's buttons are built with their ids in hand, so a new id rebuilds them.
+        AutomationIds.Track(this, this.RebuildStrip);
 
         StyleGuard.MarkReady(this, typeof(FloatingToolbar));
     }
@@ -333,6 +357,8 @@ public partial class FloatingToolbar : ContentView
             this.strip.BackgroundColor = this.BarColor;
 
         this.strip.StrokeShape = this.BuildCorner();
+        AutomationIds.Set(this.strip, AutomationIds.For(this, BarAutomationIdSuffix));
+        this.strip.ItemAutomationIdBase = AutomationIds.For(this, ItemAutomationIdSuffix);
         this.strip.Build(this.Items.ToList(), this.ResolveMaxVisible(), this.BuildOverflowItem());
 
         // Not Reposition(): the bar has just changed shape and still carries the old rect, so it has

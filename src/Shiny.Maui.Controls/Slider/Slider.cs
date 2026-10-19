@@ -9,6 +9,21 @@ namespace Shiny.Maui.Controls;
 
 public partial class Slider : ContentView
 {
+    /// <summary>
+    /// Appended to the slider's <see cref="Element.AutomationId"/> to name the track. The pan and tap
+    /// recognizers live on it (the thumb is input-transparent), so it is the part a test drags or taps.
+    /// </summary>
+    public const string TrackAutomationIdSuffix = "_Track";
+
+    /// <summary>Appended to the slider's <see cref="Element.AutomationId"/> to name the thumb, for reading where it sits.</summary>
+    public const string ThumbAutomationIdSuffix = "_Thumb";
+
+    /// <summary>Appended to the slider's <see cref="Element.AutomationId"/> to name the tooltip.</summary>
+    public const string TooltipAutomationIdSuffix = "_Tooltip";
+
+    /// <summary>Appended to the slider's <see cref="Element.AutomationId"/> to name the default tooltip's value label.</summary>
+    public const string ValueAutomationIdSuffix = "_Value";
+
     // Gap between the track and the tooltip, and between the track and the mark captions.
     const double TooltipGap = 6;
     const double MarkLabelGap = 4;
@@ -97,6 +112,11 @@ public partial class Slider : ContentView
         rootLayout.Children.Add(tooltipContainer);
 
         Content = rootLayout;
+
+        AutomationIds.Link(this, rootLayout, TrackAutomationIdSuffix);
+        AutomationIds.Link(this, thumb, ThumbAutomationIdSuffix);
+        AutomationIds.Link(this, tooltipContainer, TooltipAutomationIdSuffix);
+        AutomationIds.Link(this, tooltipLabel, ValueAutomationIdSuffix);
 
         // Set initial tooltip text
         tooltipLabel.Text = FormatValue(Value);

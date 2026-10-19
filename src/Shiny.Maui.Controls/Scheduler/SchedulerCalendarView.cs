@@ -7,6 +7,30 @@ namespace Shiny.Maui.Controls.Scheduler;
 
 public class SchedulerCalendarView : ContentView
 {
+    /// <summary>
+    /// Appended to the view's <see cref="Element.AutomationId"/>, then the date as <c>yyyyMMdd</c>, to name
+    /// each day cell: <c>&lt;id&gt;_Day_20261019</c>. Keyed by date so it survives a month change.
+    /// </summary>
+    public const string DayAutomationIdSuffix = "_Day";
+
+    /// <summary>
+    /// Appended to a day's id, then <see cref="SchedulerEvent.Identifier"/>, to name each event shown in
+    /// it: <c>&lt;id&gt;_Day_20261019_Event_&lt;identifier&gt;</c>. The agenda view uses the same suffix.
+    /// </summary>
+    public const string EventAutomationIdSuffix = "_Event";
+
+    /// <summary>Appended to a day's id to name its "+N more" overflow.</summary>
+    public const string MoreAutomationIdSuffix = "_More";
+
+    /// <summary>Appended to the view's <see cref="Element.AutomationId"/> to name the previous-month button.</summary>
+    public const string PreviousMonthAutomationIdSuffix = "_PreviousMonth";
+
+    /// <summary>Appended to the view's <see cref="Element.AutomationId"/> to name the next-month button.</summary>
+    public const string NextMonthAutomationIdSuffix = "_NextMonth";
+
+    /// <summary>Appended to the view's <see cref="Element.AutomationId"/> to name the month title label.</summary>
+    public const string MonthTitleAutomationIdSuffix = "_MonthTitle";
+
     readonly Grid rootGrid;
     readonly Grid headerGrid;
     readonly Label monthLabel;
@@ -316,6 +340,11 @@ public class SchedulerCalendarView : ContentView
         UpdateGestures();
         RebuildCalendar();
 
+        AutomationIds.Link(this, prevButton, PreviousMonthAutomationIdSuffix);
+        AutomationIds.Link(this, nextButton, NextMonthAutomationIdSuffix);
+        AutomationIds.Link(this, monthLabel, MonthTitleAutomationIdSuffix);
+        AutomationIds.Track(this, NameDayCells);
+
         // Last line: replays any styled property that was applied before the
         // children existed. See StyleGuard.
         StyleGuard.MarkReady(this, typeof(SchedulerCalendarView));
@@ -448,6 +477,13 @@ public class SchedulerCalendarView : ContentView
             cell.CurrentDayColor = CurrentDayColor;
             cell.Events = [];
         }
+        NameDayCells();
+    }
+
+    void NameDayCells()
+    {
+        foreach (var cell in cells)
+            AutomationIds.Set(cell, SchedulerAutomationIds.For(this, DayAutomationIdSuffix, SchedulerAutomationIds.DateKey(cell.Date)));
     }
 
     void UpdateCellSelection()

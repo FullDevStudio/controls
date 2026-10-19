@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using Microsoft.Maui.Controls.Shapes;
+using Shiny.Maui.Controls.Infrastructure;
 using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls;
@@ -192,6 +193,7 @@ public partial class PasswordStrength
             rulesLayout.Children.Clear();
             foreach (var _ in result.Rules)
                 rulesLayout.Children.Add(this.CreateRuleRow());
+            this.NameRules();
         }
 
         for (var i = 0; i < result.Rules.Count; i++)
@@ -216,6 +218,17 @@ public partial class PasswordStrength
                 this.PaintRuleText(glyph);
                 this.PaintRuleText(text);
             }
+        }
+    }
+
+
+    // The rule's text, which is what a test reads; the rows are only rebuilt when the rule count changes.
+    void NameRules()
+    {
+        for (var i = 0; i < rulesLayout.Children.Count; i++)
+        {
+            if (rulesLayout.Children[i] is Grid { Children.Count: > 1 } row && row.Children[1] is Label text)
+                AutomationIds.Set(text, AutomationIds.For(this, RuleAutomationIdSuffix, i));
         }
     }
 

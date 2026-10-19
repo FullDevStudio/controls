@@ -8,13 +8,20 @@ namespace Shiny.Maui.Controls.Cells;
 
 public class CheckboxCell : CellBase
 {
+    /// <summary>Appended to the cell's <see cref="Element.AutomationId"/> to name its check box.</summary>
+    public const string CheckBoxAutomationIdSuffix = "_CheckBox";
+
     /// <summary>
     /// Children are built by CellBase's constructor (BuildLayout -> the virtual
     /// CreateAccessoryView override above), so by the time this body runs they exist.
     /// Marking ready here replays any property an implicit Style applied before
     /// construction - see StyleGuard.
     /// </summary>
-    public CheckboxCell() => StyleGuard.MarkReady(this, typeof(CheckboxCell));
+    public CheckboxCell()
+    {
+        AutomationIds.Link(this, checkBox, CheckBoxAutomationIdSuffix);
+        StyleGuard.MarkReady(this, typeof(CheckboxCell));
+    }
 
     CheckBox checkBox = default!;
 

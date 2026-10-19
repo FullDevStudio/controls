@@ -108,3 +108,11 @@ is silently dropped — which shows up as a control that simply never follows th
 
 See also [Wizard](wizard.md) for the same markers in a horizontal, step-driven form, and
 [Styling & theming](styling.md).
+
+## Automation ids (MAUI)
+
+Set `AutomationId` on the control and its parts are named after it, for UI tests (Appium, UI Automation, DevFlow). With no id on the control, the parts get none.
+
+| Part | Id |
+|---|---|
+| Each row (what `NodeTapped` listens on), by index | `<id>_Node_0` |

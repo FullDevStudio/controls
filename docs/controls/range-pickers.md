@@ -120,3 +120,25 @@ The field text comes from `RangeFormatter`, which drops whatever the two ends sh
 - **Value types:** `DateRange` (inclusive days; `ToDateTimeRange()` gives a midnight-to-midnight span for queries), `TimeRange` (`CrossesMidnight`, `On(date)`) and `DateTimeRange`.
 - **Selection:** `DateRangeSelector` (the tap state machine and per-day `CalendarDayState`), `DateRangeConstraints.Validate` and `TimeRangeConstraints` (start and end slots, `EndFor` keeping a length).
 - **Calendar helpers:** `CalendarMath` (month grids) and `DateRangePresets`.
+
+## Automation ids (MAUI)
+
+Set `AutomationId` on the control and its parts are named after it, for UI tests (Appium, UI Automation, DevFlow). With no id on the control, the parts get none.
+
+| Part | Id |
+|---|---|
+| DateRangeCalendar: each day, by date | `<id>_Day_20261019` |
+| DateRangeCalendar: previous / next month | `<id>_PreviousMonth / <id>_NextMonth` |
+| DateRangeCalendar: each month's title, by index | `<id>_MonthTitle_0` |
+| DateRangeCalendar: each preset chip, by index | `<id>_Preset_0` |
+| Pickers: the field that opens the popup | `<id>_Field` |
+| Pickers: the label showing the committed range | `<id>_Value` |
+| Pickers: popup card | `<id>_Popup` |
+| Pickers: popup title (the draft summary) | `<id>_Title` |
+| Pickers: Apply / Cancel / Clear | `<id>_Apply / <id>_Cancel / <id>_Clear` |
+| DateRangePicker, DateTimeRangePicker: the calendar in the popup (its days follow it) | `<id>_Calendar → <id>_Calendar_Day_20261019` |
+| TimeRangePicker: start / end column rows, by time `HHmm` | `<id>_Start_0930 / <id>_End_1730` |
+| DateTimeRangePicker: start / end time pickers | `<id>_StartTime / <id>_EndTime` |
+| DateTimeRangePicker: start / end date labels | `<id>_StartDate / <id>_EndDate` |
+
+Days are keyed by date (`yyyyMMdd`, invariant) so a test finds the same day whichever month is showing. A padding day that another visible month also shows is left unnamed there, so every id is unique. The popup lives in the page's overlay layer, not under the picker, so the popup ids are the only way to reach it.

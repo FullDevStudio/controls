@@ -12,7 +12,11 @@ public class LabelCell : CellBase
     /// Marking ready here replays any property an implicit Style applied before
     /// construction - see StyleGuard.
     /// </summary>
-    public LabelCell() => StyleGuard.MarkReady(this, typeof(LabelCell));
+    public LabelCell()
+    {
+        AutomationIds.Link(this, valueLabel, ValueAutomationIdSuffix);
+        StyleGuard.MarkReady(this, typeof(LabelCell));
+    }
 
     Label valueLabel = default!;
 

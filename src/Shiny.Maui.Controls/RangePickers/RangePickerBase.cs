@@ -17,6 +17,27 @@ namespace Shiny.Maui.Controls;
 /// </remarks>
 public abstract partial class RangePickerBase : ContentView
 {
+    /// <summary>Appended to the picker's <see cref="Element.AutomationId"/> to name the field that opens the popup.</summary>
+    public const string FieldAutomationIdSuffix = "_Field";
+
+    /// <summary>Appended to the picker's <see cref="Element.AutomationId"/> to name the label showing the committed range.</summary>
+    public const string ValueAutomationIdSuffix = "_Value";
+
+    /// <summary>Appended to the picker's <see cref="Element.AutomationId"/> to name the popup card while it is open.</summary>
+    public const string PopupAutomationIdSuffix = "_Popup";
+
+    /// <summary>Appended to the picker's <see cref="Element.AutomationId"/> to name the popup's title (the draft summary).</summary>
+    public const string TitleAutomationIdSuffix = "_Title";
+
+    /// <summary>Appended to the picker's <see cref="Element.AutomationId"/> to name the popup's Apply button.</summary>
+    public const string ApplyAutomationIdSuffix = "_Apply";
+
+    /// <summary>Appended to the picker's <see cref="Element.AutomationId"/> to name the popup's Cancel button.</summary>
+    public const string CancelAutomationIdSuffix = "_Cancel";
+
+    /// <summary>Appended to the picker's <see cref="Element.AutomationId"/> to name the popup's Clear button.</summary>
+    public const string ClearAutomationIdSuffix = "_Clear";
+
     readonly Border field;
     readonly Label valueLabel;
     readonly Label iconLabel;
@@ -24,6 +45,7 @@ public abstract partial class RangePickerBase : ContentView
     Grid? overlay;
     Button? applyButton;
     Button? clearButton;
+    Button? cancelButton;
     Label? titleLabel;
     PageOverlay.RangePickerLayer? layer;
 
@@ -63,6 +85,16 @@ public abstract partial class RangePickerBase : ContentView
 
         this.backButton = new AndroidBackButton(() => this.Dispatcher.Dispatch(this.Cancel));
         this.Content = this.field;
+
+        AutomationIds.Link(this, this.field, FieldAutomationIdSuffix);
+        AutomationIds.Link(this, this.valueLabel, ValueAutomationIdSuffix);
+        // The popup is rebuilt on every open, so it is (re)named there; this catches an id that
+        // changes while it is open.
+        AutomationIds.Track(this, () =>
+        {
+            if (this.overlay is not null)
+                this.ApplyPopupAutomationIds();
+        });
 
         StyleGuard.MarkReady(this, typeof(RangePickerBase));
     }
@@ -164,6 +196,7 @@ public abstract partial class RangePickerBase : ContentView
         this.PopupCard = null;
         this.applyButton = null;
         this.clearButton = null;
+        this.cancelButton = null;
         this.titleLabel = null;
         this.OnClosed();
         this.SetValue(IsOpenProperty, false);
@@ -184,7 +217,7 @@ public abstract partial class RangePickerBase : ContentView
         this.titleLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurface);
 
         this.clearButton = TextButton(this.ClearText, this.ClearDraft);
-        var cancel = TextButton(this.CancelText, this.Cancel);
+        var cancel = this.cancelButton = TextButton(this.CancelText, this.Cancel);
         this.applyButton = new Button
         {
             Text = this.ApplyText,
@@ -230,6 +263,7 @@ public abstract partial class RangePickerBase : ContentView
         card.GestureRecognizers.Add(new TapGestureRecognizer());
 
         this.PopupCard = card;
+        this.ApplyPopupAutomationIds();
         var overlay = new Grid
         {
             InputTransparent = false,
@@ -291,6 +325,25 @@ public abstract partial class RangePickerBase : ContentView
         button.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.Primary);
         button.Clicked += (_, _) => action();
         return button;
+    }
+
+
+    /// <summary>
+    /// Names the open popup's parts after the picker. The card lives in the page's overlay layer, not
+    /// under the picker, so a test can only find it by these ids. Pickers override to name their content.
+    /// </summary>
+    protected virtual void ApplyPopupAutomationIds()
+    {
+        if (this.PopupCard is { } card)
+            AutomationIds.Set(card, AutomationIds.For(this, PopupAutomationIdSuffix));
+        if (this.titleLabel is { } title)
+            AutomationIds.Set(title, AutomationIds.For(this, TitleAutomationIdSuffix));
+        if (this.applyButton is { } apply)
+            AutomationIds.Set(apply, AutomationIds.For(this, ApplyAutomationIdSuffix));
+        if (this.cancelButton is { } cancel)
+            AutomationIds.Set(cancel, AutomationIds.For(this, CancelAutomationIdSuffix));
+        if (this.clearButton is { } clear)
+            AutomationIds.Set(clear, AutomationIds.For(this, ClearAutomationIdSuffix));
     }
 
 

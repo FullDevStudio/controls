@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Specialized;
+using System.Runtime.CompilerServices;
 using System.Windows.Input;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
@@ -14,6 +15,15 @@ namespace Shiny.Maui.Controls;
 [ContentProperty(nameof(Root))]
 public partial class TableView : ContentView
 {
+    /// <summary>Appended to the table's <see cref="Element.AutomationId"/>, with the visible section's index, to name each rendered section.</summary>
+    public const string SectionAutomationIdSuffix = "_Section";
+
+    /// <summary>
+    /// Appended to the table's <see cref="Element.AutomationId"/> to name a cell that has no id of its own,
+    /// as <c>&lt;id&gt;_Cell_&lt;section&gt;_&lt;row&gt;</c> in visible order. The cell's own parts then follow it.
+    /// </summary>
+    public const string CellAutomationIdSuffix = "_Cell";
+
     ScrollView scrollView = default!;
     VerticalStackLayout rootLayout = default!;
     TvTableRoot root = default!;
@@ -23,6 +33,12 @@ public partial class TableView : ContentView
     readonly List<TvTableSection> generatedSections = new();
     DragSortController? dragSort;
     internal bool SuppressRender { get; set; }
+
+    // What the last render put on screen, so a change of the table's id can rename it without a re-render.
+    readonly List<(View View, IReadOnlyList<CellBase> Cells)> renderedSections = new();
+    // The ids this table handed out. A cell whose id is one of these is ours to rename; any other id
+    // was the consumer's and is left alone.
+    readonly ConditionalWeakTable<CellBase, string> generatedCellIds = new();
 
     public TableView()
     {
@@ -34,6 +50,7 @@ public partial class TableView : ContentView
         rootLayout = new VerticalStackLayout();
         scrollView.Content = rootLayout;
         Content = scrollView;
+        AutomationIds.Track(this, NameRenderedParts);
 
         // Last line: replays any styled property that was applied before the
         // children existed. See StyleGuard.
@@ -340,6 +357,7 @@ public partial class TableView : ContentView
             }
 
             rootLayout.Children.Clear();
+            renderedSections.Clear();
 
             // Only the visible sections, and the filter has to happen here rather than in the loop.
             // A hidden section renders as a zero-height placeholder, so counting it would put a
@@ -352,6 +370,7 @@ public partial class TableView : ContentView
             {
                 var sectionView = SectionRenderer.Render(sections[i], this);
                 rootLayout.Children.Add(sectionView);
+                renderedSections.Add((sectionView, sections[i].GetVisibleCells()));
 
                 // Section separator
                 if (ShowSectionSeparator && i < sections.Count - 1)
@@ -375,6 +394,32 @@ public partial class TableView : ContentView
         finally
         {
             isRendering = false;
+        }
+        NameRenderedParts();
+    }
+
+    void NameRenderedParts()
+    {
+        for (var s = 0; s < renderedSections.Count; s++)
+        {
+            var (view, cells) = renderedSections[s];
+            AutomationIds.Set(view, AutomationIds.For(this, SectionAutomationIdSuffix, s));
+
+            var cellBase = AutomationIds.For(this, CellAutomationIdSuffix, s);
+            for (var c = 0; c < cells.Count; c++)
+            {
+                var cell = cells[c];
+                var hasGenerated = generatedCellIds.TryGetValue(cell, out var generated);
+                if (!String.IsNullOrEmpty(cell.AutomationId) && (!hasGenerated || cell.AutomationId != generated))
+                    continue;
+
+                var id = cellBase is null ? null : $"{cellBase}_{c}";
+                AutomationIds.Set(cell, id);
+                if (id is null)
+                    generatedCellIds.Remove(cell);
+                else
+                    generatedCellIds.AddOrUpdate(cell, id);
+            }
         }
     }
 

@@ -33,3 +33,16 @@ A country search control built on AutoCompleteEntry with flag emoji display, cou
 Events: `CountrySelected` fires when a country is chosen.
 
 The `Country` model provides: `Name`, `Iso2`, `Iso3`, `DialCode`, `FlagEmoji`.
+
+### Automation ids (MAUI)
+
+Set `AutomationId` on the control and its parts are named after it, for UI tests (Appium, UI Automation, DevFlow). Without an id, the parts get none.
+
+| Part | Id |
+|---|---|
+| The search field | `<id>_Entry` |
+| The country dropdown | `<id>_DropDown` |
+| Each country, by ISO alpha-2 code | `<id>_Suggestion_CA` |
+| The selected country's flag | `<id>_Flag` |
+
+Countries are keyed by code rather than position, so `_Suggestion_CA` is Canada however the list is filtered.

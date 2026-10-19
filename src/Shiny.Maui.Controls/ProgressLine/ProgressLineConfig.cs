@@ -3,6 +3,13 @@ namespace Shiny.Maui.Controls;
 /// <summary>Per-run settings for <see cref="IProgressLineService.Start"/>.</summary>
 public class ProgressLineConfig
 {
+    /// <summary>
+    /// Names the service's line for UI tests, which otherwise have nothing to find it by: it is docked
+    /// into the page's overlay layer, under no element of the app's. Null (the default) leaves it unnamed.
+    /// The line is shared by overlapping runs, so the last run's id wins, as its look does.
+    /// </summary>
+    public string? AutomationId { get; set; }
+
     /// <inheritdoc cref="ProgressLine.Position"/>
     public ProgressLinePosition Position { get; set; } = ProgressLinePosition.Top;
 

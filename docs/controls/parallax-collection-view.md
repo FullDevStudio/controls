@@ -80,3 +80,9 @@ A scrollable list with a hero header that translates at a configurable fraction 
 Both hosts fire a `Scrolled` event with `ParallaxScrollEventArgs(verticalOffset, headerTranslation, headerVisibleHeight)` so you can drive sticky titles, fading nav chrome, etc.
 
 When no `HeaderTemplate`/`HeroTemplate` is set, the header reserves **no** space (so you never get a blank band above the list). MAUI also exposes `ScrollTo(...)` and a `ScrollToTop(bool animate = true)` method that returns the list to the very top including the header.
+
+### Automation ids (MAUI)
+
+Set `AutomationId` on the `ParallaxCollectionView` and the inner list is `<id>_List` (the scroll
+target) and the header host `<id>_Header`. Items are your `ItemTemplate`'s, so give them ids there
+(`AutomationId="{Binding Id}"`).

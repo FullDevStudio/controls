@@ -43,6 +43,24 @@ namespace Shiny.Maui.Controls.Ribbons;
 [ContentProperty(nameof(Tabs))]
 public partial class Ribbon : ContentView
 {
+    /// <summary>Appended to the ribbon's own <see cref="Element.AutomationId"/> to name the collapse chevron. Without an id it stays <c>RibbonCollapseToggle</c>.</summary>
+    public const string CollapseToggleAutomationIdSuffix = "_CollapseToggle";
+
+    /// <summary>Appended to the ribbon's id to name the application (File) button. Without an id it stays <c>RibbonApplicationButton</c>.</summary>
+    public const string ApplicationButtonAutomationIdSuffix = "_ApplicationButton";
+
+    /// <summary>
+    /// Appended to the ribbon's id, with the tab's index, to name each tab that has no
+    /// <see cref="RibbonTab.AutomationId"/> of its own: <c>&lt;id&gt;_Tab_&lt;index&gt;</c>.
+    /// </summary>
+    public const string TabAutomationIdSuffix = "_Tab";
+
+    /// <summary>Appended to the ribbon's id to name the dropdown or group popup card it opens over the page.</summary>
+    public const string MenuAutomationIdSuffix = "_Menu";
+
+    /// <summary>Appended to the ribbon's id, with the line's index, to name each line of an open dropdown: <c>&lt;id&gt;_MenuItem_&lt;index&gt;</c>.</summary>
+    public const string MenuItemAutomationIdSuffix = "_MenuItem";
+
     readonly ObservableCollection<RibbonTab> tabs = new();
     readonly ObservableCollection<RibbonItem> quickAccess = new();
 
@@ -138,7 +156,6 @@ public partial class Ribbon : ContentView
             Stroke = null,
             BackgroundColor = Colors.Transparent,
             VerticalOptions = LayoutOptions.Center,
-            AutomationId = "RibbonCollapseToggle",
             StrokeShape = new RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerSmallRadius),
             GestureRecognizers =
             {
@@ -249,7 +266,11 @@ public partial class Ribbon : ContentView
         };
 
         this.Content = this.root;
-        this.Rebuild();
+
+        // Tracked rather than called once: the tabs and the application button are rebuilt with their
+        // ids in hand, so a new id on the ribbon means building them again.
+        AutomationIds.Track(this, this.Rebuild);
+        AutomationIds.Link(this, this.collapseToggle, CollapseToggleAutomationIdSuffix, "RibbonCollapseToggle");
 
         // The tab labels and the collapse chevron carry resolved colours (see ApplyTabInk), so a token
         // swap - the app flipping to dark, or a pinned palette scoped over this ribbon by its host -

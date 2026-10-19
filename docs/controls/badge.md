@@ -53,3 +53,11 @@ Wraps a single content view and overlays a small notification badge at any of th
 - `MaxCount` overflow ("99+" style) for numeric counts
 - Configurable show/hide scale animation and optional continuous pulse for attention-grabbing badges
 - Blazor honors `prefers-reduced-motion` and disables both animations when set
+
+## Automation ids (MAUI)
+
+Set `AutomationId` on the `BadgeView` and its badge is named after it, for UI tests:
+
+| Part | Id |
+|---|---|
+| Badge label ("3", "99+") | `<id>_Badge` |

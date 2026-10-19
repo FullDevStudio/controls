@@ -7,13 +7,20 @@ namespace Shiny.Maui.Controls.Cells;
 
 public class SimpleCheckCell : CellBase
 {
+    /// <summary>Appended to the cell's <see cref="Element.AutomationId"/> to name the checkmark, visible only while checked.</summary>
+    public const string CheckAutomationIdSuffix = "_Check";
+
     /// <summary>
     /// Children are built by CellBase's constructor (BuildLayout -> the virtual
     /// CreateAccessoryView override above), so by the time this body runs they exist.
     /// Marking ready here replays any property an implicit Style applied before
     /// construction - see StyleGuard.
     /// </summary>
-    public SimpleCheckCell() => StyleGuard.MarkReady(this, typeof(SimpleCheckCell));
+    public SimpleCheckCell()
+    {
+        AutomationIds.Link(this, checkLabel, CheckAutomationIdSuffix);
+        StyleGuard.MarkReady(this, typeof(SimpleCheckCell));
+    }
 
     Label checkLabel = default!;
 

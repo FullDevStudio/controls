@@ -24,6 +24,18 @@ class DateCarouselPicker : ContentView
             HorizontalScrollBarVisibility = ScrollBarVisibility.Never
         };
         Content = scroll;
+
+        // Named by the agenda view; the days follow this picker's id.
+        AutomationIds.Track(this, NameItems);
+    }
+
+    void NameItems()
+    {
+        foreach (var item in items)
+        {
+            if (item.BindingContext is DatePickerItemContext ctx)
+                AutomationIds.Set(item, SchedulerAutomationIds.For(this, SchedulerCalendarView.DayAutomationIdSuffix, SchedulerAutomationIds.DateKey(ctx.Date)));
+        }
     }
 
     public DateOnly SelectedDate
@@ -107,6 +119,7 @@ class DateCarouselPicker : ContentView
             stack.Children.Add(item);
         }
 
+        NameItems();
         ScrollToSelected();
     }
 

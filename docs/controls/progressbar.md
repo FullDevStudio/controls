@@ -78,3 +78,11 @@ Set `Segments` to split the bar into separate steps with a gap between them inst
 - Indeterminate mode and the pulse sheen always use the continuous bar.
 
 Events: `ValueChangedEvent`. Commands: `ValueChangedCommand`.
+
+## Automation ids (MAUI)
+
+Set `AutomationId` on the bar and its parts are named after it, for UI tests:
+
+| Part | Id |
+|---|---|
+| Percentage label (`ShowText`) | `<id>_Text` |

@@ -35,6 +35,12 @@ namespace Shiny.Maui.Controls;
 /// </example>
 public partial class ButtonGroup : StackLayout, IView
 {
+    /// <summary>
+    /// Appended to the group's own <see cref="Element.AutomationId"/>, with the segment's index among
+    /// <see cref="Segments"/>, to name each segment that has no id of its own: <c>&lt;id&gt;_Segment_&lt;index&gt;</c>.
+    /// </summary>
+    public const string SegmentAutomationIdSuffix = "_Segment";
+
     /// <summary>What a segment looked like before this group started pushing appearances at it.</summary>
     sealed class SegmentState
     {
@@ -49,6 +55,9 @@ public partial class ButtonGroup : StackLayout, IView
     readonly ConditionalWeakTable<ShinyButton, SegmentState> pushed = new();
     readonly List<ShinyButton> hooked = new();
     readonly List<int> selection = new();
+
+    // The segments this group named. A segment the author named is theirs and is never renamed.
+    readonly ConditionalWeakTable<ShinyButton, object> named = new();
 
     // The theme's corner radius and hairline thickness, as numbers. Both arrive as dynamic resources,
     // and two of the four corners have to be zeroed - which cannot be done to a value that has not
@@ -87,6 +96,8 @@ public partial class ButtonGroup : StackLayout, IView
         // Start/Center defaults are supplied by the IView alignment members below instead.
 
         this.Children.Add(this.probe);
+
+        AutomationIds.Track(this, this.NameSegments);
 
         // Last line: replays any styled property that was applied before the children existed.
         // See StyleGuard.
@@ -267,6 +278,27 @@ public partial class ButtonGroup : StackLayout, IView
         this.ApplyGeometry();
         this.ClampSelection();
         this.ApplySelectionVisuals();
+        this.NameSegments();
+    }
+
+
+    void NameSegments()
+    {
+        var segments = this.SegmentList();
+        for (var i = 0; i < segments.Count; i++)
+        {
+            var segment = segments[i];
+            if (!String.IsNullOrEmpty(segment.AutomationId) && !this.named.TryGetValue(segment, out _))
+                continue;
+
+            var id = AutomationIds.For(this, SegmentAutomationIdSuffix, i);
+            AutomationIds.Set(segment, id);
+
+            if (id is null)
+                this.named.Remove(segment);
+            else
+                this.named.AddOrUpdate(segment, this);
+        }
     }
 
 

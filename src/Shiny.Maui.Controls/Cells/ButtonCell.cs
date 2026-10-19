@@ -57,6 +57,10 @@ public class ButtonCell : CellBase
     public ButtonCell()
     {
         BuildButtonLayout();
+        // The base title label is swapped out for this one, so it takes the title's id (and the
+        // detached base label gives it up - this runs after CellBase's own link on every change).
+        AutomationIds.Link(this, buttonLabel, TitleAutomationIdSuffix);
+        AutomationIds.Track(this, () => AutomationIds.Set(TitleLabel, null));
 
         // Last line: replays any styled property that was applied before the
         // children existed. See StyleGuard.

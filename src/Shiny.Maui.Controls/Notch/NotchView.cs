@@ -29,6 +29,12 @@ public partial class NotchView : Grid
 {
     const string MorphAnimationName = "ShinyNotchMorph";
 
+    /// <summary>
+    /// Appended to the notch's <see cref="Element.AutomationId"/> to name the surface: the morphing card
+    /// that carries the tap gesture and whose size a test asserts on.
+    /// </summary>
+    public const string SurfaceAutomationIdSuffix = "_Surface";
+
     /// <summary>The cap automatic corners stop at, so a tall notch stays a rounded rectangle and not an oval.</summary>
     internal const double AutoCornerRadiusCap = 28d;
 
@@ -90,6 +96,7 @@ public partial class NotchView : Grid
         // Command rather than Tapped: Tapped cannot be raised from a test, Command can.
         this.surface.GestureRecognizers.Add(new TapGestureRecognizer { Command = new Command(this.OnSurfaceTapped) });
         this.Children.Add(this.surface);
+        AutomationIds.Link(this, this.surface, SurfaceAutomationIdSuffix);
 
         // Anything inside the content invalidating its measure bubbles up to here: that is the "the
         // content changed size" signal. Our own resizes land on the surface, above it, so they never

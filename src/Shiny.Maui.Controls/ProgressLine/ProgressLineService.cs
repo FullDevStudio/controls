@@ -91,6 +91,7 @@ public sealed class ProgressLineService : IProgressLineService, IDisposable
         line.FadeDuration = cfg.FadeDuration;
         line.ProgressAnimationDuration = cfg.ProgressAnimationDuration;
         line.IsIndeterminate = cfg.Indeterminate;
+        AutomationIds.Set(line, cfg.AutomationId);
 
         cfg.Configure?.Invoke(line);
     }

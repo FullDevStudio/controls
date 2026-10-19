@@ -93,3 +93,16 @@ The **foreground** — the clock and the icons — is `StatusBarStyle`, `Auto` b
 iOS's edge-swipe-back keeps working: UIKit disables it whenever the bar is hidden, so the page puts it back deliberately (`EnableSwipeBackGesture="False"` opts out).
 
 > **macOS AppKit note.** The bar, its items, badges and back button all render on `net10.0-macos` — the wrapper is installed before the page is presented, which sidesteps the re-parenting problem that affects the app-wide Flyout install there. Two things do not: the overflow menu paints nothing (it is added to a page overlay layer on the tap that opens it — the same pre-existing limitation as Toast, Dialogs and in-app Quick Entry), and a collapsing large title leaves a residual band under the bar at the end of the fold, because that head does not re-measure the row.
+
+### Automation ids (MAUI)
+
+Every pushed page with an `AutomationId` gets a bar named `<page id>_NavBar`, and the bar's parts are named after that (or after a `ShinyNavBar`'s own id when you host one by hand). A `ToolbarItem` with its own `AutomationId` keeps it, on the bar and in the overflow menu. Without an id the back and overflow buttons keep `nav-back` / `nav-overflow-left` / `nav-overflow-right`.
+
+| Part | Id |
+|---|---|
+| Back button | `<bar id>_Back` |
+| Title / subtitle | `<bar id>_Title` / `<bar id>_Subtitle` |
+| Each unnamed left / right item, by index on the bar | `<bar id>_LeftItem_<index>` / `<bar id>_RightItem_<index>` |
+| Overflow buttons | `<bar id>_OverflowLeft` / `<bar id>_OverflowRight` |
+| Overflow menu card | `<bar id>_Menu` |
+| Each unnamed menu row | `<bar id>_MenuItem_<index>` |

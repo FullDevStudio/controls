@@ -298,7 +298,6 @@ public partial class Ribbon
             Stroke = null,
             Background = this.AccentBrush,
             Margin = new Thickness(0, 4),
-            AutomationId = "RibbonApplicationButton",
             StrokeShape = new RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerSmallRadius),
             GestureRecognizers =
             {
@@ -306,6 +305,7 @@ public partial class Ribbon
             }
         };
 
+        AutomationIds.Set(border, AutomationIds.For(this, ApplicationButtonAutomationIdSuffix) ?? "RibbonApplicationButton");
         this.appButtonHost.Content = border;
         this.appButtonHost.IsVisible = true;
     }
@@ -391,8 +391,13 @@ public partial class Ribbon
             StrokeShape = new RoundRectangle()
         };
 
-        if (!string.IsNullOrWhiteSpace(tab.AutomationId))
-            border.AutomationId = tab.AutomationId;
+        // The tab's own id wins; an unnamed tab is named by its position in Tabs.
+        AutomationIds.Set(
+            border,
+            string.IsNullOrWhiteSpace(tab.AutomationId)
+                ? AutomationIds.For(this, TabAutomationIdSuffix, this.tabs.IndexOf(tab))
+                : tab.AutomationId
+        );
 
         SemanticProperties.SetDescription(border, tab.Title);
 

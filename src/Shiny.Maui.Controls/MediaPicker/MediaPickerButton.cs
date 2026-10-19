@@ -21,6 +21,51 @@ namespace Shiny.Maui.Controls.Media;
 /// </summary>
 public class MediaPickerButton : ContentView
 {
+    /// <summary>Appended to the picker's own <see cref="Element.AutomationId"/> to name the add-photo tap target.</summary>
+    public const string AddAutomationIdSuffix = "_Add";
+
+    /// <summary>Names the label shown when camera or photo permission is denied.</summary>
+    public const string PermissionAutomationIdSuffix = "_Permission";
+
+    /// <summary>Names the inline carousel of photos.</summary>
+    public const string CarouselAutomationIdSuffix = "_Carousel";
+
+    /// <summary>Names each photo in the default carousel template, indexed in <see cref="Photos"/> order.</summary>
+    public const string PhotoAutomationIdSuffix = "_Photo";
+
+    /// <summary>Names each photo's remove (✕) button in the default carousel template, indexed in <see cref="Photos"/> order.</summary>
+    public const string RemoveAutomationIdSuffix = "_Remove";
+
+    /// <summary>Names the compact preview shown when <c>ShowAsCarouselInView</c> is off. Tapping it opens the viewer.</summary>
+    public const string PreviewAutomationIdSuffix = "_Preview";
+
+    /// <summary>
+    /// Names the hidden <see cref="ImageViewer"/>, so its overlay is <c>&lt;id&gt;_Viewer_Popup</c> and its close
+    /// button <c>&lt;id&gt;_Viewer_Close</c>.
+    /// </summary>
+    public const string ViewerAutomationIdSuffix = "_Viewer";
+
+    /// <summary>Names the viewer's previous-photo button.</summary>
+    public const string PreviousAutomationIdSuffix = "_Previous";
+
+    /// <summary>Names the viewer's next-photo button.</summary>
+    public const string NextAutomationIdSuffix = "_Next";
+
+    /// <summary>Names the viewer's "2 / 5" position label.</summary>
+    public const string PositionAutomationIdSuffix = "_Position";
+
+    /// <summary>Names the viewer's edit button, shown when <see cref="AllowPhotoEdit"/> is on.</summary>
+    public const string EditAutomationIdSuffix = "_Edit";
+
+    /// <summary>
+    /// Names the <see cref="ImageEditorControl"/> opened by the edit button, so its tools follow from it:
+    /// <c>&lt;id&gt;_Editor_Save</c>, <c>&lt;id&gt;_Editor_Tool_Crop</c>.
+    /// </summary>
+    public const string EditorAutomationIdSuffix = "_Editor";
+
+    /// <summary>Names the editor overlay's cancel (✕) button.</summary>
+    public const string EditorCancelAutomationIdSuffix = "_EditorCancel";
+
     readonly VerticalStackLayout root;
     readonly ContentView displayHost;   // swaps between empty view / carousel / compact preview
     readonly ContentView addHost;       // the tap target; holds the default trigger or the AddButtonTemplate
@@ -35,6 +80,10 @@ public class MediaPickerButton : ContentView
     int currentIndex;
     Layout? editorOverlayParent;
     View? editorOverlay;
+
+    // Rows the default carousel template has built. The native list does not re-bind a row whose
+    // position shifted under it (a removal ahead of it), so UpdateView renumbers them all.
+    readonly List<WeakReference<Border>> realizedItems = new();
 
     public MediaPickerButton()
     {
@@ -95,7 +144,14 @@ public class MediaPickerButton : ContentView
         this.Content = this.root;
 
         this.Photos = new ObservableCollection<MediaPickerItem>();
-        UpdateView();
+
+        AutomationIds.Link(this, this.addHost, AddAutomationIdSuffix);
+        AutomationIds.Link(this, this.permissionLabel, PermissionAutomationIdSuffix);
+        AutomationIds.Link(this, this.carousel, CarouselAutomationIdSuffix);
+        AutomationIds.Link(this, this.viewer, ViewerAutomationIdSuffix);
+
+        // UpdateView names the preview and the carousel rows, so an id change just runs it again.
+        AutomationIds.Track(this, UpdateView);
 
         // Last line: replays any styled property that was applied before the
         // children existed. See StyleGuard.
@@ -452,6 +508,7 @@ public class MediaPickerButton : ContentView
         }
 
         this.addHost.IsVisible = count < this.MaxPhotos;
+        this.NameRealizedItems();
     }
 
     void ApplyAddButtonTemplate()
@@ -522,8 +579,31 @@ public class MediaPickerButton : ContentView
             StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerMediumRadius),
             Content = new Grid { Children = { image, removeButton } }
         };
+        this.realizedItems.Add(new WeakReference<Border>(border));
+        border.BindingContextChanged += (_, _) => this.NameItem(border);
         return border;
     });
+
+    void NameRealizedItems()
+    {
+        this.realizedItems.RemoveAll(w => !w.TryGetTarget(out _));
+        foreach (var weak in this.realizedItems)
+        {
+            if (weak.TryGetTarget(out var border))
+                this.NameItem(border);
+        }
+    }
+
+    void NameItem(Border border)
+    {
+        var index = border.BindingContext is MediaPickerItem item && this.Photos is { } photos
+            ? photos.IndexOf(item)
+            : -1;
+
+        AutomationIds.Set(border, index < 0 ? null : AutomationIds.For(this, PhotoAutomationIdSuffix, index));
+        if (border.Content is Grid grid && grid.Children.Count > 1 && grid.Children[1] is Button remove)
+            AutomationIds.Set(remove, index < 0 ? null : AutomationIds.For(this, RemoveAutomationIdSuffix, index));
+    }
 
     View BuildCompactPreview()
     {
@@ -561,6 +641,7 @@ public class MediaPickerButton : ContentView
         var tap = new TapGestureRecognizer();
         tap.Tapped += (_, _) => OpenViewer(0);
         border.GestureRecognizers.Add(tap);
+        AutomationIds.Set(border, AutomationIds.For(this, PreviewAutomationIdSuffix));
         return border;
     }
 
@@ -586,9 +667,11 @@ public class MediaPickerButton : ContentView
     {
         var prev = MakeChromeButton("‹");
         prev.Clicked += (_, _) => Page(-1);
+        AutomationIds.Set(prev, AutomationIds.For(this, PreviousAutomationIdSuffix));
 
         var next = MakeChromeButton("›");
         next.Clicked += (_, _) => Page(1);
+        AutomationIds.Set(next, AutomationIds.For(this, NextAutomationIdSuffix));
 
         this.navLabel = new Label
         {
@@ -598,6 +681,7 @@ public class MediaPickerButton : ContentView
             HorizontalTextAlignment = TextAlignment.Center,
             HorizontalOptions = LayoutOptions.Center
         };
+        AutomationIds.Set(this.navLabel, AutomationIds.For(this, PositionAutomationIdSuffix));
 
         return new HorizontalStackLayout
         {
@@ -621,6 +705,7 @@ public class MediaPickerButton : ContentView
         }.Neutralize();
         edit.SetDynamicResource(Button.BackgroundColorProperty, ShinyThemeKeys.Color.Primary);
         edit.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnPrimary);
+        AutomationIds.Set(edit, AutomationIds.For(this, EditAutomationIdSuffix));
         edit.Clicked += (_, _) =>
         {
             this.viewer.IsOpen = false;
@@ -665,12 +750,14 @@ public class MediaPickerButton : ContentView
             SaveText = "✓ Save"
         };
         editor.SaveCommand = new Command<EditedImage>(async edited => await ApplyEditAsync(index, edited));
+        AutomationIds.Set(editor, AutomationIds.For(this, EditorAutomationIdSuffix));
 
         var cancel = MakeChromeButton("✕");
         cancel.Margin = new Thickness(0, 50, 16, 0);
         cancel.HorizontalOptions = LayoutOptions.End;
         cancel.VerticalOptions = LayoutOptions.Start;
         cancel.Clicked += (_, _) => CloseEditor();
+        AutomationIds.Set(cancel, AutomationIds.For(this, EditorCancelAutomationIdSuffix));
 
         var backdrop = new BoxView();
         backdrop.SetDynamicResource(BoxView.ColorProperty, ShinyThemeKeys.Color.Scrim);

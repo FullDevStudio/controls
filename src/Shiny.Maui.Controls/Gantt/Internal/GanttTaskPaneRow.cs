@@ -1,4 +1,5 @@
 using Shiny.Controls.Gantt;
+using Shiny.Maui.Controls.Infrastructure;
 using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls.Gantt.Internal;
@@ -12,6 +13,8 @@ sealed class GanttTaskPaneRow : Grid
     readonly GanttView owner;
     readonly GanttTask task;
     readonly BoxView selectionBackdrop;
+    readonly List<View> cells = [];
+    View? expander;
 
     public GanttTaskPaneRow(GanttView owner, GanttRow row, IReadOnlyList<GanttColumn> columns)
     {
@@ -31,7 +34,9 @@ sealed class GanttTaskPaneRow : Grid
         {
             var column = columns[i];
             content.ColumnDefinitions.Add(new ColumnDefinition(column.Width));
-            content.Add(this.BuildCell(column, row), i, 0);
+            var cell = this.BuildCell(column, row);
+            this.cells.Add(cell);
+            content.Add(cell, i, 0);
         }
 
         this.Add(this.selectionBackdrop);
@@ -42,6 +47,15 @@ sealed class GanttTaskPaneRow : Grid
         this.GestureRecognizers.Add(new TapGestureRecognizer
         {
             Command = new Command(() => owner.HandleRowTapped(this.task))
+        });
+
+        // The view names this row by task id; the cells and chevron follow the row's id.
+        AutomationIds.Track(this, () =>
+        {
+            for (var i = 0; i < this.cells.Count; i++)
+                AutomationIds.Set(this.cells[i], AutomationIds.For(this, GanttView.CellAutomationIdSuffix, i));
+            if (this.expander is not null)
+                AutomationIds.Set(this.expander, AutomationIds.For(this, GanttView.ExpandAutomationIdSuffix));
         });
     }
 
@@ -118,6 +132,7 @@ sealed class GanttTaskPaneRow : Grid
                 }
             };
             host.Add(hit, 1, 0);
+            this.expander = hit;
         }
 
         host.Add(cell, 2, 0);

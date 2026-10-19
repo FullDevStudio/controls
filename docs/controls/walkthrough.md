@@ -88,3 +88,14 @@ still tearing down (spotlight shrinking, dim fading) is queued and runs once the
 `AllowTargetInteraction` is implemented by fencing the backdrop with four transparent panels *around* the
 cut-out rather than one full-screen catcher — hit testing has no notion of a hole, so the hole has to be a
 gap between panels.
+
+## Automation ids (MAUI)
+
+Set `AutomationId` on the walkthrough and the callout it puts in the page's overlay layer is named after it, for UI tests:
+
+| Part | Id |
+|---|---|
+| Callout card | `<id>_Callout` |
+| Title / text labels | `<id>_Title`, `<id>_Text` |
+| Step counter ("1 of 4") | `<id>_Counter` |
+| Skip / Back / Next (Finish) | `<id>_Skip`, `<id>_Back`, `<id>_Next` |

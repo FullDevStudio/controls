@@ -51,3 +51,14 @@ MAUI backdrop color/opacity are controlled by `ShinyContentPage.BackdropColor` /
     <p>Your page content here — gets overlaid when IsShown=true</p>
 </LoadingOverlay>
 ```
+
+## Automation ids (MAUI)
+
+Set `AutomationId` on a `LoadingOverlay` and its parts are named after it, for UI tests (the backdrop belongs to the `OverlayHost`: `<host id>_Backdrop`):
+
+| Part | Id |
+|---|---|
+| Message label | `<id>_Message` |
+| Progress bar (determinate mode) | `<id>_Progress` |
+
+On a `ShinyContentPage` with an `AutomationId`, the built-in loading overlay is `<page id>_Loading` (so its message is `<page id>_Loading_Message`) and the page's `OverlayHost` is `<page id>_OverlayHost`, whose backdrop is `<page id>_OverlayHost_Backdrop`.

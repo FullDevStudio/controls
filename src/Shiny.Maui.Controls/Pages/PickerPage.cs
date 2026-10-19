@@ -2,13 +2,22 @@ using System.Collections.ObjectModel;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
 using Shiny.Maui.Controls.Cells;
-
+using Shiny.Maui.Controls.Infrastructure;
 using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls.Pages;
 
 public class PickerPage : ContentPage
 {
+    /// <summary>Appended to the owning cell's <see cref="Element.AutomationId"/> to name the picker page.</summary>
+    public const string PageAutomationIdSuffix = "_PickerPage";
+
+    /// <summary>
+    /// Appended to the owning cell's id, with the item's index, to name each row:
+    /// <c>&lt;cell id&gt;_PickerItem_&lt;index&gt;</c>, in <c>ItemsSource</c> order.
+    /// </summary>
+    public const string ItemAutomationIdSuffix = "_PickerItem";
+
     readonly PickerCell ownerCell;
     readonly ObservableCollection<PickerItemViewModel> items = new();
     readonly CollectionView collectionView;
@@ -17,6 +26,7 @@ public class PickerPage : ContentPage
     {
         this.ownerCell = ownerCell;
         Title = ownerCell.PageTitle;
+        AutomationIds.Set(this, AutomationIds.For(ownerCell, PageAutomationIdSuffix));
 
         // No explicit accent anywhere in the chain => follow the theme's Primary, live, as resolved
         // on the owner cell (see PickerCell.ThemeAccentColorProperty).
@@ -81,6 +91,14 @@ public class PickerPage : ContentPage
                 var tapGesture = new TapGestureRecognizer();
                 tapGesture.Tapped += OnItemTapped;
                 grid.GestureRecognizers.Add(tapGesture);
+
+                // Rows are recycled, so the id follows the item each time the row is re-bound.
+                grid.BindingContextChanged += (_, _) => AutomationIds.Set(
+                    grid,
+                    grid.BindingContext is PickerItemViewModel vm
+                        ? AutomationIds.For(ownerCell, ItemAutomationIdSuffix, items.IndexOf(vm))
+                        : null
+                );
 
                 return grid;
             })

@@ -27,6 +27,15 @@ namespace Shiny.Maui.Controls;
 [ContentProperty(nameof(Steps))]
 public partial class Wizard : ContentView
 {
+    /// <summary>Appended to the wizard's <see cref="Element.AutomationId"/> to name the built-in Next button.</summary>
+    public const string NextAutomationIdSuffix = "_Next";
+
+    /// <summary>Appended to the wizard's <see cref="Element.AutomationId"/> to name the built-in Back button.</summary>
+    public const string BackAutomationIdSuffix = "_Back";
+
+    /// <summary>Appended to the wizard's <see cref="Element.AutomationId"/> to name the built-in Cancel button.</summary>
+    public const string CancelAutomationIdSuffix = "_Cancel";
+
     readonly ObservableCollection<WizardStep> steps = new();
     readonly Grid root;
     readonly StateView stateView;
@@ -58,23 +67,26 @@ public partial class Wizard : ContentView
             Text = "Cancel",
             Appearance = ButtonAppearance.Text,
             Type = ButtonType.Secondary,
-            IsVisible = false,
-            AutomationId = "WizardCancelButton"
+            IsVisible = false
         };
         this.backButton = new ShinyButton
         {
             Text = "Back",
             Appearance = ButtonAppearance.Outlined,
-            Type = ButtonType.Secondary,
-            AutomationId = "WizardBackButton"
+            Type = ButtonType.Secondary
         };
         this.nextButton = new ShinyButton
         {
             Text = "Next",
             Appearance = ButtonAppearance.Filled,
-            Type = ButtonType.Primary,
-            AutomationId = "WizardNextButton"
+            Type = ButtonType.Primary
         };
+
+        // Named after the wizard, so two on one page do not share ids. The fixed ids are what shipped
+        // before the wizard's own id was used, and stay for a wizard that has none.
+        AutomationIds.Link(this, this.cancelButton, CancelAutomationIdSuffix, "WizardCancelButton");
+        AutomationIds.Link(this, this.backButton, BackAutomationIdSuffix, "WizardBackButton");
+        AutomationIds.Link(this, this.nextButton, NextAutomationIdSuffix, "WizardNextButton");
 
         this.cancelButton.Clicked += (_, _) => this.Cancel();
         this.backButton.Clicked += (_, _) => this.GoBack();

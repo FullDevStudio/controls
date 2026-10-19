@@ -143,3 +143,11 @@ Worth knowing, because it is where the two hosts genuinely differ:
 - Keep one appearance and one size across a group — mixing them makes the segments read as separate controls again, which is the thing the group exists to undo.
 - Use `SelectionMode` for a segmented picker; use `ShinyTabBar` when the segments switch *pages* rather than a value.
 - Give icon-only segments a `SemanticProperties.Description` (MAUI) or `aria-label` (Blazor). Blazor adds `aria-pressed` automatically for segments of a selection group, and nothing at all outside one.
+
+### Automation ids (MAUI)
+
+Set `AutomationId` on the group and every segment you did not name yourself is named after it, by its index in `Segments` (text segments and separators are skipped). A segment with its own `AutomationId` keeps it.
+
+| Part | Id |
+|---|---|
+| Each selectable segment | `<id>_Segment_<index>` |

@@ -19,6 +19,7 @@ class AgendaTimelinePanel : ContentView
     IReadOnlyList<TimeZoneInfo>? additionalTimezones;
     bool showTimeLabels = true;
     TapGestureRecognizer? backgroundTap;
+    readonly List<(View View, SchedulerEvent Event)> eventViews = [];
     DateOnly buildDate;
 
     public Action<SchedulerEvent>? EventTapped { get; set; }
@@ -66,6 +67,9 @@ class AgendaTimelinePanel : ContentView
         outerGrid.Add(eventsLayer);
 
         Content = outerGrid;
+
+        // Named by the agenda view after the day it shows; the events follow this panel's id.
+        AutomationIds.Track(this, () => SchedulerAutomationIds.NameEvents(this, eventViews));
     }
 
     public double TimeSlotHeight
@@ -205,6 +209,7 @@ class AgendaTimelinePanel : ContentView
 
         // events overlay content (the layer itself is parented once, in the constructor)
         eventsLayer.Children.Clear();
+        eventViews.Clear();
         eventsLayer.HeightRequest = totalHeight;
 
         var overlaps = DetectOverlaps(timedEvents);
@@ -243,6 +248,8 @@ class AgendaTimelinePanel : ContentView
                 EventTapped?.Invoke(captured);
             };
             eventView.GestureRecognizers.Add(tap);
+            // The tapped view is named, not the drag wrapper: that is what a UI test presses.
+            eventViews.Add((eventView, captured));
 
             // When neither flag is on, the tree below is byte-for-byte what it has always been:
             // the templated view goes straight into the layer with no wrapper and no recognizers.
@@ -255,6 +262,8 @@ class AgendaTimelinePanel : ContentView
 
             eventsLayer.Children.Add(placed);
         }
+
+        SchedulerAutomationIds.NameEvents(this, eventViews);
 
         // time marker
         var time = ShinyTime.For(this);

@@ -6,6 +6,12 @@ public class OverlayHost : Grid
 {
     const double DefaultBackdropMaxOpacity = 0.5;
 
+    /// <summary>
+    /// Appended to the host's <see cref="Element.AutomationId"/> to name the dimmed backdrop. Tapping it
+    /// closes the open panels and overlays that allow it.
+    /// </summary>
+    public const string BackdropAutomationIdSuffix = "_Backdrop";
+
     readonly BoxView backdrop;
     readonly List<object> activeClients = new();
 
@@ -26,6 +32,7 @@ public class OverlayHost : Grid
         tap.Tapped += OnBackdropTapped;
         backdrop.GestureRecognizers.Add(tap);
         Children.Add(backdrop);
+        AutomationIds.Link(this, backdrop, BackdropAutomationIdSuffix);
 
         // Last line: replays any styled property that was applied before the
         // children existed. See StyleGuard.

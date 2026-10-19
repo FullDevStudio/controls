@@ -278,6 +278,11 @@ public class TooltipBubble : Grid
     /// <summary>The card itself, so an owner can animate it independently of the tail.</summary>
     internal Border Card => this.card;
 
+    /// <summary>The title and text labels, so an owner can name them for UI automation.</summary>
+    internal Label TitleLabel => this.titleLabel;
+
+    internal Label TextLabel => this.textLabel;
+
     /// <summary>
     /// Which theme token the fill falls back to when <see cref="BubbleColor"/> is unset. A tooltip
     /// wants the inverse surface (light bubble on a dark app, and the other way round); a walkthrough

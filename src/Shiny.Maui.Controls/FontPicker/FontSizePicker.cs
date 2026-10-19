@@ -7,6 +7,9 @@ namespace Shiny.Maui.Controls.FontPicker;
 
 public class FontSizePicker : ContentView
 {
+    /// <summary>Appended to the picker's <see cref="Element.AutomationId"/> to name each size row, by its index in <see cref="AvailableFontSizes"/>: <c>&lt;id&gt;_Size_0</c>.</summary>
+    public const string SizeAutomationIdSuffix = "_Size";
+
     readonly VerticalStackLayout listLayout;
     readonly ScrollView scrollView;
 
@@ -19,6 +22,7 @@ public class FontSizePicker : ContentView
             VerticalScrollBarVisibility = ScrollBarVisibility.Default
         };
         Content = scrollView;
+        AutomationIds.Track(this, NameRows);
 
         // Last line: replays any styled property that was applied before the
         // children existed. See StyleGuard.
@@ -128,7 +132,17 @@ public class FontSizePicker : ContentView
             listLayout.Children.Add(border);
         }
 
+        NameRows();
         UpdateSelectionHighlight();
+    }
+
+    void NameRows()
+    {
+        for (var i = 0; i < listLayout.Children.Count; i++)
+        {
+            if (listLayout.Children[i] is Element row)
+                AutomationIds.Set(row, AutomationIds.For(this, SizeAutomationIdSuffix, i));
+        }
     }
 
     void UpdateSelectionHighlight()

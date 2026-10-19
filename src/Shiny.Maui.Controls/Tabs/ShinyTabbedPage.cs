@@ -34,6 +34,12 @@ namespace Shiny.Maui.Controls;
 [ContentProperty(nameof(Tabs))]
 public partial class ShinyTabbedPage : ContentPage, ShinyTabBar.ITabMenuHost
 {
+    /// <summary>
+    /// Appended to the page's own <see cref="Element.AutomationId"/> to name its tab bar, whose tabs and
+    /// centre button are then named after that: <c>&lt;id&gt;_TabBar_Tab_0</c>, <c>&lt;id&gt;_TabBar_Center</c>.
+    /// </summary>
+    public const string TabBarAutomationIdSuffix = "_TabBar";
+
     readonly ObservableCollection<ShinyTabItem> tabs = new();
     readonly Grid rootGrid;
     readonly StateView contentHost;
@@ -58,6 +64,7 @@ public partial class ShinyTabbedPage : ContentPage, ShinyTabBar.ITabMenuHost
         this.tabBar = new ShinyTabBar();
         this.tabBar.SelectionChanged += this.OnBarSelectionChanged;
         this.tabBar.TabReselected += (_, e) => this.TabReselected?.Invoke(this, e);
+        AutomationIds.Link(this, this.tabBar, TabBarAutomationIdSuffix);
 
         // Between the content and the bar: the centre menu dims the page it belongs to, but the
         // button that opened it has to stay visible above its own backdrop or the rotate-to-close

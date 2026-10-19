@@ -93,3 +93,15 @@ On MAUI the type is `ShinyToolbarItem`, not `ToolbarItem`: MAUI already has a `T
 
 - [Tooltip](tooltip.md) — the anchoring this is built on.
 - [Toolbar & TabBar](toolbar-tabbar.md) — the docked, page-level bar.
+
+### Automation ids (MAUI)
+
+Set `AutomationId` on the `FloatingToolbar` and the bar it floats over the page is named after it. Without one, the bar's buttons keep the `toolbar-item-<Text>` ids they have always had.
+
+| Part | Id |
+|---|---|
+| The floating bar | `<id>_Bar` |
+| Each bar button, by index among the drawn items | `<id>_Item_<index>` |
+| Overflow (⋯) button | `<id>_Item_Overflow` |
+| An open dropdown (depth 0 from the bar, 1 for its submenu…) | `<id>_Menu_<depth>` |
+| Each item in that dropdown | `<id>_Menu_<depth>_Item_<index>` |

@@ -4,7 +4,7 @@ using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls;
 
-public class Fab : ContentView
+public class Fab : ContentView, ITapTarget
 {
     const double DefaultSize = 56;
     const double DefaultIconSize = 24;
@@ -321,8 +321,15 @@ public class Fab : ContentView
     public event EventHandler? Clicked;
 
 
-    void OnTapped(object? sender, TappedEventArgs e)
+    void OnTapped(object? sender, TappedEventArgs e) => Invoke();
+
+    void ITapTarget.Invoke() => Invoke();
+
+    internal void Invoke()
     {
+        if (!IsEnabled)
+            return;
+
         if (UseFeedback)
             FeedbackHelper.Execute(this, nameof(Clicked));
 

@@ -11,6 +11,12 @@ namespace Shiny.Maui.Controls.ParallaxCollectionView;
 [ContentProperty(nameof(ItemTemplate))]
 public class ParallaxCollectionView : ContentView
 {
+    /// <summary>Appended to the control's <see cref="Element.AutomationId"/> to name the inner list (the scroll target). Items come from your template and carry the ids it gives them.</summary>
+    public const string ListAutomationIdSuffix = "_List";
+
+    /// <summary>Appended to the control's <see cref="Element.AutomationId"/> to name the parallax header host.</summary>
+    public const string HeaderAutomationIdSuffix = "_Header";
+
     readonly Grid root;
     readonly ContentView heroHost;
     readonly Grid spacerHeader;
@@ -49,6 +55,9 @@ public class ParallaxCollectionView : ContentView
 
         Content = root;
         ApplyHeaderHeight();
+
+        AutomationIds.Link(this, collection, ListAutomationIdSuffix);
+        AutomationIds.Link(this, heroHost, HeaderAutomationIdSuffix);
 
         // Last line: replays any styled property that was applied before the
         // children existed. See StyleGuard.

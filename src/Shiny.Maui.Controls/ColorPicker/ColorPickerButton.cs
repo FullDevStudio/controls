@@ -6,6 +6,21 @@ namespace Shiny.Maui.Controls.ColorPicker;
 
 public class ColorPickerButton : ContentView
 {
+    /// <summary>Appended to the button's <see cref="Element.AutomationId"/> to name the trigger that opens the popup.</summary>
+    public const string ButtonAutomationIdSuffix = "_Button";
+
+    /// <summary>Appended to the button's <see cref="Element.AutomationId"/> to name the popup card.</summary>
+    public const string PopupAutomationIdSuffix = "_Popup";
+
+    /// <summary>Appended to the button's <see cref="Element.AutomationId"/> to name the popup's Done button.</summary>
+    public const string DoneAutomationIdSuffix = "_Done";
+
+    /// <summary>
+    /// Appended to the button's <see cref="Element.AutomationId"/> to name the <see cref="ColorPicker"/> in the
+    /// popup. Its parts follow that: <c>&lt;id&gt;_Picker_Hex</c>.
+    /// </summary>
+    public const string PickerAutomationIdSuffix = "_Picker";
+
     readonly Border buttonBorder;
     readonly Label buttonLabel;
     readonly ColorPicker picker;
@@ -92,6 +107,14 @@ public class ColorPickerButton : ContentView
         };
 
         Content = buttonBorder;
+
+        // The popup is moved into the page when it opens, away from this button - these ids are the
+        // only way a test finds it there.
+        AutomationIds.Link(this, buttonBorder, ButtonAutomationIdSuffix);
+        AutomationIds.Link(this, popupBorder, PopupAutomationIdSuffix);
+        AutomationIds.Link(this, doneButton, DoneAutomationIdSuffix);
+        AutomationIds.Link(this, picker, PickerAutomationIdSuffix);
+
         UpdateButtonColor(SelectedColor);
         picker.ShowOpacity = ShowOpacity;
 

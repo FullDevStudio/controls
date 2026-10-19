@@ -35,6 +35,38 @@ namespace Shiny.Maui.Controls.Kanban;
 /// </remarks>
 public partial class KanbanView : ContentView, IDisposable
 {
+    /// <summary>
+    /// Appended to the board's <see cref="Element.AutomationId"/>, then <see cref="KanbanCard.Id"/>, to name
+    /// each card (the view that is tapped and dragged): <c>&lt;id&gt;_Card_&lt;card id&gt;</c>. Keyed by
+    /// card, not position, because a drag reorders positions.
+    /// </summary>
+    public const string CardAutomationIdSuffix = "_Card";
+
+    /// <summary>Appended to the board's <see cref="Element.AutomationId"/>, then <see cref="KanbanColumn.Id"/>, to name each column header.</summary>
+    public const string ColumnAutomationIdSuffix = "_Column";
+
+    /// <summary>Appended to a default column header's id to name its collapse chevron.</summary>
+    public const string CollapseAutomationIdSuffix = "_Collapse";
+
+    /// <summary>Appended to a default column header's id to name its card count / WIP label.</summary>
+    public const string CountAutomationIdSuffix = "_Count";
+
+    /// <summary>
+    /// Appended to the board's <see cref="Element.AutomationId"/>, then the column id (and the swimlane id
+    /// when grouped), to name each lane well - the drop target: <c>&lt;id&gt;_Lane_todo</c> or
+    /// <c>&lt;id&gt;_Lane_todo_urgent</c>.
+    /// </summary>
+    public const string LaneAutomationIdSuffix = "_Lane";
+
+    /// <summary>Appended to a lane's id to name its "Add card" button.</summary>
+    public const string AddAutomationIdSuffix = "_Add";
+
+    /// <summary>Appended to a lane's id to name its inline new-card entry (<see cref="KanbanAddCardMode"/> inline).</summary>
+    public const string AddEntryAutomationIdSuffix = "_AddEntry";
+
+    /// <summary>Appended to the board's <see cref="Element.AutomationId"/>, then <see cref="KanbanSwimlane.Id"/>, to name each swimlane header.</summary>
+    public const string SwimlaneAutomationIdSuffix = "_Swimlane";
+
     readonly Grid root;
     readonly ContentView headerClip;
     readonly Grid headerRow;
@@ -50,6 +82,9 @@ public partial class KanbanView : ContentView, IDisposable
     readonly Dictionary<KanbanCard, View> cardHosts = [];
     readonly List<KanbanColumnHeaderView> columnHeaders = [];
     readonly List<RoundRectangle> cellShapes = [];
+    readonly List<(KanbanColumn Column, View Header)> headerViews = [];
+    readonly List<(KanbanSwimlane Swimlane, View Header)> swimlaneHeaders = [];
+    readonly List<(KanbanLane Lane, View Button, Entry Entry)> addAffordances = [];
     // Weak: cards, columns and swimlanes belong to the view model, which outlives the page.
     readonly List<IDisposable> observedItems = [];
     readonly CornerRadiusProbe columnRadius;
@@ -127,6 +162,8 @@ public partial class KanbanView : ContentView, IDisposable
         this.root.Add(this.columnRadius.View);
 
         this.Content = this.root;
+
+        AutomationIds.Track(this, this.NameParts);
 
         this.ApplyThemeChrome();
 
@@ -209,6 +246,9 @@ public partial class KanbanView : ContentView, IDisposable
         this.laneCells.Clear();
         this.columnHeaders.Clear();
         this.cellShapes.Clear();
+        this.headerViews.Clear();
+        this.swimlaneHeaders.Clear();
+        this.addAffordances.Clear();
         this.cardHosts.Clear();
         this.defaultCardViews.Clear();
         this.lanesHost.Clear();
@@ -252,7 +292,49 @@ public partial class KanbanView : ContentView, IDisposable
         this.ApplyColumnRadii();
         this.ApplySelection();
         this.UpdateHeaderClip();
+        this.NameParts();
     }
+
+
+    /// <summary>
+    /// Names every generated part by the id of what it shows. All of it is rebuilt on each render, so
+    /// this runs after every render and again whenever the board's own id changes.
+    /// </summary>
+    void NameParts()
+    {
+        foreach (var (column, header) in this.headerViews)
+        {
+            var id = this.KeyedId(ColumnAutomationIdSuffix, column.Id);
+            AutomationIds.Set(header, id);
+            if (header is KanbanColumnHeaderView built)
+            {
+                AutomationIds.Set(built.Chevron, id is null ? null : id + CollapseAutomationIdSuffix);
+                AutomationIds.Set(built.CountLabel, id is null ? null : id + CountAutomationIdSuffix);
+            }
+        }
+
+        foreach (var (swimlane, header) in this.swimlaneHeaders)
+            AutomationIds.Set(header, this.KeyedId(SwimlaneAutomationIdSuffix, swimlane.Id));
+
+        foreach (var cell in this.laneCells)
+            AutomationIds.Set(cell.Host, this.LaneId(cell.Lane));
+
+        foreach (var (lane, button, entry) in this.addAffordances)
+        {
+            var id = this.LaneId(lane);
+            AutomationIds.Set(button, id is null ? null : id + AddAutomationIdSuffix);
+            AutomationIds.Set(entry, id is null ? null : id + AddEntryAutomationIdSuffix);
+        }
+
+        foreach (var (card, host) in this.cardHosts)
+            AutomationIds.Set(host, this.KeyedId(CardAutomationIdSuffix, card.Id));
+    }
+
+
+    string? KeyedId(string suffix, string key) => AutomationIds.For(this, suffix) is { } prefix ? $"{prefix}_{key}" : null;
+
+    string? LaneId(KanbanLane lane)
+        => this.KeyedId(LaneAutomationIdSuffix, lane.Swimlane is { } swimlane ? $"{lane.Column.Id}_{swimlane.Id}" : lane.Column.Id);
 
 
     /// <summary>
@@ -307,6 +389,7 @@ public partial class KanbanView : ContentView, IDisposable
             }
 
             this.headerRow.Add(header, i, 0);
+            this.headerViews.Add((column, header));
         }
     }
 
@@ -317,6 +400,7 @@ public partial class KanbanView : ContentView, IDisposable
         {
             var templated = BuildTemplate(template, swimlane);
             templated.WidthRequest = totalWidth;
+            this.swimlaneHeaders.Add((swimlane, templated));
             return templated;
         }
 
@@ -371,6 +455,7 @@ public partial class KanbanView : ContentView, IDisposable
             host.GestureRecognizers.Add(tap);
         }
 
+        this.swimlaneHeaders.Add((swimlane, host));
         return host;
     }
 
@@ -527,6 +612,7 @@ public partial class KanbanView : ContentView, IDisposable
         }.WithFontSize(ShinyThemeKeys.Type.BodySmallSize);
 
         var host = new Grid { Children = { button, entry } };
+        this.addAffordances.Add((lane, button, entry));
 
         if (this.AddCardMode == KanbanAddCardMode.Button)
         {

@@ -66,3 +66,20 @@ inside the width you asked for, and the remainder would show as a gap beside the
 <shiny:ColorPickerButton WidthRequest="150" />
 ```
 
+## Automation ids (MAUI)
+
+Set `AutomationId` on the control and its parts are named after it, for UI tests (Appium, UI Automation, DevFlow). With no id on the control, the parts get none.
+
+| Part | Id |
+|---|---|
+| ColorPicker: saturation/brightness spectrum | `<id>_Spectrum` |
+| ColorPicker: hue bar | `<id>_Hue` |
+| ColorPicker: opacity slider | `<id>_Opacity` |
+| ColorPicker: preview swatch | `<id>_Preview` |
+| ColorPicker: hex entry | `<id>_Hex` |
+| ColorPickerButton: the trigger | `<id>_Button` |
+| ColorPickerButton: popup card | `<id>_Popup` |
+| ColorPickerButton: Done | `<id>_Done` |
+| ColorPickerButton: the picker in the popup (its parts follow it, e.g. `<id>_Picker_Hex`) | `<id>_Picker` |
+
+The popup is moved into the page when it opens, so these ids are how a test finds it. The constants are `ColorPicker.HexAutomationIdSuffix`, `ColorPickerButton.PopupAutomationIdSuffix` and so on.

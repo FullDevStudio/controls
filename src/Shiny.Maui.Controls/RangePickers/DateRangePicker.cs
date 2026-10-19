@@ -10,6 +10,12 @@ namespace Shiny.Maui.Controls;
 /// </summary>
 public partial class DateRangePicker : RangePickerBase
 {
+    /// <summary>
+    /// Appended to the picker's <see cref="Element.AutomationId"/> to name the calendar in the popup. Its
+    /// days and buttons are then named after that (<c>&lt;id&gt;_Calendar_Day_20261019</c>).
+    /// </summary>
+    public const string CalendarAutomationIdSuffix = "_Calendar";
+
     DateRangeCalendar? calendar;
 
     public DateRangePicker() : base("📅")
@@ -61,6 +67,13 @@ public partial class DateRangePicker : RangePickerBase
     }
 
     protected override View CreatePopupContent() => this.calendar!;
+
+    protected override void ApplyPopupAutomationIds()
+    {
+        base.ApplyPopupAutomationIds();
+        if (this.calendar is not null)
+            AutomationIds.Set(this.calendar, AutomationIds.For(this, CalendarAutomationIdSuffix));
+    }
 
     void OnDraftChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {

@@ -7,6 +7,12 @@ namespace Shiny.Maui.Controls.Scheduler;
 
 public class SchedulerCalendarListView : ContentView
 {
+    /// <summary>
+    /// Appended to the view's <see cref="Element.AutomationId"/> to name the list of days. Its rows come
+    /// from <see cref="EventItemTemplate"/> and are recycled, so they carry whatever id the template gives them.
+    /// </summary>
+    public const string ListAutomationIdSuffix = "_List";
+
     readonly CollectionView collectionView;
     readonly ContentView loaderOverlay;
     readonly ContentView stickyHeader;
@@ -231,6 +237,7 @@ public class SchedulerCalendarListView : ContentView
         VerticalOptions = LayoutOptions.Fill;
         Content = rootGrid;
         ApplyTemplates();
+        AutomationIds.Link(this, collectionView, ListAutomationIdSuffix);
 
         // Last line: replays any styled property that was applied before the
         // children existed. See StyleGuard.

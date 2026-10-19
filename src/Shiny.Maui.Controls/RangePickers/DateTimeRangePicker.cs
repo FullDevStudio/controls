@@ -18,6 +18,24 @@ public class DateTimeRangeSelectedEventArgs(DateTimeRange? range) : EventArgs
 /// </summary>
 public partial class DateTimeRangePicker : RangePickerBase
 {
+    /// <summary>
+    /// Appended to the picker's <see cref="Element.AutomationId"/> to name the calendar in the popup. Its
+    /// days and buttons are then named after that (<c>&lt;id&gt;_Calendar_Day_20261019</c>).
+    /// </summary>
+    public const string CalendarAutomationIdSuffix = "_Calendar";
+
+    /// <summary>Appended to the picker's <see cref="Element.AutomationId"/> to name the popup's start time picker.</summary>
+    public const string StartTimeAutomationIdSuffix = "_StartTime";
+
+    /// <summary>Appended to the picker's <see cref="Element.AutomationId"/> to name the popup's end time picker.</summary>
+    public const string EndTimeAutomationIdSuffix = "_EndTime";
+
+    /// <summary>Appended to the picker's <see cref="Element.AutomationId"/> to name the label showing the draft start date.</summary>
+    public const string StartDateAutomationIdSuffix = "_StartDate";
+
+    /// <summary>Appended to the picker's <see cref="Element.AutomationId"/> to name the label showing the draft end date.</summary>
+    public const string EndDateAutomationIdSuffix = "_EndDate";
+
     DateRangeCalendar? calendar;
     Picker? startPicker;
     Picker? endPicker;
@@ -138,6 +156,22 @@ public partial class DateTimeRangePicker : RangePickerBase
 
         this.RefreshTimes();
         return new VerticalStackLayout { Children = { this.calendar!, times } };
+    }
+
+
+    protected override void ApplyPopupAutomationIds()
+    {
+        base.ApplyPopupAutomationIds();
+        if (this.calendar is not null)
+            AutomationIds.Set(this.calendar, AutomationIds.For(this, CalendarAutomationIdSuffix));
+        if (this.startPicker is not null)
+            AutomationIds.Set(this.startPicker, AutomationIds.For(this, StartTimeAutomationIdSuffix));
+        if (this.endPicker is not null)
+            AutomationIds.Set(this.endPicker, AutomationIds.For(this, EndTimeAutomationIdSuffix));
+        if (this.startDateLabel is not null)
+            AutomationIds.Set(this.startDateLabel, AutomationIds.For(this, StartDateAutomationIdSuffix));
+        if (this.endDateLabel is not null)
+            AutomationIds.Set(this.endDateLabel, AutomationIds.For(this, EndDateAutomationIdSuffix));
     }
 
 

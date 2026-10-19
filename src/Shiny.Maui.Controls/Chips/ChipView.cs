@@ -24,7 +24,7 @@ namespace Shiny.Maui.Controls;
 /// happens when a chip is tapped" would have nothing assertable about it.
 /// </para>
 /// </remarks>
-class ChipView : ContentView
+class ChipView : ContentView, ITapTarget
 {
     const double IconSize = 12;
     const double RemoveTouchSize = 24;
@@ -114,6 +114,10 @@ class ChipView : ContentView
         this.VerticalOptions = LayoutOptions.Center;
 
         this.GestureRecognizers.Add(new TapGestureRecognizer { Command = new Command(this.OnTapped) });
+
+        // The remove affordance carries its own gesture, so a test tapping the chip's id would select it
+        // instead: name it after the chip, which ChipGroup names after itself.
+        AutomationIds.Link(this, this.removeHost, ChipGroup.RemoveAutomationIdSuffix);
 
         this.ApplyCornerRadius();
         this.ApplyColors();
@@ -252,6 +256,12 @@ class ChipView : ContentView
 
 
     void OnTapped() => this.Tapped?.Invoke(this, EventArgs.Empty);
+
+    void ITapTarget.Invoke()
+    {
+        if (this.IsEnabled)
+            this.OnTapped();
+    }
 
 
     void OnRemoveTapped()

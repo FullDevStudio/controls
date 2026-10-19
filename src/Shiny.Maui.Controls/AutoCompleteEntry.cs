@@ -7,6 +7,15 @@ namespace Shiny.Maui.Controls;
 
 public class AutoCompleteEntry : ContentView
 {
+    /// <summary>Appended to the field's <see cref="Element.AutomationId"/> to name the entry a test types into.</summary>
+    public const string EntryAutomationIdSuffix = "_Entry";
+
+    /// <summary>Names the floating suggestion list, which lives in the page's overlay layer rather than under the field.</summary>
+    public const string DropDownAutomationIdSuffix = "_DropDown";
+
+    /// <summary>Names each suggestion, with its index in the shown list: <c>&lt;id&gt;_Suggestion_0</c>.</summary>
+    public const string SuggestionAutomationIdSuffix = "_Suggestion";
+
     const int DefaultDebounceMs = 500;
     const double DefaultMaxDropDownHeight = 200;
 
@@ -123,6 +132,14 @@ public class AutoCompleteEntry : ContentView
         rootGrid.Add(entryGrid, 0, 0);
 
         Content = rootGrid;
+
+        // Through SetValue, not the AutomationId setter: that throws the second time. The dropdown keeps
+        // the field's id even though it floats in the overlay, so a test can still find the suggestions.
+        AutomationIds.Track(this, () =>
+        {
+            if (!partIdBaseOverridden)
+                NameParts(AutomationId);
+        });
 
         // Install the page's overlay root up front. Doing it the first time the dropdown opens would
         // re-parent the page content while the entry has focus - which rebuilds every native view,
@@ -577,6 +594,7 @@ public class AutoCompleteEntry : ContentView
     {
         currentFilteredItems = items;
         suggestionStack.Children.Clear();
+        namedSuggestions.Clear();
 
         foreach (var item in items)
         {
@@ -610,7 +628,57 @@ public class AutoCompleteEntry : ContentView
             tapGesture.Tapped += (_, _) => OnItemTapped(capturedItem);
             itemView.GestureRecognizers.Add(tapGesture);
 
+            // A template that names its own root keeps that id.
+            if (String.IsNullOrEmpty(itemView.AutomationId))
+                namedSuggestions[itemView] = item;
+
             suggestionStack.Children.Add(itemView);
+        }
+
+        NameSuggestions();
+    }
+
+    // The suggestion views this control named, as opposed to ones an ItemTemplate named itself.
+    // Mapped to the item each stands for, for SuggestionKey.
+    readonly Dictionary<View, object?> namedSuggestions = new();
+
+    // The id the parts are named after: this field's own, or a composing control's (AddressEntry), so
+    // its parts read <address id>_Entry rather than carrying a second, made-up id for the inner field.
+    string? partIdBase;
+    bool partIdBaseOverridden;
+
+    /// <summary>Names the parts after <paramref name="baseId"/> instead of this field's own id, from then on.</summary>
+    internal void NamePartsAfter(string? baseId)
+    {
+        partIdBaseOverridden = true;
+        NameParts(baseId);
+    }
+
+    void NameParts(string? baseId)
+    {
+        partIdBase = String.IsNullOrEmpty(baseId) ? null : baseId;
+        AutomationIds.Set(entry, partIdBase is null ? null : partIdBase + EntryAutomationIdSuffix);
+        AutomationIds.Set(dropDownBorder, partIdBase is null ? null : partIdBase + DropDownAutomationIdSuffix);
+        NameSuggestions();
+    }
+
+    /// <summary>
+    /// A stable key to name each suggestion by instead of its index (CountryPicker uses the ISO code, so
+    /// <c>_Suggestion_CA</c> stays Canada however the list is filtered). Null keys fall back to the index.
+    /// </summary>
+    internal Func<object, string?>? SuggestionKey { get; set; }
+
+    void NameSuggestions()
+    {
+        var i = 0;
+        foreach (var child in suggestionStack.Children)
+        {
+            var index = i++;
+            if (child is not View view || !namedSuggestions.TryGetValue(view, out var item))
+                continue;
+
+            var key = item is null ? null : SuggestionKey?.Invoke(item);
+            AutomationIds.Set(view, partIdBase is null ? null : $"{partIdBase}{SuggestionAutomationIdSuffix}_{key ?? index.ToString()}");
         }
     }
 
@@ -700,11 +768,6 @@ public class AutoCompleteEntry : ContentView
                 trackedScrolls.Add(scroll);
             }
         }
-
-        // The automation id follows the field's, so a UI test can still find the suggestions now that
-        // they are not underneath it. AutomationId is set-once in MAUI, hence the guard.
-        if (dropDownBorder.AutomationId is null && AutomationId is { Length: > 0 } id)
-            dropDownBorder.AutomationId = id + "_DropDown";
 
         PlaceDropDown();
     }

@@ -1,3 +1,4 @@
+using Shiny.Maui.Controls.Infrastructure;
 using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls.Scheduler.Internal;
@@ -7,6 +8,8 @@ class CalendarDayCell : ContentView
     readonly Label dateLabel;
     readonly VerticalStackLayout eventsStack;
     readonly Grid root;
+    readonly List<(View View, SchedulerEvent Event)> eventViews = [];
+    View? overflowView;
 
     DateOnly date;
     IReadOnlyList<SchedulerEvent> events = [];
@@ -53,6 +56,16 @@ class CalendarDayCell : ContentView
 
         IsClippedToBounds = true;
         Content = root;
+
+        // The owning view names this cell by date; its events follow the cell's id.
+        AutomationIds.Track(this, NameParts);
+    }
+
+    void NameParts()
+    {
+        SchedulerAutomationIds.NameEvents(this, eventViews);
+        if (overflowView is not null)
+            AutomationIds.Set(overflowView, AutomationIds.For(this, SchedulerCalendarView.MoreAutomationIdSuffix));
     }
 
     public DateOnly Date
@@ -176,6 +189,8 @@ class CalendarDayCell : ContentView
     void RefreshEvents()
     {
         eventsStack.Children.Clear();
+        eventViews.Clear();
+        overflowView = null;
 
         if (events.Count == 0)
             return;
@@ -217,6 +232,7 @@ class CalendarDayCell : ContentView
             tap.Tapped += (_, _) => EventTapped?.Invoke(evt);
             view.GestureRecognizers.Add(tap);
             eventsStack.Children.Add(view);
+            eventViews.Add((view, evt));
         }
 
         if (overflow > 0)
@@ -240,7 +256,9 @@ class CalendarDayCell : ContentView
                 overflowView = overflowLabel;
             }
             eventsStack.Children.Add(overflowView);
+            this.overflowView = overflowView;
         }
+        NameParts();
     }
 
     static View CreateDefaultEventView(SchedulerEvent evt)

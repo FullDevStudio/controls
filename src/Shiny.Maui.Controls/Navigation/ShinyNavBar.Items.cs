@@ -79,12 +79,16 @@ public partial class ShinyNavBar
         overflow.AddRange(primary.Skip(onBar.Count));
         overflow.AddRange(secondary);
 
-        foreach (var item in onBar)
+        var itemSuffix = side == NavBarSide.Left ? LeftItemAutomationIdSuffix : RightItemAutomationIdSuffix;
+        for (var i = 0; i < onBar.Count; i++)
         {
+            var item = onBar[i];
             if (item is NavBarItem { IsSeparator: true })
                 continue;
 
-            host.Children.Add(this.BuildItemView(item));
+            // The item's own id wins: it is the one the app chose, and it follows the item into the
+            // overflow menu. The indexed one is for items nobody named.
+            host.Children.Add(this.BuildItemView(item, item.AutomationId ?? AutomationIds.For(this, itemSuffix, i)));
         }
 
         if (overflow.Count > 0)
@@ -117,7 +121,7 @@ public partial class ShinyNavBar
     Color? ResolvedIconColor() => this.IconColor ?? this.BarTextColor;
 
 
-    View BuildItemView(ToolbarItem item)
+    View BuildItemView(ToolbarItem item, string? automationId)
     {
         var spec = IconSpec(item);
         var display = item is NavBarItem nav ? nav.Display : NavBarItemDisplay.Auto;
@@ -178,7 +182,6 @@ public partial class ShinyNavBar
             inner = badge;
         }
 
-        var automationId = item.AutomationId;
         return this.WrapAsButton(inner, automationId, () => this.InvokeItem(item), item.IsEnabled);
     }
 
@@ -233,7 +236,11 @@ public partial class ShinyNavBar
             };
         }
 
-        return this.WrapAsButton(glyph, side == NavBarSide.Left ? "nav-overflow-left" : "nav-overflow-right", () => this.OpenMenu(side));
+        var automationId = side == NavBarSide.Left
+            ? AutomationIds.For(this, OverflowLeftAutomationIdSuffix) ?? "nav-overflow-left"
+            : AutomationIds.For(this, OverflowRightAutomationIdSuffix) ?? "nav-overflow-right";
+
+        return this.WrapAsButton(glyph, automationId, () => this.OpenMenu(side));
     }
 
 
@@ -279,8 +286,7 @@ public partial class ShinyNavBar
             Content = content
         };
 
-        if (automationId is { Length: > 0 })
-            host.AutomationId = automationId;
+        AutomationIds.Set(host, automationId);
 
         if (!enabled)
             return host;
@@ -446,6 +452,9 @@ public partial class ShinyNavBar
             Content = this.BuildMenuBody()
         };
         card.WithElevation(ShinyThemeKeys.Elevation.Level3);
+
+        // Painted into the page's overlay layer rather than under the bar, so it needs a name of its own.
+        AutomationIds.Set(card, AutomationIds.For(this, MenuAutomationIdSuffix));
         return card;
     }
 
@@ -462,8 +471,15 @@ public partial class ShinyNavBar
         }
 
         var stack = new VerticalStackLayout { Spacing = 0 };
-        foreach (var item in items)
-            stack.Children.Add(this.BuildMenuRow(item));
+        for (var i = 0; i < items.Count; i++)
+        {
+            var item = items[i];
+            var row = this.BuildMenuRow(item);
+            if (item is not NavBarItem { IsSeparator: true })
+                AutomationIds.Set(row, item.AutomationId ?? AutomationIds.For(this, MenuItemAutomationIdSuffix, i));
+
+            stack.Children.Add(row);
+        }
 
         return stack;
     }

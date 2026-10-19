@@ -29,6 +29,7 @@ public class ShinyFlyoutPage : ShinyContentPage
     {
         this.flyout = new FlyoutView();
         base.PageContent = this.flyout;
+        AutomationIds.Link(this, this.flyout, ShinyFlyout.FlyoutAutomationIdSuffix);
 
         // Last line: replays any styled property that was applied before the
         // children existed. See StyleGuard.

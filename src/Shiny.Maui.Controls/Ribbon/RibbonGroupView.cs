@@ -1,4 +1,5 @@
 using Microsoft.Maui.Controls.Shapes;
+using Shiny.Maui.Controls.Infrastructure;
 using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls.Ribbons;
@@ -43,7 +44,7 @@ class RibbonGroupView : Grid
         this.Add(this.collapsedView);
 
         if (!string.IsNullOrWhiteSpace(group.AutomationId))
-            this.AutomationId = group.AutomationId;
+            AutomationIds.Set(this, group.AutomationId);
 
         this.Refresh();
     }

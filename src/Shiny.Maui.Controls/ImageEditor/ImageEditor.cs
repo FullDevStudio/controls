@@ -9,6 +9,69 @@ namespace Shiny.Maui.Controls.ImageEditor;
 
 public partial class ImageEditor : ContentView
 {
+    /// <summary>
+    /// Appended to the editor's own <see cref="Element.AutomationId"/>, then <c>_&lt;mode&gt;</c>, to name
+    /// each tool button: <c>&lt;id&gt;_Tool_Crop</c>. Without an id the shipped <c>ImageEditorTool&lt;mode&gt;</c> stays.
+    /// </summary>
+    public const string ToolAutomationIdSuffix = "_Tool";
+
+    /// <summary>Names the undo button (fallback <c>ImageEditorQuickUndo</c>).</summary>
+    public const string UndoAutomationIdSuffix = "_Undo";
+
+    /// <summary>Names the redo button (fallback <c>ImageEditorQuickRedo</c>).</summary>
+    public const string RedoAutomationIdSuffix = "_Redo";
+
+    /// <summary>Names the reset button (fallback <c>ImageEditorQuickReset</c>).</summary>
+    public const string ResetAutomationIdSuffix = "_Reset";
+
+    /// <summary>Names the rotate button.</summary>
+    public const string RotateAutomationIdSuffix = "_Rotate";
+
+    /// <summary>Names the save button, shown when <see cref="SaveCommand"/> is set.</summary>
+    public const string SaveAutomationIdSuffix = "_Save";
+
+    /// <summary>Names the zoom out button.</summary>
+    public const string ZoomOutAutomationIdSuffix = "_ZoomOut";
+
+    /// <summary>Names the zoom in button.</summary>
+    public const string ZoomInAutomationIdSuffix = "_ZoomIn";
+
+    /// <summary>Names the zoom to fit button.</summary>
+    public const string ZoomFitAutomationIdSuffix = "_ZoomFit";
+
+    /// <summary>Names the zoom percentage label.</summary>
+    public const string ZoomReadoutAutomationIdSuffix = "_ZoomReadout";
+
+    /// <summary>Names the stroke / text colour picker button.</summary>
+    public const string StrokeColorAutomationIdSuffix = "_StrokeColor";
+
+    /// <summary>Names each stroke width preset, indexed in <see cref="StrokeWidthPresets"/> order.</summary>
+    public const string StrokeWidthAutomationIdSuffix = "_StrokeWidth";
+
+    /// <summary>Names the shape fill colour picker button.</summary>
+    public const string FillColorAutomationIdSuffix = "_FillColor";
+
+    /// <summary>Names the shape fill on/off toggle.</summary>
+    public const string FillToggleAutomationIdSuffix = "_FillToggle";
+
+    /// <summary>Names the font picker button.</summary>
+    public const string FontAutomationIdSuffix = "_Font";
+
+    /// <summary>Names the font size picker button.</summary>
+    public const string FontSizeAutomationIdSuffix = "_FontSize";
+
+    /// <summary>Names the crop bar's cancel button.</summary>
+    public const string CropCancelAutomationIdSuffix = "_CropCancel";
+
+    /// <summary>Names the crop bar's apply button.</summary>
+    public const string CropApplyAutomationIdSuffix = "_CropApply";
+
+    /// <summary>Names the entry that appears where the Text tool was tapped.</summary>
+    public const string TextEntryAutomationIdSuffix = "_TextEntry";
+
+    /// <summary>Names the ribbon toolbar, whose own parts (collapse toggle, tabs) are named after it.</summary>
+    public const string RibbonAutomationIdSuffix = "_Ribbon";
+
     readonly Grid rootGrid;
     readonly GraphicsView graphicsView;
     readonly ImageEditorDrawable drawable;
@@ -61,7 +124,14 @@ public partial class ImageEditor : ContentView
 
         Grid.SetRow(graphicsView, 0);
 
-        BuildDefaultToolbar();
+        // Every toolbar part is named after the editor, and the toolbar is rebuilt wholesale anyway, so
+        // an id change simply rebuilds it. This is also the toolbar's first build.
+        AutomationIds.Track(this, () =>
+        {
+            BuildDefaultToolbar();
+            if (activeTextEntry != null)
+                AutomationIds.Set(activeTextEntry, AutomationIds.For(this, TextEntryAutomationIdSuffix));
+        });
 
         Content = rootGrid;
 
@@ -860,6 +930,7 @@ public partial class ImageEditor : ContentView
             Padding = new Thickness(16, 0),
             VerticalOptions = LayoutOptions.Center
         }.Neutralize().WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
+        AutomationIds.Set(cancelBtn, AutomationIds.For(this, CropCancelAutomationIdSuffix));
         cancelBtn.Clicked += (_, _) => CurrentToolMode = ImageEditorToolMode.Move;
         grid.Add(cancelBtn, 0);
 
@@ -884,6 +955,7 @@ public partial class ImageEditor : ContentView
         }.Neutralize().WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
         applyBtn.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnPrimary);
         applyBtn.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Primary);
+        AutomationIds.Set(applyBtn, AutomationIds.For(this, CropApplyAutomationIdSuffix));
         applyBtn.Clicked += (_, _) => ApplyCrop();
         grid.Add(applyBtn, 2);
 

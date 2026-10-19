@@ -61,3 +61,22 @@ await dialogs.Confirm("Delete?", "This cannot be undone.", configure: c =>
 - **Replace the service**: MAUI `c.SetCustomDialogs<T>()`.
 
 Tapping the backdrop or pressing `Escape` cancels (`Confirm` → `false`, `Prompt` → `Cancelled`); `Enter` confirms on Blazor. On MAUI, `Escape` comes from a hardware keyboard and works whenever the dialog has a Cancel button or `DismissOnBackdrop` is on. While a MAUI dialog is open it is a modal [keyboard-shortcut](keyboard-shortcuts.md) scope, so the page behind it ignores its shortcuts. Colors follow the theme tokens (`--shiny-color-surface` / `Shiny.Color.Surface`, `Primary`, …) so dialogs match light/dark and the active theme pack automatically, and restyle live on a theme switch; any colour set in `DialogConfig` wins over its token. ActionSheet options take `ActionSheetButtonColor`, `ActionSheetButtonTextColor` and `DestructiveButtonTextColor`.
+
+## Automation ids (MAUI)
+
+Name a dialog through its config and its parts are named after it, for UI tests:
+
+```csharp
+await dialogs.Confirm("Delete?", "This cannot be undone", configure: c => c.AutomationId = "DeleteDialog");
+```
+
+| Part | Id |
+|---|---|
+| The dialog root | `<id>` |
+| Dimmed backdrop (tap cancels) | `<id>_Backdrop` |
+| Title / message labels | `<id>_Title`, `<id>_Message` |
+| Prompt entry | `<id>_Entry` |
+| OK / Cancel buttons | `<id>_Ok`, `<id>_Cancel` |
+| ActionSheet options, in order | `<id>_Action_0`, `<id>_Action_1`, … |
+
+Unset (the default), the dialog carries no ids. With `DialogOptions.ContentTemplate`, only the root and backdrop are named; the template names its own parts.

@@ -13,7 +13,7 @@ namespace Shiny.Maui.Controls;
 /// <see cref="Text"/> collapses to a plain circle of <see cref="Size"/>.
 /// </para>
 /// </summary>
-public class FabMenuItem : ContentView
+public class FabMenuItem : ContentView, ITapTarget
 {
     const double DefaultSize = 44;
     const double DefaultIconSize = 20;
@@ -352,6 +352,8 @@ public class FabMenuItem : ContentView
 
     public event EventHandler? Clicked;
 
+
+    void ITapTarget.Invoke() => Invoke();
 
     internal void Invoke()
     {

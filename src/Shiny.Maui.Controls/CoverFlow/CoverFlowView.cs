@@ -44,6 +44,16 @@ public class CoverFlowView : ContentView
 {
     const int MaximumZ = 100_000;
 
+    /// <summary>
+    /// Appended to the control's own <see cref="Element.AutomationId"/>, with the item's index in
+    /// <see cref="ItemsSource"/>, to name each realized cover: <c>&lt;id&gt;_Item_3</c>. Only covers near the
+    /// centre exist. Covers take no touches themselves; tapping one's bounds still hits it.
+    /// </summary>
+    public const string ItemAutomationIdSuffix = "_Item";
+
+    /// <summary>Names the caption area under the centre cover.</summary>
+    public const string CaptionAutomationIdSuffix = "_Caption";
+
     readonly Grid root;
     readonly CoverFlowStage stage;
     readonly ContentView captionHost;
@@ -114,6 +124,13 @@ public class CoverFlowView : ContentView
         this.GestureRecognizers.Add(tap);
 
         this.Unloaded += (_, _) => this.StopAnimation(snap: true);
+
+        AutomationIds.Link(this, this.captionHost, CaptionAutomationIdSuffix);
+        AutomationIds.Track(this, () =>
+        {
+            foreach (var slot in this.realized.Values)
+                this.NameSlot(slot);
+        });
 
         ThemeProbe.Tint(this.surfaceProbe, BoxView.ColorProperty, null, ShinyThemeKeys.Color.Surface);
         StyleGuard.MarkReady(this, typeof(CoverFlowView));
@@ -608,6 +625,7 @@ public class CoverFlowView : ContentView
         slot.ZIndex = -MaximumZ;
         slot.Opacity = 0;
         slot.SetBindingContextFor(item);
+        this.NameSlot(slot);
         this.stage.Children.Add(slot);
         return slot;
     }
@@ -616,8 +634,16 @@ public class CoverFlowView : ContentView
     {
         this.stage.Children.Remove(slot);
         slot.SetBindingContextFor(null);
+        AutomationIds.Set(slot, null);
         this.pool.Add(slot);
     }
+
+    // By the item's index rather than the virtual one, so an infinite loop's covers keep the names a
+    // test knows from the data.
+    void NameSlot(CoverFlowSlot slot)
+        => AutomationIds.Set(slot, this.items.Count == 0
+            ? null
+            : AutomationIds.For(this, ItemAutomationIdSuffix, CoverFlowGeometry.Mod(slot.VirtualIndex, this.items.Count)));
 
     void ReleaseAll(bool discard)
     {

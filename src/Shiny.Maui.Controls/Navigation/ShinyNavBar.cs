@@ -24,6 +24,39 @@ namespace Shiny.Maui.Controls;
 /// </remarks>
 public partial class ShinyNavBar : Grid
 {
+    /// <summary>Appended to the bar's own <see cref="Element.AutomationId"/> to name the back button. Without an id it stays <c>nav-back</c>.</summary>
+    public const string BackAutomationIdSuffix = "_Back";
+
+    /// <summary>Appended to the bar's id to name the title label.</summary>
+    public const string TitleAutomationIdSuffix = "_Title";
+
+    /// <summary>Appended to the bar's id to name the subtitle label.</summary>
+    public const string SubtitleAutomationIdSuffix = "_Subtitle";
+
+    /// <summary>
+    /// Appended to the bar's id, with the item's index, to name each left item that has no
+    /// <c>AutomationId</c> of its own: <c>&lt;id&gt;_LeftItem_&lt;index&gt;</c>.
+    /// </summary>
+    public const string LeftItemAutomationIdSuffix = "_LeftItem";
+
+    /// <summary>As <see cref="LeftItemAutomationIdSuffix"/>, for the right items: <c>&lt;id&gt;_RightItem_&lt;index&gt;</c>.</summary>
+    public const string RightItemAutomationIdSuffix = "_RightItem";
+
+    /// <summary>Appended to the bar's id to name the left overflow button. Without an id it stays <c>nav-overflow-left</c>.</summary>
+    public const string OverflowLeftAutomationIdSuffix = "_OverflowLeft";
+
+    /// <summary>Appended to the bar's id to name the right overflow button. Without an id it stays <c>nav-overflow-right</c>.</summary>
+    public const string OverflowRightAutomationIdSuffix = "_OverflowRight";
+
+    /// <summary>Appended to the bar's id to name the overflow menu card.</summary>
+    public const string MenuAutomationIdSuffix = "_Menu";
+
+    /// <summary>
+    /// Appended to the bar's id, with the row's index, to name each overflow menu row whose item has no
+    /// <c>AutomationId</c> of its own: <c>&lt;id&gt;_MenuItem_&lt;index&gt;</c>.
+    /// </summary>
+    public const string MenuItemAutomationIdSuffix = "_MenuItem";
+
     const string BackChevronPath = "M 15 4.5 L 7.5 12 L 15 19.5";
 
     readonly ObservableCollection<ToolbarItem> leftItems = new();
@@ -249,7 +282,12 @@ public partial class ShinyNavBar : Grid
         this.ApplyTitle();
         this.ApplyTitleAlignment();
         this.ApplyLargeTitle();
-        this.RebuildItems();
+
+        // Tracked rather than called once: every button is built with its id already in hand, so
+        // a new id on the bar means building them again.
+        AutomationIds.Track(this, this.RebuildItems);
+        AutomationIds.Link(this, this.titleLabel, TitleAutomationIdSuffix);
+        AutomationIds.Link(this, this.subtitleLabel, SubtitleAutomationIdSuffix);
 
         // Last line: replays any styled property that was applied before the
         // children existed. See StyleGuard.
@@ -743,7 +781,7 @@ public partial class ShinyNavBar : Grid
             content.Children.Add(label);
         }
 
-        var button = this.WrapAsButton(content, "nav-back", () => this.RaiseBack());
+        var button = this.WrapAsButton(content, AutomationIds.For(this, BackAutomationIdSuffix) ?? "nav-back", () => this.RaiseBack());
         this.backButton = button;
         this.leadingHost.Children.Insert(0, button);
     }

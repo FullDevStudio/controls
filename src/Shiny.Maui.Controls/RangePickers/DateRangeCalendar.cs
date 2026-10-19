@@ -21,6 +21,26 @@ public class DateRangeSelectedEventArgs(DateRange? range) : EventArgs
 /// </summary>
 public partial class DateRangeCalendar : ContentView
 {
+    /// <summary>
+    /// Appended to the calendar's <see cref="Element.AutomationId"/>, then the date as <c>yyyyMMdd</c>, to
+    /// name each day: <c>&lt;id&gt;_Day_20261019</c>. Keyed by date, not grid position, so a test finds the
+    /// same day whichever month is showing. A padding day that another visible month also shows is left
+    /// unnamed there, so every id is unique.
+    /// </summary>
+    public const string DayAutomationIdSuffix = "_Day";
+
+    /// <summary>Appended to the calendar's <see cref="Element.AutomationId"/> to name the previous-month button.</summary>
+    public const string PreviousMonthAutomationIdSuffix = "_PreviousMonth";
+
+    /// <summary>Appended to the calendar's <see cref="Element.AutomationId"/> to name the next-month button.</summary>
+    public const string NextMonthAutomationIdSuffix = "_NextMonth";
+
+    /// <summary>Appended to the calendar's <see cref="Element.AutomationId"/> to name each month's title, by index: <c>&lt;id&gt;_MonthTitle_0</c>.</summary>
+    public const string MonthTitleAutomationIdSuffix = "_MonthTitle";
+
+    /// <summary>Appended to the calendar's <see cref="Element.AutomationId"/> to name each preset chip, by index: <c>&lt;id&gt;_Preset_0</c>.</summary>
+    public const string PresetAutomationIdSuffix = "_Preset";
+
     readonly DateRangeSelector selector = new();
     readonly HorizontalStackLayout presetRow;
     readonly ScrollView presetScroll;
@@ -59,6 +79,7 @@ public partial class DateRangeCalendar : ContentView
         this.RebuildMonths();
         this.RebuildConstraints();
         this.Refresh();
+        AutomationIds.Track(this, this.ApplyAutomationIds);
 
         StyleGuard.MarkReady(this, typeof(DateRangeCalendar));
     }
@@ -229,6 +250,7 @@ public partial class DateRangeCalendar : ContentView
         {
             this.monthsGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
             var view = new MonthView(this, showPrevious: i == 0, showNext: i == count - 1);
+            view.ApplyAutomationIds(i);
             this.months.Add(view);
             this.monthsGrid.Add(view, i, 0);
         }
@@ -261,7 +283,27 @@ public partial class DateRangeCalendar : ContentView
             SemanticProperties.SetDescription(chip, preset.Label);
             this.presetRow.Add(chip);
         }
+        this.NamePresets();
         this.RefreshPresets();
+    }
+
+
+    void NamePresets()
+    {
+        for (var i = 0; i < this.presetRow.Children.Count; i++)
+        {
+            if (this.presetRow.Children[i] is Element chip)
+                AutomationIds.Set(chip, AutomationIds.For(this, PresetAutomationIdSuffix, i));
+        }
+    }
+
+
+    /// <summary>Renames every part after the calendar's id. Days are also renamed on each <see cref="Refresh"/>.</summary>
+    void ApplyAutomationIds()
+    {
+        this.NamePresets();
+        for (var i = 0; i < this.months.Count; i++)
+            this.months[i].ApplyAutomationIds(i);
     }
 
 
@@ -312,6 +354,8 @@ public partial class DateRangeCalendar : ContentView
         readonly Grid weekdays;
         readonly Grid days;
         readonly RangeDayCell[] cells = new RangeDayCell[42];
+        readonly View? previous;
+        readonly View? next;
 
         public MonthView(DateRangeCalendar owner, bool showPrevious, bool showNext)
         {
@@ -333,9 +377,15 @@ public partial class DateRangeCalendar : ContentView
             };
             header.Add(this.title, 1, 0);
             if (showPrevious)
-                header.Add(NavButton("‹", "Previous month", owner.PreviousMonth), 0, 0);
+            {
+                this.previous = NavButton("‹", "Previous month", owner.PreviousMonth);
+                header.Add(this.previous, 0, 0);
+            }
             if (showNext)
-                header.Add(NavButton("›", "Next month", owner.NextMonth), 2, 0);
+            {
+                this.next = NavButton("›", "Next month", owner.NextMonth);
+                header.Add(this.next, 2, 0);
+            }
 
             this.weekdays = SevenColumns();
             for (var i = 0; i < 7; i++)
@@ -368,6 +418,29 @@ public partial class DateRangeCalendar : ContentView
         }
 
         public IEnumerable<RangeDayCell> Cells => this.cells;
+
+        public void ApplyAutomationIds(int index)
+        {
+            AutomationIds.Set(this.title, AutomationIds.For(this.owner, MonthTitleAutomationIdSuffix, index));
+            if (this.previous is not null)
+                AutomationIds.Set(this.previous, AutomationIds.For(this.owner, PreviousMonthAutomationIdSuffix));
+            if (this.next is not null)
+                AutomationIds.Set(this.next, AutomationIds.For(this.owner, NextMonthAutomationIdSuffix));
+            this.NameDays();
+        }
+
+        void NameDays()
+        {
+            var prefix = AutomationIds.For(this.owner, DayAutomationIdSuffix);
+            foreach (var cell in this.cells)
+            {
+                // A padding day is unnamed when hidden, or when the month it belongs to is also on
+                // screen - that month's cell carries the id.
+                var outside = cell.State.HasFlag(CalendarDayState.OutsideMonth);
+                var named = prefix is not null && (!outside || (this.owner.ShowOutsideDays && !this.owner.IsMonthVisible(cell.Date)));
+                AutomationIds.Set(cell, named ? $"{prefix}_{cell.Date.ToString("yyyyMMdd", CultureInfo.InvariantCulture)}" : null);
+            }
+        }
 
         public void Detach()
         {
@@ -410,6 +483,7 @@ public partial class DateRangeCalendar : ContentView
                     culture
                 );
             }
+            this.NameDays();
         }
 
         static Grid SevenColumns()

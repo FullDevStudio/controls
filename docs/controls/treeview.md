@@ -67,3 +67,15 @@ Tree.CanSelectSelector   = item => item is FileNode f && !f.IsLocked;
 **Public methods:** `ExpandAll(maxDepth)`, `ExpandAllAsync(maxDepth)`, `CollapseAll`, `Expand(item)`, `Collapse(item)`, `SelectAll()`, `DeselectAll()`, `SetBranchSelected(item, selected)`, `Refresh(item)`, `ReloadAsync`, `FindNode(item)` — Blazor mirrors these as `ExpandAsync` / `CollapseAsync` / `ExpandAllAsync` / `CollapseAll` / `SelectAllAsync` / `DeselectAllAsync` / `SetBranchSelectedAsync` / `RefreshAsync` / `ReloadAsync` / `FindNode`.
 
 `ExpandAll` materializes everything `ChildrenSelector` can supply — it only leaves branches that need `ChildrenLoader`, which `ExpandAllAsync` awaits. Both stop at `maxDepth` (default 32) so a self-referencing or endlessly generated hierarchy can't expand forever. `SelectAll` / `SetBranchSelected` cover collapsed branches too, but only nodes that have been loaded — call `ExpandAllAsync()` first to check a lazy tree in full.
+
+### Automation ids (MAUI)
+
+Set `AutomationId` on the `TreeView` and each row is named by its index in the visible (flattened)
+order, renamed on every expand/collapse, for UI tests:
+
+| Part | Id |
+|---|---|
+| Node row (the selection tap target) | `<id>_Node_<index>` |
+| Expand/collapse chevron | `<id>_Expand_<index>` |
+| Multi-select checkbox | `<id>_CheckBox_<index>` (`ShinyTreeNodeCheckBox` when the tree has no id) |
+| Root loading indicator / load-error label | `<id>_Loading` / `<id>_Error` |

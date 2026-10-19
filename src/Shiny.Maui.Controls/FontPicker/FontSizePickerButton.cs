@@ -7,6 +7,24 @@ namespace Shiny.Maui.Controls.FontPicker;
 
 public class FontSizePickerButton : ContentView
 {
+    /// <summary>Appended to the button's <see cref="Element.AutomationId"/> to name the trigger that opens the popup.</summary>
+    public const string ButtonAutomationIdSuffix = "_Button";
+
+    /// <summary>Appended to the button's <see cref="Element.AutomationId"/> to name the label showing the selection.</summary>
+    public const string ValueAutomationIdSuffix = "_Value";
+
+    /// <summary>Appended to the button's <see cref="Element.AutomationId"/> to name the popup card.</summary>
+    public const string PopupAutomationIdSuffix = "_Popup";
+
+    /// <summary>Appended to the button's <see cref="Element.AutomationId"/> to name the popup's Done button.</summary>
+    public const string DoneAutomationIdSuffix = "_Done";
+
+    /// <summary>
+    /// Appended to the button's <see cref="Element.AutomationId"/> to name the <see cref="FontSizePicker"/> in the
+    /// popup. Its rows follow that: <c>&lt;id&gt;_Picker_Size_0</c>.
+    /// </summary>
+    public const string PickerAutomationIdSuffix = "_Picker";
+
     readonly Border buttonBorder;
     readonly Label buttonLabel;
     readonly Border popupBorder;
@@ -101,6 +119,14 @@ public class FontSizePickerButton : ContentView
         };
 
         Content = buttonBorder;
+
+        // The popup is moved into the page's root grid when it opens, away from this button - these
+        // ids are the only way a test finds it there.
+        AutomationIds.Link(this, buttonBorder, ButtonAutomationIdSuffix);
+        AutomationIds.Link(this, buttonLabel, ValueAutomationIdSuffix);
+        AutomationIds.Link(this, popupBorder, PopupAutomationIdSuffix);
+        AutomationIds.Link(this, doneButton, DoneAutomationIdSuffix);
+        AutomationIds.Link(this, picker, PickerAutomationIdSuffix);
         UpdateButtonLabel(SelectedFontSize);
 
         // Last line: replays any styled property that was applied before the

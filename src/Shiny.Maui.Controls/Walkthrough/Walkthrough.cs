@@ -47,6 +47,31 @@ public partial class Walkthrough : ContentView
     const double SlideDistance = 20;
 
     /// <summary>
+    /// Appended to the walkthrough's <see cref="Element.AutomationId"/> to name the callout card. The
+    /// callout lives in the page's overlay layer rather than under the walkthrough, so this is how a test
+    /// finds it.
+    /// </summary>
+    public const string CalloutAutomationIdSuffix = "_Callout";
+
+    /// <summary>Appended to the walkthrough's id to name the callout's title label.</summary>
+    public const string TitleAutomationIdSuffix = "_Title";
+
+    /// <summary>Appended to the walkthrough's id to name the callout's text label.</summary>
+    public const string TextAutomationIdSuffix = "_Text";
+
+    /// <summary>Appended to the walkthrough's id to name the "1 of 4" step counter.</summary>
+    public const string CounterAutomationIdSuffix = "_Counter";
+
+    /// <summary>Appended to the walkthrough's id to name the Skip link.</summary>
+    public const string SkipAutomationIdSuffix = "_Skip";
+
+    /// <summary>Appended to the walkthrough's id to name the Back link.</summary>
+    public const string BackAutomationIdSuffix = "_Back";
+
+    /// <summary>Appended to the walkthrough's id to name the Next (Finish on the last step) link.</summary>
+    public const string NextAutomationIdSuffix = "_Next";
+
+    /// <summary>
     /// Where "has this user seen it" is recorded. Replace during startup to keep the flag with the rest
     /// of your user state instead of on the device.
     /// </summary>
@@ -104,6 +129,10 @@ public partial class Walkthrough : ContentView
         this.BackCommand = new Command(() => this.Back());
         this.SkipCommand = new Command(() => this.Skip());
         this.RestartCommand = new Command(() => this.Restart());
+
+        // The chrome is built per run and torn down after, so the parts are named when they are built
+        // and renamed from here if the id changes mid-run.
+        AutomationIds.Track(this, this.NameChrome);
 
         // Last line: replays any styled property applied before the fields existed. See StyleGuard.
         StyleGuard.MarkReady(this, typeof(Walkthrough));

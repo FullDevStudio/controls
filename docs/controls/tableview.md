@@ -130,3 +130,34 @@ the sections of a light table, or headers drifting out of step with the rows und
 bound to theme tokens now, which re-resolve on both.
 
 Setting any of them still pins it, as before. See [Styling & theming](styling.md#dark-mode).
+
+### Automation ids (MAUI)
+
+Set `AutomationId` on a cell and its parts are named after it, for UI tests:
+
+| Part | Id |
+|---|---|
+| Title / description / hint label (every cell) | `<cell id>_Title` / `_Description` / `_Hint` |
+| Value label (`LabelCell`, `CommandCell`, `DatePickerCell`, `TimePickerCell`, `TextPickerCell`, `NumberPickerCell`, `DurationPickerCell`) | `<cell id>_Value` |
+| `EntryCell` entry | `<cell id>_Entry` |
+| `SwitchCell` switch | `<cell id>_Switch` |
+| `CheckboxCell` check box | `<cell id>_CheckBox` |
+| `RadioCell` radio button | `<cell id>_Radio` |
+| `SimpleCheckCell` checkmark (visible only while checked) | `<cell id>_Check` |
+| `ButtonCell` text | `<cell id>_Title` |
+| Native picker behind `DatePickerCell` / `TimePickerCell` / `TextPickerCell` | `<cell id>_Picker` |
+| `DurationPickerCell` panel, its hour/minute pickers and buttons | `<cell id>_Popup`, `_Hours`, `_Minutes`, `_Done`, `_Cancel` |
+
+Set `AutomationId` on the `TableView` too and it names what it renders: each visible section is
+`<table id>_Section_<index>`, and a cell **without an id of its own** (typically one generated from a
+section's `ItemTemplate`) becomes `<table id>_Cell_<section>_<row>`, in visible order, with its parts
+following it (`<table id>_Cell_0_2_Value`). A cell you named keeps its name. The suffixes are public
+constants (`CellBase.ValueAutomationIdSuffix`, `EntryCell.EntryAutomationIdSuffix`,
+`TableView.CellAutomationIdSuffix`, …).
+
+A `PickerCell` with an `AutomationId` names the page it pushes and the rows on it, for UI tests:
+
+| Part | Id |
+|---|---|
+| Picker page | `<cell id>_PickerPage` |
+| Each row, in `ItemsSource` order | `<cell id>_PickerItem_<index>` |

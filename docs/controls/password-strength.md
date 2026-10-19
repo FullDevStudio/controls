@@ -137,3 +137,16 @@ evaluator. `Suggestions` are not painted by the control and stay as the evaluato
 **Never send the password itself anywhere.** HIBP's range API takes the first five characters of the
 SHA-1 hash and returns a bucket of suffixes exactly so the password — and its full hash — never
 leaves the device.
+
+### Automation ids (MAUI)
+
+Set `AutomationId` on the control and its parts are named after it, for UI tests (Appium, UI Automation, DevFlow). Without an id, the parts get none.
+
+| Part | Id |
+|---|---|
+| The password field | `<id>_Entry` |
+| Warning / hint line | `<id>_Hint` |
+| Show/hide toggle | `<id>_Reveal` |
+| Strength caption | `<id>_Strength` |
+| Time-to-crack line | `<id>_TimeToCrack` |
+| Each rule's text, by position | `<id>_Rule_0` |

@@ -7,6 +7,21 @@ namespace Shiny.Maui.Controls.ColorPicker;
 
 public partial class ColorPicker : ContentView
 {
+    /// <summary>Appended to the picker's <see cref="Element.AutomationId"/> to name the saturation/brightness spectrum.</summary>
+    public const string SpectrumAutomationIdSuffix = "_Spectrum";
+
+    /// <summary>Appended to the picker's <see cref="Element.AutomationId"/> to name the hue bar.</summary>
+    public const string HueAutomationIdSuffix = "_Hue";
+
+    /// <summary>Appended to the picker's <see cref="Element.AutomationId"/> to name the opacity slider.</summary>
+    public const string OpacityAutomationIdSuffix = "_Opacity";
+
+    /// <summary>Appended to the picker's <see cref="Element.AutomationId"/> to name the swatch previewing the colour.</summary>
+    public const string PreviewAutomationIdSuffix = "_Preview";
+
+    /// <summary>Appended to the picker's <see cref="Element.AutomationId"/> to name the hex entry.</summary>
+    public const string HexAutomationIdSuffix = "_Hex";
+
     readonly ColorSpectrumView spectrumView;
     readonly HueBarView hueBar;
     readonly MauiSlider opacitySlider;
@@ -134,6 +149,12 @@ public partial class ColorPicker : ContentView
         rootGrid.Add(bottomRow, 0, 3);
 
         Content = rootGrid;
+
+        AutomationIds.Link(this, spectrumView, SpectrumAutomationIdSuffix);
+        AutomationIds.Link(this, hueBar, HueAutomationIdSuffix);
+        AutomationIds.Link(this, opacitySlider, OpacityAutomationIdSuffix);
+        AutomationIds.Link(this, previewSwatch, PreviewAutomationIdSuffix);
+        AutomationIds.Link(this, hexEntry, HexAutomationIdSuffix);
 
         UpdateFromColor(SelectedColor);
 

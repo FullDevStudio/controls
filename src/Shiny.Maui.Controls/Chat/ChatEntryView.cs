@@ -19,6 +19,30 @@ namespace Shiny.Maui.Controls.Chat;
 /// </summary>
 public partial class ChatEntryView : ContentView
 {
+    /// <summary>Appended to the composer's own <see cref="Element.AutomationId"/> to name the text editor.</summary>
+    public const string EntryAutomationIdSuffix = "_Entry";
+
+    /// <summary>Names the send button.</summary>
+    public const string SendAutomationIdSuffix = "_Send";
+
+    /// <summary>Names the attach (+) button.</summary>
+    public const string AttachAutomationIdSuffix = "_Attach";
+
+    /// <summary>Names the overflow (⋯) button that opens the input actions.</summary>
+    public const string ActionsAutomationIdSuffix = "_Actions";
+
+    /// <summary>
+    /// Names each markdown format button, followed by the format: <c>&lt;id&gt;_Format_Bold</c>, <c>_Italic</c>,
+    /// <c>_Underline</c>, <c>_Strikethrough</c>, <c>_Code</c>, <c>_Link</c>.
+    /// </summary>
+    public const string FormatAutomationIdSuffix = "_Format";
+
+    /// <summary>Names the label on the edit banner.</summary>
+    public const string EditBannerAutomationIdSuffix = "_EditBanner";
+
+    /// <summary>Names the edit banner's cancel (✕) button.</summary>
+    public const string EditCancelAutomationIdSuffix = "_EditCancel";
+
     /// <summary>Raised when the send button is pressed with non-empty text. The argument is the trimmed text.</summary>
     public event EventHandler<string>? SendRequested;
 
@@ -242,6 +266,23 @@ public partial class ChatEntryView : ContentView
         this.Content = this.rootGrid;
         this.SyncMaxHeight();
 
+        AutomationIds.Link(this, this.entry, EntryAutomationIdSuffix);
+        AutomationIds.Link(this, this.sendButton, SendAutomationIdSuffix);
+        AutomationIds.Link(this, this.attachButton, AttachAutomationIdSuffix);
+        AutomationIds.Link(this, this.actionsButton, ActionsAutomationIdSuffix);
+        AutomationIds.Link(this, this.editBannerLabel, EditBannerAutomationIdSuffix);
+        AutomationIds.Link(this, editCancel, EditCancelAutomationIdSuffix);
+
+        // The format buttons are rebuilt by SetBodyPermissions; each remembers its key in ClassId.
+        AutomationIds.Track(this, () =>
+        {
+            foreach (var child in this.markdownToolbar.Children)
+            {
+                if (child is Button b)
+                    this.NameFormatButton(b);
+            }
+        });
+
         // Collections initialised here rather than via defaultValueCreator: a lazily-created default
         // never fires propertyChanged, so the CollectionChanged hook would never be wired.
         this.LeftToolbar = new ObservableCollection<IView>();
@@ -310,25 +351,26 @@ public partial class ChatEntryView : ContentView
         }
 
         if (permissions.HasFlag(MessageBodyPermissions.Bold))
-            this.markdownToolbar.Children.Add(this.CreateFormatButton("B", FontAttributes.Bold, () => this.ApplyWrap("**", "**", "bold")));
+            this.markdownToolbar.Children.Add(this.CreateFormatButton("Bold", "B", FontAttributes.Bold, () => this.ApplyWrap("**", "**", "bold")));
         if (permissions.HasFlag(MessageBodyPermissions.Italics))
-            this.markdownToolbar.Children.Add(this.CreateFormatButton("I", FontAttributes.Italic, () => this.ApplyWrap("*", "*", "italic")));
+            this.markdownToolbar.Children.Add(this.CreateFormatButton("Italic", "I", FontAttributes.Italic, () => this.ApplyWrap("*", "*", "italic")));
         if (permissions.HasFlag(MessageBodyPermissions.Underline))
-            this.markdownToolbar.Children.Add(this.CreateFormatButton("U", FontAttributes.None, () => this.ApplyWrap("<u>", "</u>", "underline")));
+            this.markdownToolbar.Children.Add(this.CreateFormatButton("Underline", "U", FontAttributes.None, () => this.ApplyWrap("<u>", "</u>", "underline")));
         if (permissions.HasFlag(MessageBodyPermissions.Strikethrough))
-            this.markdownToolbar.Children.Add(this.CreateFormatButton("S", FontAttributes.None, () => this.ApplyWrap("~~", "~~", "strike")));
+            this.markdownToolbar.Children.Add(this.CreateFormatButton("Strikethrough", "S", FontAttributes.None, () => this.ApplyWrap("~~", "~~", "strike")));
         if (permissions.HasFlag(MessageBodyPermissions.Codeblocks))
-            this.markdownToolbar.Children.Add(this.CreateFormatButton("</>", FontAttributes.None, () => this.ApplyWrap("`", "`", "code")));
+            this.markdownToolbar.Children.Add(this.CreateFormatButton("Code", "</>", FontAttributes.None, () => this.ApplyWrap("`", "`", "code")));
         if (permissions.HasFlag(MessageBodyPermissions.Links))
-            this.markdownToolbar.Children.Add(this.CreateFormatButton("🔗", FontAttributes.None, () => this.LinkRequested?.Invoke(this, EventArgs.Empty)));
+            this.markdownToolbar.Children.Add(this.CreateFormatButton("Link", "🔗", FontAttributes.None, () => this.LinkRequested?.Invoke(this, EventArgs.Empty)));
 
         this.markdownToolbar.IsVisible = this.markdownToolbar.Children.Count > 0;
     }
 
-    Button CreateFormatButton(string text, FontAttributes attrs, Action action)
+    Button CreateFormatButton(string key, string text, FontAttributes attrs, Action action)
     {
         var btn = new Button
         {
+            ClassId = key,
             Text = text,
             FontAttributes = attrs,
             BackgroundColor = Colors.Transparent,
@@ -338,8 +380,15 @@ public partial class ChatEntryView : ContentView
         }.Neutralize().WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
         btn.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
         btn.Clicked += (_, _) => action();
+        this.NameFormatButton(btn);
         return btn;
     }
+
+    // Keyed by format rather than position: which buttons appear depends on the session's permissions.
+    void NameFormatButton(Button button)
+        => AutomationIds.Set(button, AutomationIds.For(this, FormatAutomationIdSuffix) is { } prefix
+            ? $"{prefix}_{button.ClassId}"
+            : null);
 
     /// <summary>Wraps the current selection (or inserts <paramref name="placeholder"/>) with the given delimiters.</summary>
     public void ApplyWrap(string prefix, string suffix, string placeholder)

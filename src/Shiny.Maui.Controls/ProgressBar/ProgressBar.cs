@@ -16,6 +16,12 @@ public partial class ProgressBar : ContentView, IDisposable
 
     const string FillAnimationName = "ShinyProgressFill";
 
+    /// <summary>
+    /// Appended to the bar's <see cref="Element.AutomationId"/> to name the percentage label shown when
+    /// <see cref="ShowText"/> is on, so a test can read the value the user sees.
+    /// </summary>
+    public const string TextAutomationIdSuffix = "_Text";
+
     IDispatcherTimer? pulseTimer;
     bool isAnimatingPulse;
     bool isAnimatingIndeterminate;
@@ -103,6 +109,7 @@ public partial class ProgressBar : ContentView, IDisposable
         trackGrid.Children.Add(progressLabel);
 
         Content = trackGrid;
+        AutomationIds.Link(this, progressLabel, TextAutomationIdSuffix);
 
         // MAUI never calls Dispose on a view, so the repeating pulse timer and the indeterminate loop
         // have to follow the tree: left running they are rooted by the platform timer/ticker and keep

@@ -1,4 +1,5 @@
 using Microsoft.Maui.Controls.Shapes;
+using Shiny.Maui.Controls.Infrastructure;
 using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls.Ribbons;
@@ -86,7 +87,7 @@ class RibbonItemView : Grid
         // de-duplicates a repeated id by suffixing one of them, so the tappable element ends up with a
         // name no test can predict.
         if (!string.IsNullOrWhiteSpace(item.AutomationId))
-            this.face.AutomationId = item.AutomationId;
+            AutomationIds.Set(this.face, item.AutomationId);
 
         SemanticProperties.SetDescription(this, item.Tooltip ?? item.Text);
 

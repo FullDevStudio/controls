@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Specialized;
+using System.Runtime.CompilerServices;
 using System.Windows.Input;
 using Shiny.Maui.Controls.Infrastructure;
 
@@ -7,13 +8,32 @@ namespace Shiny.Maui.Controls.Collections;
 
 public abstract class CollectionControlBase : View
 {
+    /// <summary>
+    /// Appended to the control's <see cref="Element.AutomationId"/>, with the item's index in
+    /// <see cref="ItemsSource"/>, to name each item view that has no id of its own. Recycled views are
+    /// renamed every time they are bound to another item.
+    /// </summary>
+    public const string ItemAutomationIdSuffix = "_Item";
+
     IDisposable? collectionSubscription;
 
+    // Item -> index, built only while the control has an id and dropped on any source change.
+    Dictionary<object, int>? itemIndexes;
+    readonly List<WeakReference<View>> liveItemViews = new();
+    int pruneItemViewsAt = 64;
+    // The ids this control handed out. An item view carrying any other id was named by the
+    // consumer's template (a bound AutomationId, say) and is left alone.
+    readonly ConditionalWeakTable<View, string> generatedItemIds = new();
+
     protected CollectionControlBase()
+    {
+        AutomationIds.Track(this, RenameItemViews);
+
         // This level owns no children of its own - OnItemsSourceChanged only touches a field and
         // the handler - so it is ready the moment its own constructor ends. Scoping it here is
         // what lets the concrete grids inherit the guard without writing anything themselves.
-        => StyleGuard.MarkReady(this, typeof(CollectionControlBase));
+        StyleGuard.MarkReady(this, typeof(CollectionControlBase));
+    }
 
     public static readonly BindableProperty ItemsSourceProperty = BindableProperty.Create(
         nameof(ItemsSource),
@@ -160,12 +180,71 @@ public abstract class CollectionControlBase : View
         var view = content as View ?? (content as ViewCell)?.View
             ?? throw new InvalidOperationException("DataTemplate must produce a View or ViewCell.");
         view.BindingContext = item;
+
+        liveItemViews.Add(new WeakReference<View>(view));
+        if (liveItemViews.Count >= pruneItemViewsAt)
+        {
+            liveItemViews.RemoveAll(w => !w.TryGetTarget(out _));
+            pruneItemViewsAt = Math.Max(64, liveItemViews.Count * 2);
+        }
+        NameItemView(view);
         return view;
     }
 
     internal void RecycleItemView(View view, object newItem)
     {
         view.BindingContext = newItem;
+        NameItemView(view);
+    }
+
+    /// <summary>The items in the order their automation index counts them. Grouped controls flatten their groups.</summary>
+    internal virtual IEnumerable<object> GetAutomationItems() => GetItemsList();
+
+    void NameItemView(View view)
+    {
+        string? id = null;
+        if (!String.IsNullOrEmpty(AutomationId) && view.BindingContext is { } item)
+        {
+            itemIndexes ??= BuildItemIndexes();
+            if (itemIndexes.TryGetValue(item, out var index))
+                id = AutomationIds.For(this, ItemAutomationIdSuffix, index);
+        }
+
+        var ours = generatedItemIds.TryGetValue(view, out var previous);
+        if (!String.IsNullOrEmpty(view.AutomationId) && (!ours || view.AutomationId != previous))
+            return;
+
+        AutomationIds.Set(view, id);
+        if (id is null)
+            generatedItemIds.Remove(view);
+        else
+            generatedItemIds.AddOrUpdate(view, id);
+    }
+
+    Dictionary<object, int> BuildItemIndexes()
+    {
+        // First occurrence wins: two equal items would otherwise share an id either way.
+        var map = new Dictionary<object, int>();
+        var i = 0;
+        foreach (var item in GetAutomationItems())
+        {
+            if (item is not null)
+                map.TryAdd(item, i);
+            i++;
+        }
+        return map;
+    }
+
+    /// <summary>Renames the realized item views - after the control's id changes, or the items shift under them.</summary>
+    void RenameItemViews()
+    {
+        itemIndexes = null;
+        foreach (var weak in liveItemViews.ToList())
+        {
+            if (weak.TryGetTarget(out var view))
+                NameItemView(view);
+        }
+        liveItemViews.RemoveAll(w => !w.TryGetTarget(out _));
     }
 
     internal void RaiseItemSelected(object item, int index)
@@ -214,6 +293,7 @@ public abstract class CollectionControlBase : View
         collectionSubscription = WeakEventSubscription.CollectionChanged(newValue, OnCollectionChanged);
 
         OnItemsSourceUpdated(CollectionChangedArgs.Reset);
+        RenameItemViews();
     }
 
     void OnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -237,6 +317,9 @@ public abstract class CollectionControlBase : View
             _ => CollectionChangedArgs.Reset
         };
         OnItemsSourceUpdated(args);
+        // An insert or remove shifts the index of every item after it, and the platform does not
+        // re-bind the views it has already realized.
+        RenameItemViews();
     }
 
     protected virtual void OnItemsSourceUpdated(CollectionChangedArgs args)

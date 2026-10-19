@@ -135,3 +135,21 @@ await quickEntry.PulseGlowAsync(TimeSpan.FromSeconds(3));   // one-shot acknowle
 It rims the **display** in desktop presentation and the **page** in-app — the same thing on a phone, and not the same thing on a desktop with your app in a window. On macOS and Linux/X11 the desktop glow is a transparent click-through window; on Windows a WinUI 3 window has no per-pixel alpha, so it is rendered with GDI+ into four layered Win32 windows, one per screen edge, which is why the Windows glow has square corners.
 
 `Glow.Thickness` is how far the colour reaches inward, and it is absolute — 110 is a band around a desktop display and most of the width of a phone, so turn it down for a tight rim on a small screen. `Glow.BlobCount` is a *floor*, not the count: enough colour pools to rim the screen without unlit gaps between them are always drawn, which on a large display is well over five.
+
+### Automation ids (MAUI)
+
+Set `AutomationId` on the control and its parts are named after it, for UI tests (Appium, UI Automation, DevFlow). Without an id, the parts get none.
+
+For `PromptView`:
+
+| Part | Id |
+|---|---|
+| The prompt field | `<id>_Entry` |
+| Submit / stop button | `<id>_Submit` |
+| Microphone button | `<id>_Microphone` |
+| Busy status line | `<id>_Busy` |
+| Built-in response label | `<id>_Response` |
+| Each suggestion row, by position | `<id>_Suggestion_0` |
+| Each leading / trailing tool, by position | `<id>_LeadingTool_0` / `<id>_TrailingTool_0` |
+
+The popup has no owner element, so set `QuickEntryOptions.AutomationId` and the service gives it to the content it builds (custom `ContentFactory` content that already has an id keeps it). A tool or `SuggestionTemplate` root with its own id keeps it.

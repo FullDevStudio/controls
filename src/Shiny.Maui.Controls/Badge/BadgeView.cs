@@ -13,6 +13,12 @@ namespace Shiny.Maui.Controls;
 [ContentProperty(nameof(Content))]
 public partial class BadgeView : Grid, IDisposable
 {
+    /// <summary>
+    /// Appended to the badge view's <see cref="Element.AutomationId"/> to name the badge's label, so a
+    /// test can read the count it shows ("3", "99+"). A dot badge has no text.
+    /// </summary>
+    public const string BadgeAutomationIdSuffix = "_Badge";
+
     readonly ContentView contentHost;
     readonly Border badgeBorder;
     readonly Label badgeLabel;
@@ -50,6 +56,7 @@ public partial class BadgeView : Grid, IDisposable
 
         this.Children.Add(this.contentHost);
         this.Children.Add(this.badgeBorder);
+        AutomationIds.Link(this, this.badgeLabel, BadgeAutomationIdSuffix);
 
         this.ApplyBadgeVisual(animate: false);
 

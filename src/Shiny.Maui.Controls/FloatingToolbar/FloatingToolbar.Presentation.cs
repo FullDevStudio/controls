@@ -265,6 +265,10 @@ public partial class FloatingToolbar
         menu.StrokeShape = this.BuildCorner();
         menu.ItemInvoked += this.OnItemInvoked;
         menu.MenuRequested += this.OnMenuRequested;
+
+        var menuId = AutomationIds.For(this, MenuAutomationIdSuffix, depth);
+        AutomationIds.Set(menu, menuId);
+        menu.ItemAutomationIdBase = menuId is null ? null : menuId + ItemAutomationIdSuffix;
         menu.Build(item.Children.ToList(), 0, null);
 
         this.menus.Add(menu);

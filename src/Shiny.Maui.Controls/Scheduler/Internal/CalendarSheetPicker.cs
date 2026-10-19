@@ -20,6 +20,7 @@ class CalendarSheetPicker : ContentView
     readonly Grid dayHeaderGrid;
     readonly Grid calendarGrid;
     readonly BoxView handleBar;
+    readonly ContentView handleContainer;
     readonly BoxView[] todayIndicators = new BoxView[42];
     readonly Label[] dayLabels = new Label[42];
     readonly Border[] cellBorders = new Border[42];
@@ -201,7 +202,7 @@ class CalendarSheetPicker : ContentView
             VerticalOptions = LayoutOptions.Center
         };
         handleBar.SetDynamicResource(BoxView.ColorProperty, ShinyThemeKeys.Color.OutlineVariant);
-        var handleContainer = new ContentView
+        handleContainer = new ContentView
         {
             Content = handleBar,
             HeightRequest = HandleHeight,
@@ -235,6 +236,14 @@ class CalendarSheetPicker : ContentView
         rootGrid.Add(handleContainer, 0, 3);
 
         Content = rootGrid;
+
+        // Named by the agenda view; the parts follow this picker's id.
+        AutomationIds.Link(this, prevButton, SchedulerCalendarView.PreviousMonthAutomationIdSuffix);
+        AutomationIds.Link(this, nextButton, SchedulerCalendarView.NextMonthAutomationIdSuffix);
+        AutomationIds.Link(this, monthLabel, SchedulerCalendarView.MonthTitleAutomationIdSuffix);
+        AutomationIds.Link(this, handleContainer, SchedulerAgendaView.ExpandAutomationIdSuffix);
+        AutomationIds.Track(this, NameDayCells);
+
         Build();
         // Start collapsed - show only selected week
         ApplyCollapsedLayout(false);
@@ -366,6 +375,21 @@ class CalendarSheetPicker : ContentView
 
         if (selectedRow < 0)
             selectedRow = 0;
+
+        NameDayCells();
+    }
+
+    void NameDayCells()
+    {
+        // Rows past the month's last week are hidden and their dates belong to the next month, which
+        // would repeat on the next page; leave them unnamed.
+        for (var i = 0; i < 42; i++)
+        {
+            var id = i / 7 < rowsNeeded
+                ? SchedulerAutomationIds.For(this, SchedulerCalendarView.DayAutomationIdSuffix, SchedulerAutomationIds.DateKey(cellDates[i]))
+                : null;
+            AutomationIds.Set(cellBorders[i], id);
+        }
     }
 
     void ApplyCollapsedLayout(bool animate)

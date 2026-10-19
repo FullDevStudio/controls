@@ -34,6 +34,28 @@ namespace Shiny.Maui.Controls;
 [ContentProperty(nameof(Items))]
 public partial class ShinyTabBar : Grid
 {
+    /// <summary>
+    /// Appended to the bar's own <see cref="Element.AutomationId"/>, with the tab's index among the drawn
+    /// tabs, to name each tab cell: <c>&lt;id&gt;_Tab_&lt;index&gt;</c>. Without an id on the bar a tab
+    /// keeps its <c>tab-&lt;route&gt;</c> id.
+    /// </summary>
+    public const string TabAutomationIdSuffix = "_Tab";
+
+    /// <summary>Appended to the bar's id to name the <b>More</b> tab drawn when tabs overflow.</summary>
+    public const string MoreAutomationIdSuffix = "_More";
+
+    /// <summary>Appended to the bar's id to name the centre button. Without an id it stays <c>tab-center</c>.</summary>
+    public const string CenterAutomationIdSuffix = "_Center";
+
+    /// <summary>Appended to the bar's id to name the menu card the centre button or <b>More</b> tab opens.</summary>
+    public const string MenuAutomationIdSuffix = "_Menu";
+
+    /// <summary>Appended to the bar's id, with the action's index, to name each centre-menu row: <c>&lt;id&gt;_MenuItem_&lt;index&gt;</c>.</summary>
+    public const string MenuItemAutomationIdSuffix = "_MenuItem";
+
+    /// <summary>Appended to the bar's id, with the row's index, to name each tab folded into the overflow menu: <c>&lt;id&gt;_OverflowItem_&lt;index&gt;</c>.</summary>
+    public const string OverflowItemAutomationIdSuffix = "_OverflowItem";
+
     const double PillWidthFactor = 2.4;
     const double PillHeightPadding = 8;
     const double IndicatorBarWidth = 28;
@@ -111,8 +133,7 @@ public partial class ShinyTabBar : Grid
         {
             // On the circle rather than the stack around it, because this is where the tap gesture
             // is - an id on an element that has no recognizer resolves and then does nothing, which
-            // is the most confusing possible outcome for a UI test.
-            AutomationId = "tab-center",
+            // is the most confusing possible outcome for a UI test. Named in the constructor below.
             StrokeThickness = 0,
             Stroke = null,
             Padding = 0,
@@ -200,6 +221,7 @@ public partial class ShinyTabBar : Grid
         // Command rather than the Tapped event: a command is invokable from a test, Tapped is not.
         var centerTap = new TapGestureRecognizer { Command = new Command(this.PressCenter) };
         this.centerCircle.GestureRecognizers.Add(centerTap);
+        AutomationIds.Link(this, this.centerCircle, CenterAutomationIdSuffix, "tab-center");
 
         this.items.CollectionChanged += this.OnItemsCollectionChanged;
 
@@ -221,6 +243,10 @@ public partial class ShinyTabBar : Grid
         this.Loaded += (_, _) => this.RefreshBottomInset();
 
         this.RebuildCells();
+
+        // Cells are rebuilt whole, so they are named there; this renames the drawn ones when the
+        // bar's own id arrives or changes.
+        AutomationIds.Track(this, this.NameCells);
 
         // Last line: replays any styled property that was applied before the
         // children existed. See StyleGuard.
@@ -813,6 +839,7 @@ public partial class ShinyTabBar : Grid
             this.barGrid.Children.Add(cell.Root);
             this.cells.Add(cell);
         }
+        this.NameCells();
 
         // Re-added and re-spanned because RebuildCells clears the grid it lives in.
         this.barGrid.Children.Insert(0, this.travelIndicator);
@@ -1058,12 +1085,6 @@ public partial class ShinyTabBar : Grid
             Children = { line, underline, stack }
         };
 
-        // Assigned once, here, and never again: AutomationId is set-once in MAUI and throws on a
-        // second write. Cells are rebuilt as whole new Grids rather than re-labelled, so a tab that
-        // is renamed or reordered still gets a correct id without anything being reassigned.
-        if (AutomationIdFor(item) is { } automationId)
-            root.AutomationId = automationId;
-
         var cell = new TabCell
         {
             Item = item,
@@ -1107,6 +1128,22 @@ public partial class ShinyTabBar : Grid
     {
         var name = item.Route ?? item.Title;
         return String.IsNullOrWhiteSpace(name) ? null : "tab-" + name.Trim().ToLowerInvariant().Replace(' ', '-');
+    }
+
+
+    void NameCells()
+    {
+        // Through AutomationIds rather than the setter, which throws on a second write: the bar's own
+        // id can arrive after the cells are built, and every rename has to reach the drawn ones.
+        for (var i = 0; i < this.cells.Count; i++)
+        {
+            var cell = this.cells[i];
+            var owned = cell.IsOverflow
+                ? AutomationIds.For(this, MoreAutomationIdSuffix)
+                : AutomationIds.For(this, TabAutomationIdSuffix, i);
+
+            AutomationIds.Set(cell.Root, owned ?? AutomationIdFor(cell.Item));
+        }
     }
 
 
@@ -2000,6 +2037,10 @@ public partial class ShinyTabBar : Grid
             Content = this.BuildMenuBody()
         };
         card.WithElevation(ShinyThemeKeys.Elevation.Level3);
+
+        // The card is painted into the page's overlay layer, not under the bar, so a test looking
+        // beneath the bar's id would never find it.
+        AutomationIds.Set(card, AutomationIds.For(this, MenuAutomationIdSuffix));
         return card;
     }
 
@@ -2009,8 +2050,12 @@ public partial class ShinyTabBar : Grid
         if (this.menuKind == TabMenuKind.Overflow)
         {
             var tabs = new VerticalStackLayout { Spacing = 0 };
-            foreach (var item in this.overflowed)
-                tabs.Children.Add(this.BuildOverflowRow(item));
+            for (var i = 0; i < this.overflowed.Count; i++)
+            {
+                var row = this.BuildOverflowRow(this.overflowed[i]);
+                AutomationIds.Set(row, AutomationIds.For(this, OverflowItemAutomationIdSuffix, i));
+                tabs.Children.Add(row);
+            }
 
             return tabs;
         }
@@ -2035,8 +2080,19 @@ public partial class ShinyTabBar : Grid
         }
 
         var stack = new VerticalStackLayout { Spacing = 0 };
+        var index = 0;
         foreach (var action in this.ResolveMenuActions())
-            stack.Children.Add(this.BuildActionRow(action));
+        {
+            var row = this.BuildActionRow(action);
+
+            // Indexed in source order, separators included, so an action's id is its position in the
+            // collection the page declared.
+            if (!action.IsSeparator)
+                AutomationIds.Set(row, AutomationIds.For(this, MenuItemAutomationIdSuffix, index));
+
+            stack.Children.Add(row);
+            index++;
+        }
 
         return stack;
     }

@@ -32,6 +32,11 @@ This is that assembly, done once and at parity on both hosts.
 - **Appearance × Type** — `Filled` / `Tonal` / `Outlined` / `Text` / `Elevated` crossed with
   `Primary` / `Secondary` / `Success` / `Warning` / `Critical` / `Info`, all resolved from the theme
   tokens. Any explicit colour property wins over both.
+- **A real button to assistive tech (MAUI)** — on Windows, UI Automation sees the Button control type
+  with the Invoke pattern, so Narrator, WinAppDriver and Appium can press it, and Enter or Space press
+  it when it has focus. TalkBack announces a button and double-tap presses it; VoiceOver gets the
+  button trait. Every route runs the same code as a tap, so a disabled button ignores all of them.
+  `Fab`, `FabMenuItem`, ChipGroup chips and the TextEntry / keyboard-accessory tools get the same.
 
 ```xml
 <!-- The whole point: nothing here binds IsBusy. SaveCommand is an AsyncRelayCommand. -->

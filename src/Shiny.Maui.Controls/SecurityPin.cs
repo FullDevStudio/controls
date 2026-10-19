@@ -5,6 +5,15 @@ namespace Shiny.Maui.Controls;
 
 public class SecurityPin : ContentView
 {
+    /// <summary>Appended to the pin's <see cref="Element.AutomationId"/> to name the hidden entry that takes the keystrokes.</summary>
+    public const string EntryAutomationIdSuffix = "_Entry";
+
+    /// <summary>Names the row of cells, which carries the tap that brings the keyboard up.</summary>
+    public const string CellsAutomationIdSuffix = "_Cells";
+
+    /// <summary>Names each cell, with its position: <c>&lt;id&gt;_Cell_0</c>.</summary>
+    public const string CellAutomationIdSuffix = "_Cell";
+
     readonly Grid rootGrid;
     readonly HorizontalStackLayout cellsLayout;
     readonly Entry hiddenEntry;
@@ -57,6 +66,11 @@ public class SecurityPin : ContentView
 
         Content = rootGrid;
         BuildCells();
+
+        // Through SetValue, not the AutomationId setter: that throws the second time. See AutomationIds.
+        AutomationIds.Link(this, hiddenEntry, EntryAutomationIdSuffix);
+        AutomationIds.Link(this, cellsLayout, CellsAutomationIdSuffix);
+        AutomationIds.Track(this, NameCells);
 
         // Last line: replays any styled property that was applied before the
         // children existed. See StyleGuard.
@@ -302,6 +316,13 @@ public class SecurityPin : ContentView
     public void Clear() => UpdateValue(string.Empty);
 
 
+    // Cells are rebuilt when Length changes, so they are renamed with them.
+    void NameCells()
+    {
+        for (var i = 0; i < cellBorders.Count; i++)
+            AutomationIds.Set(cellBorders[i], AutomationIds.For(this, CellAutomationIdSuffix, i));
+    }
+
     void BuildCells()
     {
         cellsLayout.Clear();
@@ -339,6 +360,7 @@ public class SecurityPin : ContentView
 
         ApplyCellStyle();
         RefreshCells();
+        NameCells();
 
         // Keep the Entry's MaxLength in sync with pin length
         hiddenEntry.MaxLength = count;

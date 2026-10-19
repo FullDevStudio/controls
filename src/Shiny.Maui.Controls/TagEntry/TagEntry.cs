@@ -37,6 +37,15 @@ public partial class TagEntry : ContentView
     /// </summary>
     internal const string Sentinel = "​";
 
+    /// <summary>Appended to the field's <see cref="Element.AutomationId"/> to name the entry a test types into.</summary>
+    public const string EntryAutomationIdSuffix = "_Entry";
+
+    /// <summary>Names each chip, with its index in <see cref="Tags"/>: <c>&lt;id&gt;_Chip_0</c>.</summary>
+    public const string ChipAutomationIdSuffix = "_Chip";
+
+    /// <summary>Names each chip's remove button, with the chip's index: <c>&lt;id&gt;_Remove_0</c>.</summary>
+    public const string RemoveAutomationIdSuffix = "_Remove";
+
     const double DefaultMinimumHeight = 48;
 
     readonly Border border;
@@ -90,6 +99,10 @@ public partial class TagEntry : ContentView
 
         this.Content = this.border;
         this.MinimumHeightRequest = DefaultMinimumHeight;
+
+        // Through SetValue, not the AutomationId setter: that throws the second time. See AutomationIds.
+        AutomationIds.Link(this, this.entry, EntryAutomationIdSuffix);
+        AutomationIds.Track(this, this.NameChips);
 
         // Assigned after the children exist, for the reason FabMenu gives: the property-changed handler
         // rebuilds the chips, which needs the wrap layout to be there. Created here rather than in a
@@ -521,10 +534,23 @@ public partial class TagEntry : ContentView
                 // of the list rather than in the middle of it.
                 this.wrap.Insert(insertAt++, chip);
             }
+
+            this.NameChips();
         }
         finally
         {
             this.rebuilding = false;
+        }
+    }
+
+
+    // Chips are rebuilt on every change, so they are renamed with them, and again if the field's id changes.
+    void NameChips()
+    {
+        for (var i = 0; i < this.chips.Count; i++)
+        {
+            AutomationIds.Set(this.chips[i], AutomationIds.For(this, ChipAutomationIdSuffix, i));
+            AutomationIds.Set(this.chips[i].RemoveButton, AutomationIds.For(this, RemoveAutomationIdSuffix, i));
         }
     }
 

@@ -284,6 +284,9 @@ public partial class DataGrid
     /// Emits one grouping level into <c>displayItems</c>, recursing until the innermost level, which
     /// emits the rows themselves.
     /// </summary>
+    // Display-order position of the next group header, across every level - what names it for UI tests.
+    int nextGroupIndex;
+
     void AppendGroupRows(IReadOnlyList<object> items, int level, string parentPath, ref int index)
     {
         var cols = this.GroupColumns;
@@ -305,7 +308,10 @@ public partial class DataGrid
                 groupItems,
                 level,
                 path
-            );
+            )
+            {
+                Index = this.nextGroupIndex++
+            };
             this.displayItems.Add(header);
 
             if (this.GroupSummaryPlacement is DataGridGroupSummaryPlacement.Header or DataGridGroupSummaryPlacement.Both)
@@ -354,6 +360,7 @@ public partial class DataGrid
             var host = new Grid();
             host.Add(custom);
             this.AddGroupHeaderTap(host);
+            this.NameGroupHeader(host);
             return host;
         }
 
@@ -381,6 +388,7 @@ public partial class DataGrid
         container.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceContainerHigh);
         container.Add(layout);
         this.AddGroupHeaderTap(container);
+        this.NameGroupHeader(container);
         return container;
     }
 

@@ -32,6 +32,20 @@ namespace Shiny.Maui.Controls;
 /// </remarks>
 public partial class Tooltip : ContentView
 {
+    /// <summary>
+    /// Appended to the tooltip's <see cref="Element.AutomationId"/> to name the bubble. The bubble lives
+    /// in the page's overlay layer rather than under the tooltip, so this is how a test finds it. A
+    /// tooltip attached through <see cref="TooltipProperties"/> has no id of its own and takes its
+    /// target view's instead: <c>&lt;target id&gt;_Bubble</c>.
+    /// </summary>
+    public const string BubbleAutomationIdSuffix = "_Bubble";
+
+    /// <summary>Appended to the tooltip's (or attached target's) id to name the bubble's title label.</summary>
+    public const string TitleAutomationIdSuffix = "_Title";
+
+    /// <summary>Appended to the tooltip's (or attached target's) id to name the bubble's text label.</summary>
+    public const string TextAutomationIdSuffix = "_Text";
+
     const double ScaleFrom = 0.9;
     const double SlideDistance = 12;
 
@@ -58,6 +72,7 @@ public partial class Tooltip : ContentView
     {
         this.Loaded += this.OnLoaded;
         this.Unloaded += this.OnUnloaded;
+        AutomationIds.Track(this, this.NameBubble);
 
         // Last line: replays any styled property that was applied before the fields existed.
         // See StyleGuard.
@@ -384,7 +399,25 @@ public partial class Tooltip : ContentView
             this.bubble.GestureRecognizers.Add(tap);
         }
 
+        this.NameBubble();
         this.ApplyBubbleStyle();
+    }
+
+
+    // Re-run on every open as well as on an id change: an attached tooltip names its bubble after the
+    // target, whose id this element is never told about.
+    void NameBubble()
+    {
+        if (this.bubble is null)
+            return;
+
+        Element? owner = !string.IsNullOrEmpty(this.AutomationId)
+            ? this
+            : this.Target is { } target && ReferenceEquals(TooltipProperties.GetTooltip(target), this) ? target : null;
+
+        AutomationIds.Set(this.bubble, owner is null ? null : AutomationIds.For(owner, BubbleAutomationIdSuffix));
+        AutomationIds.Set(this.bubble.TitleLabel, owner is null ? null : AutomationIds.For(owner, TitleAutomationIdSuffix));
+        AutomationIds.Set(this.bubble.TextLabel, owner is null ? null : AutomationIds.For(owner, TextAutomationIdSuffix));
     }
 
 

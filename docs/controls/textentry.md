@@ -109,3 +109,19 @@ A bar docked to the **top edge of the soft keyboard** while the field has focus 
 iOS uses the real `UIResponder.InputAccessoryView`, so it rides the keyboard animation exactly. Android has no accessory API at all (the IME is a separate process), so the same bar is rendered in the activity's content view and driven by the IME window insets — frame-synced on API 30+, and shown only while the IME is genuinely up, so a hardware keyboard correctly shows no bar. Windows, macOS, Linux and Blazor have no soft keyboard to decorate; the property compiles and does nothing. This is *not* the [on-screen keyboard](desktop.md#on-screen-keyboard) — that one draws keys; this one decorates the OS keyboard.
 
 The same bar also serves multi-line inputs — it is what puts the markdown editor's formatting toolbar on the keyboard (see [Markdown Controls](markdown.md)). `KeyboardAccessoryView.BarContent` replaces the item row with a layout of your own (a horizontal scroller, say, when there are more items than fit); `KeyboardAccessoryItem`s inside it are wired to the focused field exactly like the ones in `Items`.
+
+### Automation ids (MAUI)
+
+Set `AutomationId` on the control and its parts are named after it, for UI tests (Appium, UI Automation, DevFlow). Without an id, the parts get none.
+
+| Part | Id |
+|---|---|
+| The text field | `<id>_Entry` |
+| Hint / error / character-count line | `<id>_Hint` |
+| A `ClearButtonTool` | `<id>_Clear` |
+| Any other left tool, by position | `<id>_LeftTool_0` |
+| Any other right tool, by position | `<id>_RightTool_0` |
+
+A tool you give an `AutomationId` of its own keeps it.
+
+A `KeyboardAccessoryView` is named after **its own** `AutomationId`, not the field's — the bar lives outside the field's tree and can be shared between fields: `<bar id>_Previous`, `<bar id>_Next`, `<bar id>_Done` for the stock items, `<bar id>_Item_0` (by position) for any other `KeyboardAccessoryItem` without an id of its own.

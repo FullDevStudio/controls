@@ -27,6 +27,12 @@ namespace Shiny.Maui.Controls.Flyout;
 [ContentProperty(nameof(Content))]
 public partial class FlyoutView : Layout
 {
+    /// <summary>
+    /// Appended to the view's own <see cref="Element.AutomationId"/> to name the scrim, which closes an
+    /// overlaid panel when tapped. The panels are yours, so name them directly.
+    /// </summary>
+    public const string ScrimAutomationIdSuffix = "_Scrim";
+
     const string AnimationName = "ShinyFlyoutTransition";
     const double OpenThreshold = 0.4;
 
@@ -38,6 +44,7 @@ public partial class FlyoutView : Layout
     double hostWidth;
     double hostHeight;
     bool measuredOnce;
+    bool retargetQueued;
     bool applyingResponsive;
     double scrimProgress;
 
@@ -67,6 +74,7 @@ public partial class FlyoutView : Layout
         scrimPan.PanUpdated += (_, e) => this.OnScrimPan(e);
         this.scrim.GestureRecognizers.Add(scrimPan);
         this.Children.Add(this.scrim);
+        AutomationIds.Link(this, this.scrim, ScrimAutomationIdSuffix);
 
         this.InitSide(this.start);
         this.InitSide(this.end);
@@ -268,7 +276,9 @@ public partial class FlyoutView : Layout
         var availableWidth = widthConstraint - padding.HorizontalThickness;
         var availableHeight = heightConstraint - padding.VerticalThickness;
 
-        this.SyncHostSize(availableWidth, availableHeight);
+        // Only the first measure learns the width (see SyncHostSize); after that the arrange owns it.
+        if (!this.measuredOnce)
+            this.SyncHostSize(availableWidth, availableHeight);
 
         var (leftInset, rightInset) = this.PhysicalInsets();
 
@@ -362,7 +372,18 @@ public partial class FlyoutView : Layout
     /// layout pass rather than from <c>OnSizeAllocated</c> so that the first arrange already knows it —
     /// a panel that only found out afterwards would paint once at the wrong width and then correct
     /// itself, which reads as a flash on every page that opens with a flyout already expanded.
+    /// <para>
+    /// After that first pass only the arrange reports the width. WinUI hands the measure and the arrange
+    /// widths a fraction of a pixel apart (894.7 and 895.3), so taking it from both made every pass a
+    /// width change, and every width change re-targets and invalidates the measure: a layout cycle that
+    /// WinUI ends by killing the app. A change found during the arrange is also re-targeted once the pass
+    /// is over rather than inside it, so it cannot invalidate the layout that is running.
+    /// </para>
     /// </summary>
+    /// <summary>The width the responsive rules are judged against. Test seam.</summary>
+    internal double HostWidth => this.hostWidth;
+
+
     void SyncHostSize(double width, double height)
     {
         if (double.IsInfinity(width) || double.IsNaN(width) || width <= 0)
@@ -381,8 +402,28 @@ public partial class FlyoutView : Layout
         else if (widthChanged)
         {
             this.ApplyResponsive();
-            this.Retarget(animate: true);
+            this.RetargetAfterLayout();
         }
+    }
+
+
+    void RetargetAfterLayout()
+    {
+        if (this.Dispatcher is not { } dispatcher)
+        {
+            this.Retarget(animate: true);
+            return;
+        }
+
+        if (this.retargetQueued)
+            return;
+
+        this.retargetQueued = true;
+        dispatcher.Dispatch(() =>
+        {
+            this.retargetQueued = false;
+            this.Retarget(animate: true);
+        });
     }
 
 

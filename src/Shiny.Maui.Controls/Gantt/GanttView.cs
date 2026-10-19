@@ -31,6 +31,32 @@ namespace Shiny.Maui.Controls.Gantt;
 /// </remarks>
 public partial class GanttView : ContentView, IDisposable
 {
+    /// <summary>
+    /// Appended to the view's <see cref="Element.AutomationId"/>, then <see cref="GanttTask.Id"/>, to name
+    /// each task-pane row: <c>&lt;id&gt;_Task_&lt;task id&gt;</c>. Keyed by task, not row, because
+    /// collapsing a summary renumbers every row below it.
+    /// </summary>
+    public const string TaskAutomationIdSuffix = "_Task";
+
+    /// <summary>Appended to a task row's id to name its expand/collapse chevron (summary tasks only).</summary>
+    public const string ExpandAutomationIdSuffix = "_Expand";
+
+    /// <summary>Appended to a task row's id, then the column index, to name each cell: <c>&lt;id&gt;_Task_&lt;task id&gt;_Cell_0</c>.</summary>
+    public const string CellAutomationIdSuffix = "_Cell";
+
+    /// <summary>
+    /// Appended to the view's <see cref="Element.AutomationId"/>, then <see cref="GanttTask.Id"/>, to name
+    /// each <see cref="BarTemplate"/> bar. Default bars are drawn, not views, so they have no id;
+    /// drive them through <see cref="TimelineAutomationIdSuffix"/>.
+    /// </summary>
+    public const string BarAutomationIdSuffix = "_Bar";
+
+    /// <summary>Appended to the view's <see cref="Element.AutomationId"/> to name the timeline, which takes every bar tap and drag.</summary>
+    public const string TimelineAutomationIdSuffix = "_Timeline";
+
+    /// <summary>Appended to the view's <see cref="Element.AutomationId"/> to name the splitter that resizes the task pane.</summary>
+    public const string SplitterAutomationIdSuffix = "_Splitter";
+
     readonly Grid root;
     readonly Grid taskPaneHeader;
     readonly VerticalStackLayout taskPaneRows;
@@ -158,6 +184,10 @@ public partial class GanttView : ContentView, IDisposable
         this.root.Add(this.emptyHost, 2, 1);
 
         this.Content = this.root;
+
+        AutomationIds.Link(this, this.timelineContent, TimelineAutomationIdSuffix);
+        AutomationIds.Link(this, this.splitter, SplitterAutomationIdSuffix);
+        AutomationIds.Track(this, this.NameGeneratedParts);
 
         this.ApplyThemeChrome();
         this.WireGestures();
@@ -512,7 +542,29 @@ public partial class GanttView : ContentView, IDisposable
 
         foreach (var row in model.Rows)
             this.taskPaneRows.Add(new GanttTaskPaneRow(this, row, columns));
+
+        this.NameGeneratedParts();
     }
+
+
+    /// <summary>Names the task rows and templated bars by task id; each row names its own cells.</summary>
+    void NameGeneratedParts()
+    {
+        foreach (var child in this.taskPaneRows.Children)
+        {
+            if (child is GanttTaskPaneRow row)
+                AutomationIds.Set(row, KeyedId(TaskAutomationIdSuffix, row.Task.Id));
+        }
+
+        foreach (var child in this.barLayer.Children)
+        {
+            if (child is View { BindingContext: GanttTask task } bar)
+                AutomationIds.Set(bar, KeyedId(BarAutomationIdSuffix, task.Id));
+        }
+    }
+
+
+    string? KeyedId(string suffix, string key) => AutomationIds.For(this, suffix) is { } prefix ? $"{prefix}_{key}" : null;
 
 
     /// <summary>
@@ -565,6 +617,8 @@ public partial class GanttView : ContentView, IDisposable
             AbsoluteLayout.SetLayoutBounds(view, new Rect(rect.X, rect.Y, rect.Width, rect.Height));
             this.barLayer.Add(view);
         }
+
+        this.NameGeneratedParts();
     }
 
 

@@ -31,6 +31,24 @@ namespace Shiny.Maui.Controls;
 /// </remarks>
 public partial class PasswordStrength : ContentView
 {
+    /// <summary>Appended to the control's <see cref="Element.AutomationId"/> to name the password entry a test types into.</summary>
+    public const string EntryAutomationIdSuffix = TextEntry.EntryAutomationIdSuffix;
+
+    /// <summary>Names the warning / hint line under the field.</summary>
+    public const string HintAutomationIdSuffix = TextEntry.HintAutomationIdSuffix;
+
+    /// <summary>Names the show/hide password toggle.</summary>
+    public const string RevealAutomationIdSuffix = "_Reveal";
+
+    /// <summary>Names the strength caption beside the meter ("Weak", "Strong", …).</summary>
+    public const string StrengthAutomationIdSuffix = "_Strength";
+
+    /// <summary>Names the time-to-crack line.</summary>
+    public const string TimeToCrackAutomationIdSuffix = "_TimeToCrack";
+
+    /// <summary>Names each rule's text in the checklist, with its position: <c>&lt;id&gt;_Rule_0</c>.</summary>
+    public const string RuleAutomationIdSuffix = "_Rule";
+
     const int SegmentCount = 4;
     const double RowSpacing = 6;
     const double GlyphWidth = 16;
@@ -114,6 +132,17 @@ public partial class PasswordStrength : ContentView
         this.Content = root;
 
         this.BuildMeter();
+
+        // The toggle is named before the field names its tools, so the field leaves it alone. The field's
+        // own parts are named after this control rather than after a second id of its own.
+        AutomationIds.Track(this, () =>
+        {
+            AutomationIds.Set(visibilityTool, AutomationIds.For(this, RevealAutomationIdSuffix));
+            entry.NamePartsAfter(this);
+            this.NameRules();
+        });
+        AutomationIds.Link(this, strengthLabel, StrengthAutomationIdSuffix);
+        AutomationIds.Link(this, timeToCrackLabel, TimeToCrackAutomationIdSuffix);
 
         // Last line: replays any styled property that was applied before the
         // children existed. See StyleGuard.

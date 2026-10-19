@@ -74,3 +74,17 @@ inside the width you asked for, and the remainder would show as a gap beside the
 ```
 
 These controls are also integrated into the **ImageEditor** toolbar when `AllowFontSelection` and `AllowFontSizeSelection` are enabled, and into both **Office editor** toolbars on both hosts.
+
+## Automation ids (MAUI)
+
+Set `AutomationId` on the control and its parts are named after it, for UI tests (Appium, UI Automation, DevFlow). With no id on the control, the parts get none.
+
+| Part | Id |
+|---|---|
+| FontPicker: each font row, by index in `AvailableFonts` | `<id>_Font_0` |
+| FontSizePicker: each size row, by index in `AvailableFontSizes` | `<id>_Size_0` |
+| FontPickerButton / FontSizePickerButton: the trigger | `<id>_Button` |
+| … the label showing the selection | `<id>_Value` |
+| … popup card | `<id>_Popup` |
+| … Done | `<id>_Done` |
+| … the picker in the popup (rows follow it) | `<id>_Picker_Font_0 / <id>_Picker_Size_0` |

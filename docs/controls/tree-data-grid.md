@@ -42,3 +42,8 @@ collapses again).
 Sorting and filtering apply **per level**, so children stay under their parent, and a row is kept when a
 *descendant* matches the filter — otherwise the match would be unreachable. Paging pages the roots, and
 tree mode and `Groupable` are mutually exclusive (grouping wins).
+
+### Automation ids (MAUI)
+
+`TreeDataGrid` names its parts exactly as [DataGrid](datagrid.md#automation-ids-maui) does; the tree
+caret on each row is `<id>_RowToggle_<row>`.

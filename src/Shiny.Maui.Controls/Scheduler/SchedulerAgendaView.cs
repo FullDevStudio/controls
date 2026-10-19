@@ -7,6 +7,38 @@ namespace Shiny.Maui.Controls.Scheduler;
 
 public class SchedulerAgendaView : ContentView
 {
+    /// <summary>
+    /// Appended to the view's <see cref="Element.AutomationId"/> to name the carousel date picker. Its days
+    /// are named after it with <see cref="SchedulerCalendarView.DayAutomationIdSuffix"/>:
+    /// <c>&lt;id&gt;_DatePicker_Day_20261019</c>.
+    /// </summary>
+    public const string DatePickerAutomationIdSuffix = "_DatePicker";
+
+    /// <summary>
+    /// Appended to the view's <see cref="Element.AutomationId"/> to name the calendar sheet date picker.
+    /// Its days, month buttons and title follow the <see cref="SchedulerCalendarView"/> suffixes.
+    /// </summary>
+    public const string CalendarPickerAutomationIdSuffix = "_CalendarPicker";
+
+    /// <summary>Appended to the calendar sheet picker's id to name the handle that expands and collapses it.</summary>
+    public const string ExpandAutomationIdSuffix = "_Expand";
+
+    /// <summary>
+    /// Appended to the view's <see cref="Element.AutomationId"/> to name the all-day strip. Its events are
+    /// <c>&lt;id&gt;_AllDay_Event_&lt;identifier&gt;</c>.
+    /// </summary>
+    public const string AllDayAutomationIdSuffix = "_AllDay";
+
+    /// <summary>
+    /// Appended to the view's <see cref="Element.AutomationId"/>, then the date as <c>yyyyMMdd</c>, to name
+    /// each day's timeline (the time-slot tap target): <c>&lt;id&gt;_DayColumn_20261019</c>. Its events are
+    /// <c>&lt;id&gt;_DayColumn_20261019_Event_&lt;identifier&gt;</c>.
+    /// </summary>
+    public const string DayColumnAutomationIdSuffix = "_DayColumn";
+
+    /// <summary>Appended to the view's <see cref="Element.AutomationId"/>, then the date as <c>yyyyMMdd</c>, to name each day's header label.</summary>
+    public const string DayHeaderAutomationIdSuffix = "_DayHeader";
+
     readonly Grid rootGrid;
     readonly AllDayEventsSection allDaySection;
     readonly DateCarouselPicker datePicker;
@@ -432,6 +464,11 @@ public class SchedulerAgendaView : ContentView
         VerticalOptions = LayoutOptions.Fill;
         Content = rootGrid;
         Rebuild();
+
+        AutomationIds.Link(this, datePicker, DatePickerAutomationIdSuffix);
+        AutomationIds.Link(this, calendarSheetPicker, CalendarPickerAutomationIdSuffix);
+        AutomationIds.Link(this, allDaySection, AllDayAutomationIdSuffix);
+        AutomationIds.Track(this, NameDays);
     
 
 
@@ -569,6 +606,7 @@ public class SchedulerAgendaView : ContentView
     {
         dayHeadersGrid.Children.Clear();
         dayHeadersGrid.ColumnDefinitions.Clear();
+        dayHeaders.Clear();
 
         var showTz = ShowAdditionalTimezones && AdditionalTimezones.Count > 0;
         var localTz = TimeZoneInfo.Local;
@@ -630,7 +668,20 @@ public class SchedulerAgendaView : ContentView
             };
 
             dayHeadersGrid.Add(headerLabel, timeColumnCount + i);
+            dayHeaders.Add(headerLabel);
         }
+        NameDays();
+    }
+
+    readonly List<Label> dayHeaders = [];
+
+    /// <summary>Names the day headers and timelines by the date each shows.</summary>
+    void NameDays()
+    {
+        for (var i = 0; i < dayHeaders.Count; i++)
+            AutomationIds.Set(dayHeaders[i], SchedulerAutomationIds.For(this, DayHeaderAutomationIdSuffix, SchedulerAutomationIds.DateKey(SelectedDate.AddDays(i))));
+        for (var i = 0; i < panels.Count; i++)
+            AutomationIds.Set(panels[i], SchedulerAutomationIds.For(this, DayColumnAutomationIdSuffix, SchedulerAutomationIds.DateKey(SelectedDate.AddDays(i))));
     }
 
     void BuildColumns()
@@ -716,6 +767,7 @@ public class SchedulerAgendaView : ContentView
             columnsGrid.Add(panel, col);
             Grid.SetRowSpan(panel, 24);
         }
+        NameDays();
     }
 
     static string GetTimezoneAbbreviation(TimeZoneInfo tz)

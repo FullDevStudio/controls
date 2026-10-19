@@ -9,7 +9,7 @@ namespace Shiny.Maui.Controls;
 /// inside a <see cref="TextEntry"/> and the items on a keyboard accessory bar. Icon, optional label,
 /// a tap that raises <see cref="Clicked"/> and runs <see cref="Command"/>.
 /// </summary>
-public abstract class IconTextTool : ContentView
+public abstract class IconTextTool : ContentView, ITapTarget
 {
     private protected readonly Image iconImage;
     private protected readonly Label textLabel;
@@ -146,6 +146,13 @@ public abstract class IconTextTool : ContentView
             if (this.iconImage.Source is FontImageSource f)
                 f.SetDynamicResource(FontImageSource.ColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
         }
+    }
+
+    void ITapTarget.Invoke()
+    {
+        this.Invoke();
+        if (this.IsEnabled)
+            this.FlashPress();
     }
 
     internal void Invoke()

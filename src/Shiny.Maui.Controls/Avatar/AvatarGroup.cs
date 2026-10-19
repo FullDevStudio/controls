@@ -20,6 +20,16 @@ namespace Shiny.Maui.Controls;
 [ContentProperty(nameof(Avatars))]
 public partial class AvatarGroup : ContentView, IView
 {
+    /// <summary>
+    /// Appended to the group's own <see cref="Element.AutomationId"/>, with the item's index, to name each
+    /// avatar the group generates from <see cref="ItemsSource"/>: <c>&lt;id&gt;_Avatar_0</c>. Avatars you
+    /// add yourself, or that your <see cref="ItemTemplate"/> already gives an id, keep their own.
+    /// </summary>
+    public const string AvatarAutomationIdSuffix = "_Avatar";
+
+    /// <summary>Names the "+N" overflow chip.</summary>
+    public const string OverflowAutomationIdSuffix = "_Overflow";
+
     readonly HorizontalStackLayout stack;
     readonly Avatar overflowChip;
     readonly List<Avatar> generated = new();
@@ -41,7 +51,10 @@ public partial class AvatarGroup : ContentView, IView
         SemanticProperties.SetDescription(this.stack, null);
 
         StyleGuard.MarkReady(this, typeof(AvatarGroup));
-        this.Rebuild();
+        AutomationIds.Link(this, this.overflowChip, OverflowAutomationIdSuffix);
+
+        // Generated avatars are named as they are created, so an id change regenerates them.
+        AutomationIds.Track(this, this.Rebuild);
     }
 
 
@@ -104,13 +117,13 @@ public partial class AvatarGroup : ContentView, IView
 
         this.generated.Clear();
         foreach (var item in this.ItemsSource)
-            this.generated.Add(this.CreateAvatar(item));
+            this.generated.Add(this.CreateAvatar(item, this.generated.Count));
 
         return this.generated;
     }
 
 
-    Avatar CreateAvatar(object? item)
+    Avatar CreateAvatar(object? item, int index)
     {
         var template = this.ItemTemplate;
         if (template is DataTemplateSelector selector)
@@ -118,17 +131,22 @@ public partial class AvatarGroup : ContentView, IView
 
         if (template is null)
         {
-            return item switch
-            {
-                Avatar avatar => avatar,
-                _ => new Avatar { Name = item?.ToString() }
-            };
+            if (item is Avatar avatar)
+                return avatar;
+
+            var plain = new Avatar { Name = item?.ToString() };
+            AutomationIds.Set(plain, AutomationIds.For(this, AvatarAutomationIdSuffix, index));
+            return plain;
         }
 
         if (template.CreateContent() is not Avatar created)
             throw new InvalidOperationException($"{nameof(AvatarGroup)}.{nameof(ItemTemplate)} must produce an {nameof(Avatar)}.");
 
         created.BindingContext = item;
+
+        // A template that names its own avatar (a bound AutomationId) wins.
+        if (!created.IsSet(Element.AutomationIdProperty))
+            AutomationIds.Set(created, AutomationIds.For(this, AvatarAutomationIdSuffix, index));
         return created;
     }
 

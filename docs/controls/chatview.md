@@ -167,3 +167,23 @@ composer; the rounded outline is the edge.
 scheme. They previously defaulted to a fixed pale green and white, which stayed exactly as light in
 dark mode. Set them to pin the classic messenger look — and set the matching text colour whenever you
 set a bubble colour. See [Styling & theming](styling.md#dark-mode).
+
+### Automation ids (MAUI)
+
+Set `AutomationId` on the control and its parts are named after it, for UI tests (Appium, UI Automation, DevFlow). Without an id the parts get none. Bubble ids end in the message's `MessageId` rather than a row index, because loading older messages shifts every index. The attach, message-action and reaction menus are native action sheets and cannot be named.
+
+| Part | Id |
+|---|---|
+| Built-in composer (a `ChatEntryView`) | `<id>_Composer` |
+| Composer text editor / send / attach / overflow | `<id>_Composer_Entry` / `_Composer_Send` / `_Composer_Attach` / `_Composer_Actions` |
+| Composer format buttons | `<id>_Composer_Format_Bold` (`_Italic`, `_Underline`, `_Strikethrough`, `_Code`, `_Link`) |
+| Edit banner label / its cancel button | `<id>_Composer_EditBanner` / `<id>_Composer_EditCancel` |
+| A message bubble | `<id>_Message_<MessageId>` |
+| Its text / image / actions (⋮) / status | `<id>_MessageText_<MessageId>` / `_MessageImage_` / `_MessageActions_` / `_MessageStatus_` |
+| "New messages" pill | `<id>_NewMessages` |
+| Connection banner | `<id>_ConnectionBanner` |
+| Load error text / retry button | `<id>_Error` / `<id>_Retry` |
+| Reaction picker / each glyph | `<id>_ReactionPicker` / `<id>_Reaction_<index>` |
+| Photo lightbox | `<id>_ImageViewer_Popup`, close `<id>_ImageViewer_Close` |
+
+A standalone `ChatEntryView` names its parts after its own id the same way (`<id>_Entry`, `<id>_Send`, …); a composer you assign to `InputBar` keeps the id you give it.

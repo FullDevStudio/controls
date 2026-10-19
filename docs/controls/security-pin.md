@@ -40,3 +40,13 @@ Methods: `Focus()`, `Unfocus()`, `Clear()`.
 `CellBackgroundColor` defaults to `surface-container-low` rather than a literal white, so the cells
 follow the app's scheme. Pass your own to pin it — and pass `CellTextColor` alongside it, or the
 theme's ink may not read against your fill. See [Styling & theming](styling.md#dark-mode).
+
+### Automation ids (MAUI)
+
+Set `AutomationId` on the control and its parts are named after it, for UI tests (Appium, UI Automation, DevFlow). Without an id, the parts get none.
+
+| Part | Id |
+|---|---|
+| The hidden entry that takes keystrokes | `<id>_Entry` |
+| The row of cells (tap to raise the keyboard) | `<id>_Cells` |
+| Each cell, by position | `<id>_Cell_0` |

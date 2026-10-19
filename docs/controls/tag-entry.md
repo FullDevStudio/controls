@@ -124,6 +124,16 @@ Focus always targets the typing area, never a chip or its remove button — so c
 
 On MAUI the chips sit in a small internal wrapping layout: they flow onto as many lines as they need, and the editor takes the rest of whichever line it lands on, dropping to a line of its own rather than becoming a sliver nobody can type into. On Blazor that is `flex-wrap` and a `min-width` on the input.
 
+## Automation ids (MAUI)
+
+Set `AutomationId` on the control and its parts are named after it, for UI tests (Appium, UI Automation, DevFlow). Without an id, the parts get none.
+
+| Part | Id |
+|---|---|
+| The text field | `<id>_Entry` |
+| Each chip, by index in `Tags` | `<id>_Chip_0` |
+| Each chip's remove button | `<id>_Remove_0` |
+
 ## Code generation guidance
 
 - Bind `Tags` to an `ObservableCollection<string>` on MAUI and it is watched live; a plain `List` works too, the control just rebuilds the chips itself.

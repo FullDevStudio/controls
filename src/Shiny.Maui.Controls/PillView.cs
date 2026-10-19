@@ -12,6 +12,9 @@ public class PillView : ContentView
     public const string CautionStyleKey = "ShinyPillCautionStyle";
     public const string CriticalStyleKey = "ShinyPillCriticalStyle";
 
+    /// <summary>Appended to the pill's <see cref="Element.AutomationId"/> to name its text label.</summary>
+    public const string TextAutomationIdSuffix = "_Text";
+
     readonly Border border;
     readonly Label label;
 
@@ -41,6 +44,7 @@ public class PillView : ContentView
         }.WithStrokeThickness(ShinyThemeKeys.Border.Thin);
 
         Content = border;
+        AutomationIds.Link(this, label, TextAutomationIdSuffix);
 
         // Apply default (None) styling
         ApplyPillType(PillType.None);

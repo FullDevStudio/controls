@@ -46,7 +46,28 @@ public partial class Walkthrough
         }
 
         this.BuildCallout();
+        this.NameChrome();
         this.ApplyChrome();
+    }
+
+
+    void NameChrome()
+    {
+        if (this.callout is not null)
+        {
+            AutomationIds.Set(this.callout, AutomationIds.For(this, CalloutAutomationIdSuffix));
+            AutomationIds.Set(this.callout.TitleLabel, AutomationIds.For(this, TitleAutomationIdSuffix));
+            AutomationIds.Set(this.callout.TextLabel, AutomationIds.For(this, TextAutomationIdSuffix));
+        }
+
+        if (this.counterLabel is not null)
+            AutomationIds.Set(this.counterLabel, AutomationIds.For(this, CounterAutomationIdSuffix));
+        if (this.skipLabel is not null)
+            AutomationIds.Set(this.skipLabel, AutomationIds.For(this, SkipAutomationIdSuffix));
+        if (this.backLabel is not null)
+            AutomationIds.Set(this.backLabel, AutomationIds.For(this, BackAutomationIdSuffix));
+        if (this.nextLabel is not null)
+            AutomationIds.Set(this.nextLabel, AutomationIds.For(this, NextAutomationIdSuffix));
     }
 
 

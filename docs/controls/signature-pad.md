@@ -67,3 +67,13 @@ While the pad is open the control automatically suppresses system navigation ges
 Blazor uses CSS color strings instead of `Color`, `SheetDirection` instead of `FloatingPanelPosition`, and `Signed` is `EventCallback<byte[]>` (raw PNG bytes).
 
 Events: `Signed` fires with `SignatureImageEventArgs` (MAUI) or `byte[]` (Blazor). `Cancelled` fires on cancel.
+
+### Automation ids (MAUI)
+
+Set `AutomationId` on the control and its parts are named after it, for UI tests (Appium, UI Automation, DevFlow). Without an id the parts get none.
+
+| Part | Id |
+|---|---|
+| Sheet content (lives in the floating panel) | `<id>_Popup` |
+| Drawing surface | `<id>_Canvas` |
+| Sign / cancel / clear | `<id>_Sign` / `<id>_Cancel` / `<id>_Clear` |

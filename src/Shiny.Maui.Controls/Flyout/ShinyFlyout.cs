@@ -35,6 +35,13 @@ namespace Shiny.Maui.Controls.Flyout;
 /// </remarks>
 public static class ShinyFlyout
 {
+    /// <summary>
+    /// Appended to a page's own <see cref="Element.AutomationId"/> to name the <see cref="FlyoutView"/>
+    /// installed on it (and the one inside a <see cref="ShinyFlyoutPage"/>), whose scrim is then
+    /// <c>&lt;page id&gt;_Flyout_Scrim</c>.
+    /// </summary>
+    public const string FlyoutAutomationIdSuffix = "_Flyout";
+
     static readonly ConditionalWeakTable<Page, FlyoutView> installed = new();
     static readonly ConditionalWeakTable<BindableObject, HostState> hostStates = new();
     static readonly ConditionalWeakTable<BindableObject, object> hooked = new();
@@ -258,6 +265,7 @@ public static class ShinyFlyout
         }
 
         var view = new FlyoutView();
+        AutomationIds.Link(target, view, FlyoutAutomationIdSuffix);
         ApplyViewOptions(host, view);
         Wrap(target, view);
 

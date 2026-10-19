@@ -146,3 +146,18 @@ Set `AutoUpload="true"` to send each photo the moment it is picked, when the add
 **Events:** `Uploaded` (`MediaPickerUploadResult`), `UploadProgress` (`MediaPickerUploadProgress`).
 
 A successful upload takes the photo out of the picker unless `keep: true` — which is for sending the same photos to more than one place.
+
+### Automation ids (MAUI)
+
+Set `AutomationId` on the control and its parts are named after it, for UI tests (Appium, UI Automation, DevFlow). Without an id the parts get none.
+
+| Part | Id |
+|---|---|
+| Add-photo tap target | `<id>_Add` |
+| Permission-denied text | `<id>_Permission` |
+| Carousel / each photo / its remove button | `<id>_Carousel` / `<id>_Photo_<index>` / `<id>_Remove_<index>` (default item template) |
+| Compact preview | `<id>_Preview` |
+| Viewer overlay / close | `<id>_Viewer_Popup` / `<id>_Viewer_Close` |
+| Viewer previous / next / "2 / 5" label / edit | `<id>_Previous` / `<id>_Next` / `<id>_Position` / `<id>_Edit` |
+| The photo editor and its tools | `<id>_Editor`, then the ImageEditor ids: `<id>_Editor_Save`, `<id>_Editor_Tool_Crop`, … |
+| Editor cancel (✕) | `<id>_EditorCancel` |

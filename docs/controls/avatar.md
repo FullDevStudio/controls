@@ -92,3 +92,14 @@ Later avatars sit on top of earlier ones. The `+N` chip takes the size and shape
 - **Blazor** — the picture is a plain `<img loading="lazy">`, so caching is the browser's.
 - **MAUI** — the group *writes* `Size`, `Shape`, `RingThickness`, `RingColor` and `Margin` onto the avatars it holds; set them on the group, not on the children.
 - **Accessibility** — each avatar announces its name (and status, e.g. "Grace Hopper, Online"); the group announces "4 people and 12 more".
+
+### Automation ids (MAUI)
+
+Set `AutomationId` on an `AvatarGroup` and its parts are named after it, for UI tests. A single `Avatar` is one tap target and needs nothing extra.
+
+| Part | Id |
+|---|---|
+| Avatars generated from `ItemsSource` | `<id>_Avatar_<index>` |
+| "+N" overflow chip | `<id>_Overflow` |
+
+Avatars you add to `Avatars` yourself, or that your `ItemTemplate` already gives an id, keep their own.

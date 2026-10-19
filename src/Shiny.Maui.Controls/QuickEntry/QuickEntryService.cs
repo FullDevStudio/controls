@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls.QuickEntry;
 
@@ -284,6 +285,11 @@ sealed class QuickEntryService : IQuickEntryService, IDisposable
     {
         var view = this.Options.ContentFactory?.Invoke() ?? new PromptView();
         view.WidthRequest = this.Options.Width;
+
+        // There is no owner element to name it after, so the id comes from the options. Through
+        // SetValue, not the AutomationId setter, which throws when the content already had one.
+        if (!String.IsNullOrEmpty(this.Options.AutomationId) && String.IsNullOrEmpty(view.AutomationId))
+            AutomationIds.Set(view, this.Options.AutomationId);
         this.ObserveBusy(view);
         return view;
     }

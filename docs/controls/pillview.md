@@ -22,3 +22,11 @@ Pill/chip/tag elements for displaying categories, filters, or status indicators 
 | Critical | Red |
 
 Each `PillType` maps to a well-known style key (e.g. `ShinyPillSuccessStyle`) that can be overridden in your app's `ResourceDictionary` to customize the preset themes.
+
+## Automation ids (MAUI)
+
+Set `AutomationId` on the pill and its label is named after it, for UI tests:
+
+| Part | Id |
+|---|---|
+| Text label | `<id>_Text` |

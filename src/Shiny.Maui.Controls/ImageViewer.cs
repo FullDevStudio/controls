@@ -17,6 +17,18 @@ namespace Shiny.Maui.Controls;
 /// </remarks>
 public partial class ImageViewer : ContentView, IDisposable
 {
+    /// <summary>Appended to the viewer's own <see cref="Element.AutomationId"/> to name the thumbnail, which opens the viewer.</summary>
+    public const string ThumbnailAutomationIdSuffix = "_Thumbnail";
+
+    /// <summary>Names the full-screen overlay. It is injected into the page's overlay layer, not under the viewer.</summary>
+    public const string PopupAutomationIdSuffix = "_Popup";
+
+    /// <summary>Names the zoomable image inside the overlay.</summary>
+    public const string ImageAutomationIdSuffix = "_Image";
+
+    /// <summary>Names the overlay's close button - the default one or the root of <see cref="CloseButtonTemplate"/>.</summary>
+    public const string CloseAutomationIdSuffix = "_Close";
+
     const double DefaultMaxZoom = 5.0;
     const uint AnimationDuration = 250;
     const string DefaultCloseButtonText = "✕";
@@ -110,6 +122,13 @@ public partial class ImageViewer : ContentView, IDisposable
             CascadeInputTransparent = false,
             Children = { backdrop, overlayImage, closeView }
         };
+
+        AutomationIds.Link(this, thumbnailImage, ThumbnailAutomationIdSuffix);
+        AutomationIds.Link(this, overlayGrid, PopupAutomationIdSuffix);
+        AutomationIds.Link(this, overlayImage, ImageAutomationIdSuffix);
+        // closeView is replaced whenever the template or the button's look changes, so it is renamed
+        // where it is swapped as well as here.
+        AutomationIds.Track(this, () => AutomationIds.Set(closeView, AutomationIds.For(this, CloseAutomationIdSuffix)));
 
         this.Loaded += (_, _) => this.InstallOverlayRoot();
 
@@ -237,6 +256,7 @@ public partial class ImageViewer : ContentView, IDisposable
             closeView = CreateDefaultCloseButton();
         }
 
+        AutomationIds.Set(closeView, AutomationIds.For(this, CloseAutomationIdSuffix));
         overlayGrid.Children.Add(closeView);
     }
 

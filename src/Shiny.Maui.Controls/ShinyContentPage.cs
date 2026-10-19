@@ -11,6 +11,18 @@ namespace Shiny.Maui.Controls;
 [ContentProperty(nameof(PageContent))]
 public class ShinyContentPage : ContentPage
 {
+    /// <summary>
+    /// Appended to the page's own <see cref="Element.AutomationId"/> to name the built-in loading overlay,
+    /// so a UI test can wait for it to go away.
+    /// </summary>
+    public const string LoadingAutomationIdSuffix = "_Loading";
+
+    /// <summary>
+    /// Appended to the page's id to name its <see cref="OverlayHost"/>, whose backdrop is then
+    /// <c>&lt;page id&gt;_OverlayHost_Backdrop</c>.
+    /// </summary>
+    public const string OverlayHostAutomationIdSuffix = "_OverlayHost";
+
     readonly Grid rootGrid;
     readonly OverlayHost overlayHost;
     readonly LoadingOverlay loadingOverlay;
@@ -24,6 +36,8 @@ public class ShinyContentPage : ContentPage
         // backdrop tap (loading state is code-controlled) and is brought to the front when shown.
         loadingOverlay = new LoadingOverlay { CloseOnBackdropTap = false };
         overlayHost.Children.Add(loadingOverlay);
+        AutomationIds.Link(this, loadingOverlay, LoadingAutomationIdSuffix);
+        AutomationIds.Link(this, overlayHost, OverlayHostAutomationIdSuffix);
 
         rootGrid = new Grid
         {

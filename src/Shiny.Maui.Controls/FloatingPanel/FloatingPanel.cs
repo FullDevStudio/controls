@@ -10,6 +10,18 @@ public partial class FloatingPanel : ContentView
     const double DefaultAnimationDuration = 250;
     const double DragHandleHeight = 30;
 
+    /// <summary>
+    /// Appended to the panel's <see cref="Element.AutomationId"/> to name the drag handle strip, which is
+    /// where the pan gesture that moves between detents lives.
+    /// </summary>
+    public const string HandleAutomationIdSuffix = "_Handle";
+
+    /// <summary>
+    /// Appended to the panel's id to name the header host. Tapping the header toggles the panel, so a test
+    /// driving the panel's own id finds nothing to tap - this is the one that opens it.
+    /// </summary>
+    public const string HeaderAutomationIdSuffix = "_Header";
+
     readonly Border sheetContainer;
     readonly Grid sheetInnerGrid;
     readonly Grid dragHandleContainer;
@@ -149,6 +161,9 @@ public partial class FloatingPanel : ContentView
         Grid.SetRow(safeAreaFill, 1);
 
         Content = outerGrid;
+
+        AutomationIds.Link(this, dragHandleContainer, HandleAutomationIdSuffix);
+        AutomationIds.Link(this, headerHost, HeaderAutomationIdSuffix);
 
         // Default layout
         UpdateLayoutForPosition();

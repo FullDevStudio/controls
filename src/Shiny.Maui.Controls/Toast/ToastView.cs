@@ -1,3 +1,4 @@
+using Shiny.Maui.Controls.Infrastructure;
 using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls.Toast;
@@ -248,6 +249,14 @@ sealed class ToastView : ContentView
 
         // Accessibility
         AutomationProperties.SetName(this, config.Text);
+
+        // The id goes on the border rather than this view: the tap gesture lives there, and a pill
+        // only covers the middle of this full-width view.
+        if (!String.IsNullOrEmpty(config.AutomationId))
+        {
+            AutomationIds.Set(border, config.AutomationId);
+            AutomationIds.Set(label, config.AutomationId + ToastConfig.TextAutomationIdSuffix);
+        }
     }
 
     void OnThemeBackground(Color? color)

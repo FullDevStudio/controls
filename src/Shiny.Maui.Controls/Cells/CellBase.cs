@@ -10,6 +10,18 @@ namespace Shiny.Maui.Controls.Cells;
 
 public abstract class CellBase : ContentView
 {
+    /// <summary>Appended to the cell's <see cref="Element.AutomationId"/> to name its title label.</summary>
+    public const string TitleAutomationIdSuffix = "_Title";
+
+    /// <summary>Appended to the cell's <see cref="Element.AutomationId"/> to name its description label.</summary>
+    public const string DescriptionAutomationIdSuffix = "_Description";
+
+    /// <summary>Appended to the cell's <see cref="Element.AutomationId"/> to name its hint label.</summary>
+    public const string HintAutomationIdSuffix = "_Hint";
+
+    /// <summary>Appended to the cell's <see cref="Element.AutomationId"/> to name the label showing its value (label and picker cells).</summary>
+    public const string ValueAutomationIdSuffix = "_Value";
+
     Border border = default!;
     Grid rootGrid = default!;
     Image iconImage = default!;
@@ -21,6 +33,9 @@ public abstract class CellBase : ContentView
     public CellBase()
     {
         BuildLayout();
+        AutomationIds.Link(this, titleLabel, TitleAutomationIdSuffix);
+        AutomationIds.Link(this, descriptionLabel, DescriptionAutomationIdSuffix);
+        AutomationIds.Link(this, hintLabel, HintAutomationIdSuffix);
         var tapGesture = new TapGestureRecognizer();
         tapGesture.Tapped += OnCellTapped;
         GestureRecognizers.Add(tapGesture);

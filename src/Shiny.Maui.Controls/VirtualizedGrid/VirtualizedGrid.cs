@@ -6,6 +6,9 @@ namespace Shiny.Maui.Controls.VirtualizedGrid;
 
 public class VirtualizedGrid : CollectionControlBase
 {
+    /// <summary>Appended to the grid's <see cref="Element.AutomationId"/> to name the Load More button (or the root of <see cref="LoadMoreButtonTemplate"/>).</summary>
+    public const string LoadMoreAutomationIdSuffix = "_LoadMore";
+
     public static readonly BindableProperty ColumnCountProperty = BindableProperty.Create(
         nameof(ColumnCount),
         typeof(int),
@@ -208,6 +211,9 @@ public class VirtualizedGrid : CollectionControlBase
             var content = LoadMoreButtonTemplate.CreateContent();
             var view = content as View ?? (content as ViewCell)?.View
                 ?? throw new InvalidOperationException("LoadMoreButtonTemplate must produce a View or ViewCell.");
+            // Built fresh on every bind; a template that names itself keeps its own id.
+            if (String.IsNullOrEmpty(view.AutomationId))
+                AutomationIds.Set(view, AutomationIds.For(this, LoadMoreAutomationIdSuffix));
             return view;
         }
 
@@ -223,7 +229,17 @@ public class VirtualizedGrid : CollectionControlBase
             RaiseLoadMoreRequested();
             IsLoadingMore = false;
         };
+        AutomationIds.Set(button, AutomationIds.For(this, LoadMoreAutomationIdSuffix));
         return button;
+    }
+
+    internal override IEnumerable<object> GetAutomationItems()
+    {
+        if (!IsGroupingEnabled)
+            return GetItemsList();
+
+        var (groups, flatItems) = GetGroupedData();
+        return groups.SelectMany(g => g.Items).Concat(flatItems);
     }
 
     internal (IList<GroupedData> Groups, IList<object> FlatItems) GetGroupedData()

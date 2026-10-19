@@ -66,3 +66,15 @@ Events: `ItemSelected` fires when a suggestion is chosen.
 | `--shiny-ac-spinner` | #9CA3AF | Spinner color |
 | `--shiny-ac-font-size` | inherit | Input font size |
 | `--shiny-ac-dd-max-h` | 200px | Dropdown max height |
+
+### Automation ids (MAUI)
+
+Set `AutomationId` on the control and its parts are named after it, for UI tests (Appium, UI Automation, DevFlow). Without an id, the parts get none.
+
+| Part | Id |
+|---|---|
+| The text field | `<id>_Entry` |
+| The suggestion dropdown (floats in the page overlay) | `<id>_DropDown` |
+| Each suggestion, by position in the shown list | `<id>_Suggestion_0` |
+
+An `ItemTemplate` whose root sets its own `AutomationId` keeps it.

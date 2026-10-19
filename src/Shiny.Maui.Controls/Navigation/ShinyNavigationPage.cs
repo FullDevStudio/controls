@@ -53,6 +53,12 @@ namespace Shiny.Maui.Controls;
 /// </example>
 public partial class ShinyNavigationPage : NavigationPage
 {
+    /// <summary>
+    /// Appended to a pushed page's own <see cref="Element.AutomationId"/> to name the bar drawn for it,
+    /// whose parts are then named after that: <c>&lt;page id&gt;_NavBar_Back</c>.
+    /// </summary>
+    public const string NavBarAutomationIdSuffix = "_NavBar";
+
     static readonly ConditionalWeakTable<Page, ShinyNavBar> bars = new();
 
     readonly ConditionalWeakTable<ContentPage, Install> installs = new();
@@ -333,6 +339,11 @@ public partial class ShinyNavigationPage : NavigationPage
         }
 
         var bar = new ShinyNavBar();
+
+        // Named after the page it sits on, since each page gets a bar of its own: the back button
+        // of a page with id "Detail" is "Detail_NavBar_Back".
+        AutomationIds.Link(page, bar, NavBarAutomationIdSuffix);
+
         var host = new NavHost
         {
             RowDefinitions = { new RowDefinition(GridLength.Auto), new RowDefinition(GridLength.Star) }

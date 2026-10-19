@@ -5,6 +5,12 @@ namespace Shiny.Maui.Controls;
 
 public class LoadingOverlay : Overlay
 {
+    /// <summary>Appended to the overlay's <see cref="Element.AutomationId"/> to name the message label.</summary>
+    public const string MessageAutomationIdSuffix = "_Message";
+
+    /// <summary>Appended to the overlay's id to name the progress bar shown when not indeterminate.</summary>
+    public const string ProgressAutomationIdSuffix = "_Progress";
+
     readonly ActivityIndicator spinner;
     readonly ProgressBar progressBar;
     readonly Label messageLabel;
@@ -49,6 +55,9 @@ public class LoadingOverlay : Overlay
         };
 
         OverlayContentTemplate = new DataTemplate(() => contentLayout);
+
+        AutomationIds.Link(this, messageLabel, MessageAutomationIdSuffix);
+        AutomationIds.Link(this, progressBar, ProgressAutomationIdSuffix);
 
         // Last line: replays any styled property that was applied before the
         // children existed. See StyleGuard.

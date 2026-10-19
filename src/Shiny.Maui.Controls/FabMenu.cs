@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.Runtime.CompilerServices;
 using Shiny.Maui.Controls.Infrastructure;
 using Shiny.Maui.Controls.Themes;
 
@@ -9,6 +10,21 @@ namespace Shiny.Maui.Controls;
 [ContentProperty(nameof(Items))]
 public class FabMenu : ContentView
 {
+    /// <summary>Appended to the menu's own <see cref="Element.AutomationId"/> to name the main button that opens and closes it.</summary>
+    public const string FabAutomationIdSuffix = "_Fab";
+
+    /// <summary>Appended to the menu's id to name the backdrop, which closes the open menu when tapped.</summary>
+    public const string BackdropAutomationIdSuffix = "_Backdrop";
+
+    /// <summary>
+    /// Appended to the menu's id, with the item's index in <see cref="Items"/>, to name each item that has
+    /// no id of its own: <c>&lt;id&gt;_Item_&lt;index&gt;</c>.
+    /// </summary>
+    public const string ItemAutomationIdSuffix = "_Item";
+
+    // The items this menu named. One the author named is theirs and is never renamed.
+    readonly ConditionalWeakTable<FabMenuItem, object> namedItems = new();
+
     const uint DefaultAnimationDuration = 200;
     const double ItemStaggerMs = 35;
     const double ItemTravelDistance = 12;
@@ -69,6 +85,10 @@ public class FabMenu : ContentView
 
         ApplyBackdropColor();
         ApplyMenuAlignment();
+
+        AutomationIds.Link(this, mainFab, FabAutomationIdSuffix);
+        AutomationIds.Link(this, backdrop, BackdropAutomationIdSuffix);
+        AutomationIds.Track(this, NameItems);
 
         // Last line: replays any callback that fired before the children existed.
         StyleGuard.MarkReady(this, typeof(FabMenu));
@@ -420,6 +440,29 @@ public class FabMenu : ContentView
             item.IsVisible = IsOpen;
 
             itemsLayout.Add(item);
+        }
+
+        NameItems();
+    }
+
+    void NameItems()
+    {
+        if (Items is null)
+            return;
+
+        for (var i = 0; i < Items.Count; i++)
+        {
+            var item = Items[i];
+            if (!String.IsNullOrEmpty(item.AutomationId) && !namedItems.TryGetValue(item, out _))
+                continue;
+
+            var id = AutomationIds.For(this, ItemAutomationIdSuffix, i);
+            AutomationIds.Set(item, id);
+
+            if (id is null)
+                namedItems.Remove(item);
+            else
+                namedItems.AddOrUpdate(item, this);
         }
     }
 

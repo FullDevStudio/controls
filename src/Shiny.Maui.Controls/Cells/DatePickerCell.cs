@@ -6,13 +6,21 @@ namespace Shiny.Maui.Controls.Cells;
 
 public class DatePickerCell : CellBase
 {
+    /// <summary>Appended to the cell's <see cref="Element.AutomationId"/> to name the native picker behind it (the tap target on Android).</summary>
+    public const string PickerAutomationIdSuffix = "_Picker";
+
     /// <summary>
     /// Children are built by CellBase's constructor (BuildLayout -> the virtual
     /// CreateAccessoryView override above), so by the time this body runs they exist.
     /// Marking ready here replays any property an implicit Style applied before
     /// construction - see StyleGuard.
     /// </summary>
-    public DatePickerCell() => StyleGuard.MarkReady(this, typeof(DatePickerCell));
+    public DatePickerCell()
+    {
+        AutomationIds.Link(this, valueLabel, ValueAutomationIdSuffix);
+        AutomationIds.Link(this, hiddenPicker, PickerAutomationIdSuffix);
+        StyleGuard.MarkReady(this, typeof(DatePickerCell));
+    }
 
     Label valueLabel = default!;
     DatePicker hiddenPicker = default!;

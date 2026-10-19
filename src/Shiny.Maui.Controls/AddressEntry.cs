@@ -75,6 +75,15 @@ public class NominatimAddressSearchProvider : IAddressSearchProvider
 
 public class AddressEntry : ContentView
 {
+    /// <summary>Appended to the field's <see cref="Element.AutomationId"/> to name the entry a test types into.</summary>
+    public const string EntryAutomationIdSuffix = AutoCompleteEntry.EntryAutomationIdSuffix;
+
+    /// <summary>Names the floating list of matching addresses.</summary>
+    public const string DropDownAutomationIdSuffix = AutoCompleteEntry.DropDownAutomationIdSuffix;
+
+    /// <summary>Names each matching address, with its index: <c>&lt;id&gt;_Suggestion_0</c>.</summary>
+    public const string SuggestionAutomationIdSuffix = AutoCompleteEntry.SuggestionAutomationIdSuffix;
+
     static readonly IAddressSearchProvider defaultProvider = new NominatimAddressSearchProvider();
 
     readonly AutoCompleteEntry autoComplete;
@@ -110,6 +119,9 @@ public class AddressEntry : ContentView
         autoComplete.ItemSelected += OnItemSelected;
 
         Content = autoComplete;
+
+        // The inner field's parts are named after this control, not after a second id of its own.
+        AutomationIds.Track(this, () => autoComplete.NamePartsAfter(AutomationId));
 
         // Last line: replays any styled property that was applied before the
         // children existed. See StyleGuard.

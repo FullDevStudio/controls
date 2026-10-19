@@ -8,13 +8,20 @@ namespace Shiny.Maui.Controls.Cells;
 
 public class EntryCell : CellBase, IKeyboardAccessoryHost
 {
+    /// <summary>Appended to the cell's <see cref="Element.AutomationId"/> to name the entry typed into.</summary>
+    public const string EntryAutomationIdSuffix = "_Entry";
+
     /// <summary>
     /// Children are built by CellBase's constructor (BuildLayout -> the virtual
     /// CreateAccessoryView override above), so by the time this body runs they exist.
     /// Marking ready here replays any property an implicit Style applied before
     /// construction - see StyleGuard.
     /// </summary>
-    public EntryCell() => StyleGuard.MarkReady(this, typeof(EntryCell));
+    public EntryCell()
+    {
+        AutomationIds.Link(this, entry, EntryAutomationIdSuffix);
+        StyleGuard.MarkReady(this, typeof(EntryCell));
+    }
 
     static readonly Style CleanEntryStyle = new(typeof(BorderlessEntry))
     {
