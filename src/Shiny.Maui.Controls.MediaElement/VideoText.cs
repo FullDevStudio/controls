@@ -194,6 +194,12 @@ public class VideoText : ContentView
     readonly Label? fallback;
     IMediaPlayerBackend? backend;
     CancellationTokenSource? openCts;
+    bool videoSizeHooked;
+    bool hasOpenSource;
+
+    // Set only by Unloaded, never assumed from IsLoaded: a head that never raises Loaded must keep playing
+    // exactly as before, so the default is "showing".
+    bool suspended;
 
     public VideoText()
     {
@@ -217,6 +223,12 @@ public class VideoText : ContentView
             this.IsClippedToBounds = true; // the marquee runs the label off the edges
         }
 
+        // Off-screen, the player pauses and lets go of its output and of this control. Its process-wide
+        // observers (PiP, app lifecycle, KVO) then hold only a paused player, never the page, if the
+        // handler is never disconnected (removed from a layout, swapped out of a ContentView, recycled).
+        this.Loaded += (_, _) => this.Resume();
+        this.Unloaded += (_, _) => this.Suspend();
+
         this.ApplyText();
     }
 
@@ -228,11 +240,14 @@ public class VideoText : ContentView
     //
     // Same rule as MediaElement: the player is created when a handler arrives, never in the constructor,
     // because a backend roots itself in process-wide sources the moment it exists and only a handler
-    // disconnect ever tears it down.
+    // disconnect ever tears it down. Unloaded only pauses it and detaches it from the page (see Suspend).
 
     protected override void OnHandlerChanging(HandlerChangingEventArgs args)
     {
         base.OnHandlerChanging(args);
+
+        if (args.NewHandler is null)
+            this.StopFallbackMarquee();
 
         if (this.surface is null)
             return;
@@ -246,7 +261,8 @@ public class VideoText : ContentView
             if (this.backend is null)
                 return;
 
-            this.backend.VideoSizeChanged += this.OnVideoSizeChanged;
+            if (!this.suspended)
+                this.HookVideoSize();
             this.surface.Backend = this.backend;
             return;
         }
@@ -254,14 +270,68 @@ public class VideoText : ContentView
         this.openCts?.Cancel();
         this.openCts?.Dispose();
         this.openCts = null;
+        this.hasOpenSource = false;
 
         if (this.backend is null)
             return;
 
-        this.backend.VideoSizeChanged -= this.OnVideoSizeChanged;
+        this.UnhookVideoSize();
         this.surface.Backend = null;
         this.backend.Dispose();
         this.backend = null;
+    }
+
+    void Suspend()
+    {
+        this.suspended = true;
+        this.StopFallbackMarquee();
+
+        if (this.backend is null)
+            return;
+
+        this.UnhookVideoSize();
+        this.backend.Pause();
+
+        // Android's player holds the TextureView (and through its parents the page); AVPlayer the layer.
+        this.backend.SetOutput(null);
+    }
+
+    void Resume()
+    {
+        if (!this.suspended)
+            return;
+
+        this.suspended = false;
+        this.ApplyFallbackText();
+
+        if (this.backend is null || this.surface is null)
+            return;
+
+        this.surface.RebindOutput();
+        this.HookVideoSize();
+        this.OnVideoSizeChanged(this, EventArgs.Empty); // whatever it reported while we weren't listening
+
+        // the player kept its position while paused, so the loop carries on where it left off
+        if (this.hasOpenSource)
+            this.backend.Play();
+    }
+
+    void HookVideoSize()
+    {
+        if (this.videoSizeHooked || this.backend is null)
+            return;
+
+        this.backend.VideoSizeChanged += this.OnVideoSizeChanged;
+        this.videoSizeHooked = true;
+    }
+
+    void UnhookVideoSize()
+    {
+        if (!this.videoSizeHooked || this.backend is null)
+            return;
+
+        this.backend.VideoSizeChanged -= this.OnVideoSizeChanged;
+        this.videoSizeHooked = false;
     }
 
     protected override void OnHandlerChanged()
@@ -293,6 +363,7 @@ public class VideoText : ContentView
         this.openCts = new CancellationTokenSource();
         var ct = this.openCts.Token;
         var source = this.Source;
+        this.hasOpenSource = false;
 
         try
         {
@@ -305,7 +376,9 @@ public class VideoText : ContentView
             // Re-applied after open: AVPlayer settings live on the item, which OpenAsync just replaced.
             this.ApplyBackendSettings();
 
-            if (source is not null)
+            // a Source set while off-screen opens now and starts playing when the control is shown again
+            this.hasOpenSource = source is not null;
+            if (this.hasOpenSource && !this.suspended)
                 this.backend.Play();
         }
         catch (OperationCanceledException)
@@ -399,30 +472,72 @@ public class VideoText : ContentView
         this.ApplyFallbackMarquee(lines.Count, longest, marquee);
     }
 
-    const string MarqueeAnimation = "VideoTextMarquee";
+    // A dispatcher timer rather than a repeating MAUI Animation: a committed animation's callback is held by
+    // MAUI's static animation table and pins the label (and the page) until something aborts it. The timer
+    // stops on Unloaded and on handler disconnect, and runs only while the control is showing.
+    static readonly TimeSpan MarqueeFrame = TimeSpan.FromMilliseconds(16);
+
+    IDispatcherTimer? marqueeTimer;
+    long marqueeStart;
+    MarqueeDirection marqueeDirection;
+    double marqueeTextWidth;
+    double marqueeTextHeight;
+
+    /// <summary>Whether the fallback label's marquee timer is running - a test seam.</summary>
+    internal bool IsFallbackMarqueeRunning => this.marqueeTimer?.IsRunning == true;
 
     void ApplyFallbackMarquee(int lineCount, int longest, MarqueeDirection marquee)
     {
         if (this.fallback is not { } label)
             return;
 
-        label.AbortAnimation(MarqueeAnimation);
-        label.TranslationX = 0;
-        label.TranslationY = 0;
+        this.StopFallbackMarquee();
 
-        if (marquee == MarqueeDirection.None || lineCount == 0 || label.Width <= 0 || label.Height <= 0)
+        if (this.suspended || marquee == MarqueeDirection.None || lineCount == 0 || label.Width <= 0 || label.Height <= 0)
             return;
 
-        var textWidth = longest * VideoTextLayout.EstimatedAdvance * label.FontSize;
-        var textHeight = lineCount * VideoTextLayout.LineHeight * label.FontSize;
-        var width = label.Width;
-        var height = label.Height;
+        this.marqueeDirection = marquee;
+        this.marqueeTextWidth = longest * VideoTextLayout.EstimatedAdvance * label.FontSize;
+        this.marqueeTextHeight = lineCount * VideoTextLayout.LineHeight * label.FontSize;
+        this.marqueeStart = System.Diagnostics.Stopwatch.GetTimestamp();
 
-        new Animation(p =>
+        if (this.marqueeTimer is null)
         {
-            var (x, y) = VideoTextLayout.MarqueeOffset(marquee, p, width, height, textWidth, textHeight);
-            label.TranslationX = x;
-            label.TranslationY = y;
-        }).Commit(label, MarqueeAnimation, 16, (uint)this.MarqueeDuration.TotalMilliseconds, Easing.Linear, repeat: () => true);
+            if (this.Dispatcher?.CreateTimer() is not { } timer)
+                return;
+
+            timer.Interval = MarqueeFrame;
+            timer.IsRepeating = true;
+            timer.Tick += (_, _) => this.TickFallbackMarquee();
+            this.marqueeTimer = timer;
+        }
+
+        this.marqueeTimer.Start();
+        this.TickFallbackMarquee();
+    }
+
+    void TickFallbackMarquee()
+    {
+        if (this.fallback is not { } label)
+            return;
+
+        var duration = Math.Max(1, this.MarqueeDuration.TotalMilliseconds);
+        var elapsed = System.Diagnostics.Stopwatch.GetElapsedTime(this.marqueeStart).TotalMilliseconds;
+        var progress = elapsed % duration / duration;
+
+        var (x, y) = VideoTextLayout.MarqueeOffset(
+            this.marqueeDirection, progress, label.Width, label.Height, this.marqueeTextWidth, this.marqueeTextHeight);
+        label.TranslationX = x;
+        label.TranslationY = y;
+    }
+
+    void StopFallbackMarquee()
+    {
+        if (this.fallback is not { } label)
+            return;
+
+        this.marqueeTimer?.Stop();
+        label.TranslationX = 0;
+        label.TranslationY = 0;
     }
 }

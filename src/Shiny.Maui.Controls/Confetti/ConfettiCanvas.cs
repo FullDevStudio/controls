@@ -33,6 +33,19 @@ sealed class ConfettiCanvas : GraphicsView, IDrawable
         this.BackgroundColor = Colors.Transparent;
         this.HorizontalOptions = LayoutOptions.Fill;
         this.VerticalOptions = LayoutOptions.Fill;
+
+        // The ticker is window-wide and outlives the page: a page left mid-burst must not keep ticking.
+        this.Unloaded += (_, _) => this.Clear();
+
+        // Bursts fired before the first layout wait here rather than on the ticker (see Start).
+        this.SizeChanged += (_, _) =>
+        {
+            if (this.pending.Count == 0)
+                return;
+
+            this.LaunchDue();
+            this.Start();
+        };
     }
 
     internal ConfettiSimulation Simulation => this.simulation;
@@ -119,7 +132,9 @@ sealed class ConfettiCanvas : GraphicsView, IDrawable
 
     void Start()
     {
-        if (this.ticker is not null)
+        // Not laid out: nothing can launch, and a canvas on a page that never lays out (one fired at
+        // after it was popped) would otherwise tick forever and root that page. SizeChanged starts it.
+        if (this.ticker is not null || this.Width <= 0 || this.Height <= 0)
             return;
 
         this.ticker = MotionTicker.For(this);

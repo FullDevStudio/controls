@@ -19,11 +19,21 @@ export function start(video, container, dotnet, muted) {
 
 const observers = new WeakMap();
 
-export function stop(container) {
+export function stop(container, video) {
     const observer = container && observers.get(container);
     if (observer) {
         observer.disconnect();
         observers.delete(container);
+    }
+
+    // A removed <video> is paused, but some engines keep its decoder, buffers and connection until it is
+    // collected. Dropping the source and reloading releases them now.
+    if (video) {
+        try {
+            video.pause();
+            video.removeAttribute('src');
+            video.load();
+        } catch { }
     }
 }
 

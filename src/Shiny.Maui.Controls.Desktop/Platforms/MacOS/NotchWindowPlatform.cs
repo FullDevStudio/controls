@@ -84,7 +84,9 @@ static class NotchWindowPlatform
             // by which point the app is active. Replaying at the mouse-up rather than on a timer keeps
             // down-before-up even for an instant click.
             NSEvent? pending = null;
-            ClickMonitors[window.Handle] = NSEvent.AddLocalMonitorForEventsMatchingMask(
+            var handle = window.Handle;
+            RemoveClickMonitor(handle);
+            var monitor = NSEvent.AddLocalMonitorForEventsMatchingMask(
                 NSEventMask.LeftMouseDown | NSEventMask.LeftMouseUp | NSEventMask.RightMouseDown | NSEventMask.RightMouseUp,
                 e =>
                 {
@@ -107,11 +109,30 @@ static class NotchWindowPlatform
                     return e;
                 });
 
+            // The monitor's block holds the window, and AppKit holds the block until it is removed. The
+            // service removes it on dispose; this covers the window being closed some other way first.
+            var closeObserver = NSNotificationCenter.DefaultCenter.AddObserver(
+                NSWindow.WillCloseNotification,
+                _ => RemoveClickMonitor(handle),
+                window
+            );
+            ClickMonitors[handle] = (monitor, closeObserver);
+
             window.OrderOut(null);
         });
     }
 
-    static readonly Dictionary<IntPtr, NSObject> ClickMonitors = new();
+    static readonly Dictionary<IntPtr, (NSObject Monitor, NSObject CloseObserver)> ClickMonitors = new();
+
+    // Main thread only, like every caller.
+    static void RemoveClickMonitor(IntPtr handle)
+    {
+        if (!ClickMonitors.Remove(handle, out var entry))
+            return;
+
+        NSEvent.RemoveMonitor(entry.Monitor);
+        NSNotificationCenter.DefaultCenter.RemoveObserver(entry.CloseObserver);
+    }
 
     public static void Place(object platformWindow, double width, double height, bool hugNotch, double topMargin, double durationMs)
     {
@@ -157,11 +178,7 @@ static class NotchWindowPlatform
         Hide(platformWindow);
         if (platformWindow is NSWindow window)
         {
-            MacMainThread.Invoke(() =>
-            {
-                if (ClickMonitors.Remove(window.Handle, out var monitor))
-                    NSEvent.RemoveMonitor(monitor);
-            });
+            MacMainThread.Invoke(() => RemoveClickMonitor(window.Handle));
         }
     }
 

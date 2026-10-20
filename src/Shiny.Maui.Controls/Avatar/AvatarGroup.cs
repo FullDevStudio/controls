@@ -33,7 +33,7 @@ public partial class AvatarGroup : ContentView, IView
     readonly HorizontalStackLayout stack;
     readonly Avatar overflowChip;
     readonly List<Avatar> generated = new();
-    INotifyCollectionChanged? observedSource;
+    IDisposable? collectionSubscription;
     EventHandler? overflowClicked;
 
     public AvatarGroup()
@@ -96,12 +96,9 @@ public partial class AvatarGroup : ContentView, IView
 
     void OnItemsSourceChanged(IEnumerable? oldValue, IEnumerable? newValue)
     {
-        if (this.observedSource is not null)
-            this.observedSource.CollectionChanged -= this.OnSourceCollectionChanged;
-
-        this.observedSource = newValue as INotifyCollectionChanged;
-        if (this.observedSource is not null)
-            this.observedSource.CollectionChanged += this.OnSourceCollectionChanged;
+        // Weak: an ItemsSource is usually a view model's collection, which outlives the page.
+        this.collectionSubscription?.Dispose();
+        this.collectionSubscription = WeakEventSubscription.CollectionChanged(newValue, this.OnSourceCollectionChanged);
 
         this.Rebuild();
     }

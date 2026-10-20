@@ -24,6 +24,7 @@ partial class ChatBubbleView : ContentView
     readonly HorizontalStackLayout reactionsLayout;
     readonly Button actionsButton;
     View? customTemplateView;
+    IDisposable? automationTracking;
 
     public ChatBubbleView(ChatView chatView, bool isMe)
     {
@@ -169,7 +170,25 @@ partial class ChatBubbleView : ContentView
         this.TrackThemeTextColors();
 
         // Named after the chat, not this row: the row is recycled, and the chat is what a test knows.
-        AutomationIds.Track(chatView, this.ApplyAutomationIds);
+        // The subscription sits on the chat, which outlives every row it ever built, so it is let go
+        // while the row is out of the tree and taken again (renaming it) when the row comes back.
+        this.TrackChatAutomationId();
+        this.Loaded += (_, _) => this.TrackChatAutomationId();
+        this.Unloaded += (_, _) => this.ReleaseChatAutomationId();
+        this.HandlerChanged += (_, _) =>
+        {
+            if (this.Handler == null)
+                this.ReleaseChatAutomationId();
+        };
+    }
+
+    void TrackChatAutomationId()
+        => this.automationTracking ??= AutomationIds.Track(this.chatView, this.ApplyAutomationIds);
+
+    void ReleaseChatAutomationId()
+    {
+        this.automationTracking?.Dispose();
+        this.automationTracking = null;
     }
 
     protected override void OnBindingContextChanged()

@@ -302,7 +302,11 @@ static class WindowsTrayOwnerDraw
     }
 
     static SDFont PillFont(float scale)
-        => new(SDSystemFonts.MenuFont!.FontFamily, 10f * scale, SDFontStyle.Bold, SDGraphicsUnit.Pixel);
+    {
+        // SystemFonts.MenuFont builds a new Font on every read: dispose it once the family is taken
+        using var menuFont = SDSystemFonts.MenuFont!;
+        return new(menuFont.FontFamily, 10f * scale, SDFontStyle.Bold, SDGraphicsUnit.Pixel);
+    }
 
     static SDFont CaptionFont(SDFont menuFont, float scale)
         => new(menuFont.FontFamily, 11f * scale, SDFontStyle.Regular, SDGraphicsUnit.Pixel);

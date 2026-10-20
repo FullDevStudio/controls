@@ -40,7 +40,7 @@ public class Marquee : ContentView
     readonly BoxView fadeProbe;
     readonly List<Size> itemSizes = [];
 
-    INotifyCollectionChanged? observed;
+    IDisposable? collectionSubscription;
     MotionTicker? ticker;
     int groupSize;
     int copies;
@@ -338,12 +338,9 @@ public class Marquee : ContentView
 
     void OnItemsSourceChanged()
     {
-        if (this.observed is not null)
-            this.observed.CollectionChanged -= this.OnCollectionChanged;
-
-        this.observed = this.ItemsSource as INotifyCollectionChanged;
-        if (this.observed is not null)
-            this.observed.CollectionChanged += this.OnCollectionChanged;
+        // Weak: an ItemsSource is usually a view model's collection, which outlives the page.
+        this.collectionSubscription?.Dispose();
+        this.collectionSubscription = WeakEventSubscription.CollectionChanged(this.ItemsSource, this.OnCollectionChanged);
 
         this.Rebuild();
     }

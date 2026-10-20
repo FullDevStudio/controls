@@ -10,9 +10,13 @@ namespace Shiny.Blazor.Controls.Images;
 /// has registered and needs no setup. The downloader is scoped, so on Blazor Server this is one per
 /// circuit: two users never share an authenticated image.</para>
 ///
-/// <para>The first caller starts the download against <see cref="CancellationToken.None"/>; each caller
-/// only stops waiting on its own token. One image leaving the screen must not cancel the download the
+/// <para>The download runs on a token of its own, not the first caller's; each caller only stops
+/// waiting on its own token. One image leaving the screen must not cancel the download the
 /// other eleven are showing a ring for.</para>
+///
+/// <para>When the last one stops waiting, though, nobody wants the bytes: the download is cancelled and
+/// its entry dropped, so a request that never answers does not sit in the table for the life of the
+/// circuit.</para>
 /// </remarks>
 sealed class SharedImageDownloads
 {
@@ -24,7 +28,11 @@ sealed class SharedImageDownloads
         readonly Lock gate = new();
 
         public required Task<ImageDownloadResult> Task { get; init; }
+        public CancellationTokenSource Abandoned { get; } = new();
         public ImageLoadProgress? Latest { get; private set; }
+
+        /// <summary>Callers still awaiting it. Guarded by the owner's gate, not this entry's.</summary>
+        public int Waiters { get; set; }
 
         public void Subscribe(IProgress<ImageLoadProgress>? progress)
         {
@@ -94,6 +102,7 @@ sealed class SharedImageDownloads
 
                 _ = this.RunAsync(uri, entry, tcs);
             }
+            entry.Waiters++;
         }
 
         entry.Subscribe(progress);
@@ -105,6 +114,30 @@ sealed class SharedImageDownloads
         finally
         {
             entry.Unsubscribe(progress);
+            this.Leave(uri, entry);
+        }
+    }
+
+
+    void Leave(string uri, InFlight entry)
+    {
+        lock (this.gate)
+        {
+            if (--entry.Waiters > 0 || entry.Task.IsCompleted)
+                return;
+
+            if (this.inFlight.TryGetValue(uri, out var current) && ReferenceEquals(current, entry))
+                this.inFlight.Remove(uri);
+        }
+
+        // Outside the lock: cancellation callbacks run inline, and the download's finally takes it.
+        try
+        {
+            entry.Abandoned.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // It finished in between.
         }
     }
 
@@ -117,8 +150,13 @@ sealed class SharedImageDownloads
             // completes synchronously would otherwise run its finally - which takes that lock - there.
             await Task.Yield();
 
-            var result = await this.downloader.DownloadAsync(uri, new ForwardingProgress(entry), CancellationToken.None).ConfigureAwait(false);
+            var result = await this.downloader.DownloadAsync(uri, new ForwardingProgress(entry), entry.Abandoned.Token).ConfigureAwait(false);
             tcs.TrySetResult(result);
+        }
+        catch (OperationCanceledException) when (entry.Abandoned.IsCancellationRequested)
+        {
+            // Nobody is waiting; a faulted task nobody observes would only surface as UnobservedTaskException.
+            tcs.TrySetCanceled();
         }
         catch (Exception ex)
         {
@@ -131,6 +169,7 @@ sealed class SharedImageDownloads
                 if (this.inFlight.TryGetValue(uri, out var current) && ReferenceEquals(current, entry))
                     this.inFlight.Remove(uri);
             }
+            entry.Abandoned.Dispose();
         }
     }
 

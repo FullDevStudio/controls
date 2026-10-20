@@ -15,22 +15,26 @@ partial class VideoTextHandler : ViewHandler<VideoTextSurface, VideoTextPlatform
     {
         var fontManager = handler.MauiContext?.Services.GetService(typeof(IFontManager)) as IFontManager;
 
+        // the resolver lives on the native view, so it captures values, never the virtual view
+        var family = view.FontFamily;
+        var attributes = view.FontAttributes;
+
         handler.PlatformView.Update(
             view.Text,
             view.FontSize,
-            size => fontManager?.GetFont(view.ToFont(size)) ?? FallbackFont(view, size),
+            size => fontManager?.GetFont(VideoTextSurface.ToFont(family, attributes, size)) ?? FallbackFont(family, attributes, size),
             view.HasOverlay ? view.OverlayColor!.ToCGColor() : null,
             view.OverlayOpacity,
             view.ActiveMarquee,
             view.MarqueeDuration);
     }
 
-    static UIFont FallbackFont(VideoTextSurface view, double size)
+    static UIFont FallbackFont(string? fontFamily, FontAttributes attributes, double size)
     {
-        var font = (view.FontFamily is { Length: > 0 } family ? UIFont.FromName(family, (nfloat)size) : null)
-            ?? UIFont.SystemFontOfSize((nfloat)size, view.FontAttributes.HasFlag(FontAttributes.Bold) ? UIFontWeight.Bold : UIFontWeight.Regular);
+        var font = (fontFamily is { Length: > 0 } family ? UIFont.FromName(family, (nfloat)size) : null)
+            ?? UIFont.SystemFontOfSize((nfloat)size, attributes.HasFlag(FontAttributes.Bold) ? UIFontWeight.Bold : UIFontWeight.Regular);
 
-        if (view.FontAttributes.HasFlag(FontAttributes.Italic)
+        if (attributes.HasFlag(FontAttributes.Italic)
             && font.FontDescriptor.CreateWithTraits(font.FontDescriptor.SymbolicTraits | UIFontDescriptorSymbolicTraits.Italic) is { } italic)
         {
             font = UIFont.FromDescriptor(italic, (nfloat)size);
@@ -64,6 +68,10 @@ class VideoTextPlatformView : MediaPlayerUIView, IApplePlayerOutput
     readonly CALayer overlayLayer = new();  // overlay: the coloured sheet above the video
     readonly CALayer knockoutLayer = new(); // overlay: the sheet's mask, holding the inverted glyphs
     CALayer? textLayer;
+
+    // the managed wrappers behind the current text layer, released when the next rebuild replaces it rather
+    // than left to the finalizer (a rebuild runs on every size, text or overlay change)
+    readonly List<IDisposable> rendered = [];
 
     string? text;
     double fontSize;
@@ -141,6 +149,7 @@ class VideoTextPlatformView : MediaPlayerUIView, IApplePlayerOutput
 
         this.textLayer?.RemoveFromSuperLayer();
         this.textLayer = null;
+        this.ReleaseRendered();
 
         var hasOverlay = this.overlayColor is not null;
         this.Layer.Mask = hasOverlay ? null : this.maskLayer;
@@ -177,13 +186,17 @@ class VideoTextPlatformView : MediaPlayerUIView, IApplePlayerOutput
                     BorderWidth = border,
                     BorderColor = UIColor.Black.CGColor
                 };
-                layer.AddSublayer(new CALayer
+                var inverted = Invert(glyphs);
+                var image = new CALayer
                 {
                     Frame = new CGRect(border - 1, border - 1, imageSize.Width, imageSize.Height),
-                    Contents = Invert(glyphs).CGImage,
+                    Contents = inverted.CGImage,
                     ContentsScale = glyphs.CurrentScale
-                });
+                };
+                layer.AddSublayer(image);
                 this.knockoutLayer.AddSublayer(layer);
+                this.rendered.Add(inverted);
+                this.rendered.Add(image);
             }
             else
             {
@@ -197,6 +210,8 @@ class VideoTextPlatformView : MediaPlayerUIView, IApplePlayerOutput
             }
 
             this.textLayer = layer;
+            this.rendered.Add(glyphs);
+            this.rendered.Add(layer);
             var centre = new CGPoint(size.Width / 2, size.Height / 2);
             layer.Position = centre;
 
@@ -215,6 +230,26 @@ class VideoTextPlatformView : MediaPlayerUIView, IApplePlayerOutput
         }
 
         CATransaction.Commit();
+    }
+
+    // The layers hold their contents natively, so dropping the managed wrappers frees nothing still in use.
+    void ReleaseRendered()
+    {
+        foreach (var item in this.rendered)
+            item.Dispose();
+        this.rendered.Clear();
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            this.fontAt = null;
+            this.textLayer = null;
+            this.ReleaseRendered();
+        }
+
+        base.Dispose(disposing);
     }
 
     // White glyphs on transparent, cropped to the text plus a margin for italic overhang and descenders.

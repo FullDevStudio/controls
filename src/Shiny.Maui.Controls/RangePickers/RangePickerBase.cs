@@ -84,6 +84,12 @@ public abstract partial class RangePickerBase : ContentView
         this.field.GestureRecognizers.Add(tap);
 
         this.backButton = new AndroidBackButton(() => this.Dispatcher.Dispatch(this.Cancel));
+
+        // The back-button list is static: a page left with the popup open must not stay rooted by it.
+        // Only the claim is dropped, not the popup - installing the overlay root on the first open
+        // re-parents the page's content, which unloads and reloads the picker mid-open.
+        this.Loaded += (_, _) => this.backButton.SetActive(this.overlay is not null);
+        this.Unloaded += (_, _) => this.backButton.SetActive(false);
         this.Content = this.field;
 
         AutomationIds.Link(this, this.field, FieldAutomationIdSuffix);

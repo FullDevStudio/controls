@@ -97,6 +97,59 @@ public class SharedImageDownloadsTests
     }
 
 
+    sealed class HangingDownloader : IImageDownloader
+    {
+        int calls;
+
+        public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource Cancelled { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public int Calls => Volatile.Read(ref this.calls);
+
+        public async Task<ImageDownloadResult> DownloadAsync(string uri, IProgress<ImageLoadProgress>? progress, CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref this.calls);
+            using var registration = cancellationToken.Register(() => this.Cancelled.TrySetResult());
+            this.Started.TrySetResult();
+
+            // A server that never answers.
+            await Task.Delay(Timeout.Infinite, cancellationToken).ConfigureAwait(false);
+            return new ImageDownloadResult([], null);
+        }
+    }
+
+
+    [Fact]
+    public async Task EveryCallerGivingUp_CancelsTheDownloadAndForgetsIt()
+    {
+        var downloader = new HangingDownloader();
+        var shared = SharedImageDownloads.For(downloader);
+        using var first = new CancellationTokenSource();
+        using var second = new CancellationTokenSource();
+
+        var a = shared.DownloadAsync("/hang.png", null, first.Token);
+        var b = shared.DownloadAsync("/hang.png", null, second.Token);
+        await downloader.Started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        await first.CancelAsync();
+        await Should.ThrowAsync<OperationCanceledException>(() => a);
+        downloader.Cancelled.Task.IsCompleted.ShouldBeFalse();
+
+        await second.CancelAsync();
+        await Should.ThrowAsync<OperationCanceledException>(() => b);
+        await downloader.Cancelled.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        // The entry went with it: the next load is a new download, not a wait on the abandoned one.
+        using var third = new CancellationTokenSource();
+        var c = shared.DownloadAsync("/hang.png", null, third.Token);
+        for (var i = 0; i < 50 && downloader.Calls < 2; i++)
+            await Task.Delay(20);
+        downloader.Calls.ShouldBe(2);
+
+        await third.CancelAsync();
+        await Should.ThrowAsync<OperationCanceledException>(() => c);
+    }
+
+
     [Fact]
     public async Task AFailureIsNotRemembered()
     {

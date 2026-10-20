@@ -69,6 +69,8 @@ The control uses the same `IMediaPlayerBackend` as `MediaElement`, with a native
 
 Android uses a `TextureView` because Media3's default `SurfaceView` is a separate window surface. Nothing drawn in the view hierarchy can mask it.
 
+The video plays only while the control is on screen. On `Unloaded` (page popped or covered, view removed from its layout, a template swapped out) the player pauses and lets go of its output, and on `Loaded` it picks up again from where it stopped. A marquee stops and restarts the same way. The player itself is released when the handler disconnects.
+
 ## Blazor
 
 ```razor

@@ -97,6 +97,10 @@ public class NoiseEffect : BackgroundEffect
 
             for (var f = 0; f < FrameCount; f++)
             {
+                // The old frames hold native paths on some heads; let them go now rather than at finalization.
+                this.Frames[f].Bright?.Dispose();
+                this.Frames[f].Faint?.Dispose();
+
                 var bright = new PathF();
                 var faint = new PathF();
                 for (var row = 0; row < rows; row++)

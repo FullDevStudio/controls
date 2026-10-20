@@ -17,6 +17,8 @@ const RECENT = 'shiny-office:recent';
 const MAX_RECENT = 20;
 
 const live = new Map(); // id -> FileSystemFileHandle | File
+const born = new Map(); // id -> when it was handed out, so a file not yet in the recent list survives a prune
+const GRACE_MS = 60000;
 
 const hasPicker = () => typeof window.showOpenFilePicker === 'function';
 
@@ -43,15 +45,25 @@ async function idb(mode, work) {
         return undefined;
 
     return new Promise((resolve, reject) => {
-        const tx = db.transaction(STORE, mode);
-        const request = work(tx.objectStore(STORE));
+        let tx, request;
+        try {
+            tx = db.transaction(STORE, mode);
+            request = work(tx.objectStore(STORE));
+        } catch (error) {
+            db.close();
+            reject(error);
+            return;
+        }
         tx.oncomplete = () => { db.close(); resolve(request?.result); };
         tx.onerror = () => { db.close(); reject(tx.error); };
+        // A quota failure aborts without an error event on some browsers; never leave the db open.
+        tx.onabort = () => { db.close(); reject(tx.error); };
     });
 }
 
 async function remember(id, handle) {
     live.set(id, handle);
+    born.set(id, Date.now());
 
     // Only a real handle survives a reload; a File from an input is gone with the page.
     if (typeof FileSystemFileHandle !== 'undefined' && handle instanceof FileSystemFileHandle)
@@ -99,13 +111,24 @@ function inputPick(extension, mime) {
         input.style.display = 'none';
         document.body.appendChild(input);
 
+        let settled = false;
         const done = file => {
+            if (settled) return;
+            settled = true;
+            window.removeEventListener('focus', onFocus);
             input.remove();
             resolve(file);
         };
 
+        // Browsers without the cancel event (Safari before 16.4) say nothing when the dialog is
+        // dismissed: the window getting focus back with no file chosen is the only sign, and without
+        // it the input stays in the page and the promise never settles.
+        const onFocus = () => setTimeout(() => done(input.files && input.files[0] || null), 1000);
+
         input.addEventListener('change', () => done(input.files && input.files[0] || null), { once: true });
         input.addEventListener('cancel', () => done(null), { once: true });
+        if (!('oncancel' in input))
+            window.addEventListener('focus', onFocus, { once: true });
         input.click();
     });
 }
@@ -193,8 +216,12 @@ export async function save(id, name, description, mime, extension, streamRef) {
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 60000);
 
-    const downloaded = newId();
+    // A save over a downloaded file replaces it under the same id: a new id per Save kept a full copy
+    // of the document in memory for every press, and filled the recent list with the same file.
+    const downloaded = id && live.get(id) instanceof File ? id : newId();
     live.set(downloaded, new File([bytes], name, { type: mime }));
+    born.set(downloaded, Date.now());
+    await prune(readRecent());
     return result(downloaded, name);
 }
 
@@ -207,15 +234,46 @@ function readRecent() {
 }
 
 /** Puts a file at the top of the recent list. */
-export function touch(id, name, app) {
+export async function touch(id, name, app) {
     const entries = readRecent().filter(x => x.id !== id);
     entries.unshift({ id, name, app, lastOpened: new Date().toISOString(), persistent: !(live.get(id) instanceof File) });
+    const kept = entries.slice(0, MAX_RECENT);
 
     try {
-        localStorage.setItem(RECENT, JSON.stringify(entries.slice(0, MAX_RECENT)));
+        localStorage.setItem(RECENT, JSON.stringify(kept));
     } catch {
         // Storage full or blocked: the recent list is a convenience.
     }
+
+    await prune(kept);
+}
+
+/**
+    Lets go of every file the recent list no longer names - the bytes of a download, a handle in
+    IndexedDB - except those handed out moments ago, which an editor may be about to read or touch.
+*/
+async function prune(entries) {
+    const keep = new Set(entries.map(x => x.id));
+    const now = Date.now();
+    const kept = id => keep.has(id) || now - (born.get(id) ?? 0) < GRACE_MS;
+
+    for (const id of [...live.keys()]) {
+        if (!kept(id)) {
+            live.delete(id);
+            born.delete(id);
+        }
+    }
+
+    await idb('readwrite', s => {
+        const keys = s.getAllKeys();
+        keys.onsuccess = () => {
+            for (const key of keys.result) {
+                if (!kept(key))
+                    s.delete(key);
+            }
+        };
+        return keys;
+    }).catch(() => { });
 }
 
 /** The recent list for an app, newest first, as JSON — only files that can still be opened. */

@@ -11,28 +11,34 @@ partial class VideoTextHandler : ViewHandler<VideoTextSurface, VideoTextPlatform
     protected override VideoTextPlatformView CreatePlatformView() => new();
 
     // The AppKit head has no IFontManager to lean on, so fonts resolve straight through NSFont.
+    // The resolver lives on the native view, so it captures values, never the virtual view.
     static void MapText(VideoTextHandler handler, VideoTextSurface view)
-        => handler.PlatformView.Update(
+    {
+        var family = view.FontFamily;
+        var attributes = view.FontAttributes;
+
+        handler.PlatformView.Update(
             view.Text,
             view.FontSize,
-            size => ResolveFont(view, size),
+            size => ResolveFont(family, attributes, size),
             view.HasOverlay ? ToCGColor(view.OverlayColor!) : null,
             view.OverlayOpacity,
             view.ActiveMarquee,
             view.MarqueeDuration);
+    }
 
     static CGColor ToCGColor(Color color)
         => new((nfloat)color.Red, (nfloat)color.Green, (nfloat)color.Blue, (nfloat)color.Alpha);
 
-    static NSFont ResolveFont(VideoTextSurface view, double size)
+    static NSFont ResolveFont(string? fontFamily, FontAttributes attributes, double size)
     {
-        var font = (view.FontFamily is { Length: > 0 } family ? NSFont.FromFontName(family, (nfloat)size) : null)
-            ?? NSFont.SystemFontOfSize((nfloat)size, view.FontAttributes.HasFlag(FontAttributes.Bold) ? NSFontWeight.Bold : NSFontWeight.Regular)!;
+        var font = (fontFamily is { Length: > 0 } family ? NSFont.FromFontName(family, (nfloat)size) : null)
+            ?? NSFont.SystemFontOfSize((nfloat)size, attributes.HasFlag(FontAttributes.Bold) ? NSFontWeight.Bold : NSFontWeight.Regular)!;
 
         var traits = (NSFontTraitMask)0;
-        if (view.FontAttributes.HasFlag(FontAttributes.Bold))
+        if (attributes.HasFlag(FontAttributes.Bold))
             traits |= NSFontTraitMask.Bold;
-        if (view.FontAttributes.HasFlag(FontAttributes.Italic))
+        if (attributes.HasFlag(FontAttributes.Italic))
             traits |= NSFontTraitMask.Italic;
 
         return traits == 0 ? font : NSFontManager.SharedFontManager.ConvertFont(font, traits) ?? font;
@@ -56,6 +62,10 @@ class VideoTextPlatformView : MediaPlayerNSView
     readonly CALayer overlayLayer = new();
     readonly CALayer knockoutLayer = new();
     CALayer? textLayer;
+
+    // the managed wrappers behind the current text layer, released when the next rebuild replaces it rather
+    // than left to the finalizer (a rebuild runs on every size, text or overlay change)
+    readonly List<IDisposable> rendered = [];
 
     string? text;
     double fontSize;
@@ -128,6 +138,7 @@ class VideoTextPlatformView : MediaPlayerNSView
 
         this.textLayer?.RemoveFromSuperLayer();
         this.textLayer = null;
+        this.ReleaseRendered();
 
         var hasOverlay = this.overlayColor is not null;
         this.Layer!.Mask = hasOverlay ? null : this.maskLayer;
@@ -159,13 +170,18 @@ class VideoTextPlatformView : MediaPlayerNSView
                     BorderWidth = border,
                     BorderColor = NSColor.Black.CGColor
                 };
-                layer.AddSublayer(new CALayer
+                var inverted = Invert(glyphs);
+                var image = new CALayer
                 {
                     Frame = new CGRect(border - 1, border - 1, imageSize.Width, imageSize.Height),
-                    Contents = Invert(glyphs),
+                    Contents = inverted,
                     ContentsScale = scale
-                });
+                };
+                layer.AddSublayer(image);
                 this.knockoutLayer.AddSublayer(layer);
+                if (inverted is not null)
+                    this.rendered.Add(inverted);
+                this.rendered.Add(image);
             }
             else
             {
@@ -179,6 +195,8 @@ class VideoTextPlatformView : MediaPlayerNSView
             }
 
             this.textLayer = layer;
+            this.rendered.Add(glyphs);
+            this.rendered.Add(layer);
             var centre = new CGPoint(size.Width / 2, size.Height / 2);
             layer.Position = centre;
 
@@ -197,6 +215,26 @@ class VideoTextPlatformView : MediaPlayerNSView
         }
 
         CATransaction.Commit();
+    }
+
+    // The layers hold their contents natively, so dropping the managed wrappers frees nothing still in use.
+    void ReleaseRendered()
+    {
+        foreach (var item in this.rendered)
+            item.Dispose();
+        this.rendered.Clear();
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            this.fontAt = null;
+            this.textLayer = null;
+            this.ReleaseRendered();
+        }
+
+        base.Dispose(disposing);
     }
 
     CGImage? RenderGlyphs(CGSize size, nfloat scale, out CGSize textSize, out CGSize imageSize)
@@ -223,10 +261,11 @@ class VideoTextPlatformView : MediaPlayerNSView
         imageSize = new CGSize(Math.Ceiling(textSize.Width) + 2 * margin, Math.Ceiling(textSize.Height) + 2 * margin);
 
         using var context = CreateContext(imageSize, scale);
+        using var graphics = NSGraphicsContext.FromCGContext(context, false);
         NSGraphicsContext.GlobalSaveGraphicsState();
         try
         {
-            NSGraphicsContext.CurrentContext = NSGraphicsContext.FromCGContext(context, false);
+            NSGraphicsContext.CurrentContext = graphics;
             attributed.DrawInRect(new CGRect(0, margin, imageSize.Width, textSize.Height));
         }
         finally

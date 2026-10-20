@@ -27,6 +27,10 @@ public partial class CoverFlowView<TItem> : IAsyncDisposable
 
     ElementReference rootRef;
     ElementReference stageRef;
+
+    // The script keys its engine on this, not on the stage element: by the time a dispose arrives the
+    // stage may already be out of the DOM, and a removed element reaches the script as null.
+    readonly string engineId = Guid.NewGuid().ToString("N");
     IJSObjectReference? module;
     DotNetObjectReference<CoverFlowView<TItem>>? selfRef;
     bool disposed;
@@ -222,7 +226,7 @@ public partial class CoverFlowView<TItem> : IAsyncDisposable
             if (initialized && module is not null)
             {
                 initialized = false;
-                await module.InvokeVoidAsync("dispose", stageRef);
+                await module.InvokeVoidAsync("dispose", engineId);
             }
             return;
         }
@@ -243,21 +247,21 @@ public partial class CoverFlowView<TItem> : IAsyncDisposable
             initialized = true;
             pendingJump = false;
             pendingGoTo = null;
-            await module.InvokeVoidAsync("init", rootRef, stageRef, selfRef, BuildOptions());
+            await module.InvokeVoidAsync("init", engineId, rootRef, stageRef, selfRef, BuildOptions());
             return;
         }
 
-        await module.InvokeVoidAsync("update", stageRef, BuildOptions());
+        await module.InvokeVoidAsync("update", engineId, BuildOptions());
 
         if (pendingJump)
         {
             pendingJump = false;
-            await module.InvokeVoidAsync("goTo", stageRef, VirtualCenter, false);
+            await module.InvokeVoidAsync("goTo", engineId, VirtualCenter, false);
         }
         if (pendingGoTo is { } target)
         {
             pendingGoTo = null;
-            await module.InvokeVoidAsync("goTo", stageRef, target, true);
+            await module.InvokeVoidAsync("goTo", engineId, target, true);
         }
     }
 
@@ -281,13 +285,13 @@ public partial class CoverFlowView<TItem> : IAsyncDisposable
     public async Task NextAsync()
     {
         if (module is not null && initialized)
-            await module.InvokeVoidAsync("next", stageRef);
+            await module.InvokeVoidAsync("next", engineId);
     }
 
     public async Task PreviousAsync()
     {
         if (module is not null && initialized)
-            await module.InvokeVoidAsync("prev", stageRef);
+            await module.InvokeVoidAsync("prev", engineId);
     }
 
     /// <summary>Bring the item at <paramref name="index"/> to the centre.</summary>
@@ -299,7 +303,7 @@ public partial class CoverFlowView<TItem> : IAsyncDisposable
         var target = NearestVirtual(index);
         if (module is not null && initialized)
         {
-            await module.InvokeVoidAsync("goTo", stageRef, target, animate);
+            await module.InvokeVoidAsync("goTo", engineId, target, animate);
             if (!animate)
                 await OnSettled(target);
         }
@@ -380,7 +384,7 @@ public partial class CoverFlowView<TItem> : IAsyncDisposable
         {
             try
             {
-                await module.InvokeVoidAsync("dispose", stageRef);
+                await module.InvokeVoidAsync("dispose", engineId);
                 await module.DisposeAsync();
             }
             catch (JSDisconnectedException) { }

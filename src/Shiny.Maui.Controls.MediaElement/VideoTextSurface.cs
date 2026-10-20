@@ -28,10 +28,14 @@ class VideoTextSurface : MediaSurface
     /// <summary>The marquee to run, or <see cref="MarqueeDirection.None"/> when it has no length to run in.</summary>
     internal MarqueeDirection ActiveMarquee => this.MarqueeDuration > TimeSpan.Zero ? this.Marquee : MarqueeDirection.None;
 
-    internal Microsoft.Maui.Font ToFont(double size) => Microsoft.Maui.Font.OfSize(
-        this.FontFamily,
+    internal Microsoft.Maui.Font ToFont(double size) => ToFont(this.FontFamily, this.FontAttributes, size);
+
+    // Static so a platform view's font resolver can capture the values rather than this surface: the
+    // native view outlives the handler, and a captured surface would pin it (and through it the page).
+    internal static Microsoft.Maui.Font ToFont(string? family, FontAttributes attributes, double size) => Microsoft.Maui.Font.OfSize(
+        family,
         size,
-        this.FontAttributes.HasFlag(FontAttributes.Bold) ? FontWeight.Bold : FontWeight.Regular,
-        this.FontAttributes.HasFlag(FontAttributes.Italic) ? FontSlant.Italic : FontSlant.Default,
+        attributes.HasFlag(FontAttributes.Bold) ? FontWeight.Bold : FontWeight.Regular,
+        attributes.HasFlag(FontAttributes.Italic) ? FontSlant.Italic : FontSlant.Default,
         enableScaling: false);
 }

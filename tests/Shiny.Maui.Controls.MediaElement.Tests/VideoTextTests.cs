@@ -1,3 +1,4 @@
+using System.Reflection;
 using Shiny.Controls.Media;
 using Shouldly;
 using Xunit;
@@ -208,5 +209,85 @@ public class VideoTextTests : MediaTestBase
         label.Text.ShouldBe("OCEAN");
         label.TextColor.ShouldBe(Colors.Teal);
         label.FontSize.ShouldBe(40);
+    }
+
+
+    // ── fallback marquee lifetime ────────────────────────────────────────────────────────────────
+    //
+    // It used to be a repeating MAUI Animation that nothing ever aborted, so MAUI's static animation table
+    // kept the label (and the page) alive and ticking after the page was gone.
+
+    static VideoText MarqueeText(out Label label)
+    {
+        var text = new VideoText { Text = "OCEAN", FontSize = 40, Marquee = MarqueeDirection.Left };
+        label = text.Content.ShouldBeOfType<Label>();
+        ((IView)label).Arrange(new Rect(0, 0, 300, 100));
+        return text;
+    }
+
+    // Loaded/Unloaded never fire headlessly (there is no window), so they are driven through MAUI's own
+    // internal senders. Unloaded is ignored unless Loaded fired first.
+    static void Send(VisualElement element, string method)
+        => typeof(VisualElement)
+            .GetMethod(method, BindingFlags.Instance | BindingFlags.NonPublic, Type.EmptyTypes)!
+            .Invoke(element, null);
+
+    [Fact]
+    public void Fallback_marquee_runs_on_a_frame_timer()
+    {
+        var text = MarqueeText(out var label);
+
+        text.IsFallbackMarqueeRunning.ShouldBeTrue();
+        TimerWithInterval(TimeSpan.FromMilliseconds(16)).ShouldNotBeNull().IsRunning.ShouldBeTrue();
+        label.TranslationX.ShouldBeGreaterThan(0); // a leftward pass starts off the right edge
+    }
+
+    [Fact]
+    public void Unloading_stops_the_fallback_marquee()
+    {
+        var text = MarqueeText(out var label);
+        var timer = TimerWithInterval(TimeSpan.FromMilliseconds(16)).ShouldNotBeNull();
+
+        Send(text, "SendLoaded");
+        Send(text, "SendUnloaded");
+
+        text.IsFallbackMarqueeRunning.ShouldBeFalse();
+        timer.IsRunning.ShouldBeFalse();
+        label.TranslationX.ShouldBe(0);
+    }
+
+    [Fact]
+    public void Loading_again_restarts_the_fallback_marquee()
+    {
+        var text = MarqueeText(out _);
+        Send(text, "SendLoaded");
+        Send(text, "SendUnloaded");
+
+        Send(text, "SendLoaded");
+
+        text.IsFallbackMarqueeRunning.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void Disconnecting_the_handler_stops_the_fallback_marquee()
+    {
+        var text = MarqueeText(out _);
+        text.Handler = new StubViewHandler();
+
+        text.Handler = null;
+
+        text.IsFallbackMarqueeRunning.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void An_unloaded_marquee_does_not_start_on_a_resize()
+    {
+        var text = MarqueeText(out var label);
+        Send(text, "SendLoaded");
+        Send(text, "SendUnloaded");
+
+        ((IView)label).Arrange(new Rect(0, 0, 400, 100));
+
+        text.IsFallbackMarqueeRunning.ShouldBeFalse();
     }
 }

@@ -76,6 +76,7 @@ class VideoTextPlatformView : FrameLayout, IVideoTextureOutput
     readonly APaint textPaint = new(PaintFlags.AntiAlias) { Color = Android.Graphics.Color.White, TextAlign = APaint.Align.Center };
     readonly APaint maskPaint = new();
     readonly PorterDuffXfermode knockout = new(PorterDuff.Mode.DstOut!);
+    readonly PorterDuffXfermode clipToText = new(PorterDuff.Mode.DstIn!);
     readonly Matrix transform = new();
     IReadOnlyList<string> lines = [];
     double fontSize;
@@ -91,7 +92,7 @@ class VideoTextPlatformView : FrameLayout, IVideoTextureOutput
     {
         this.textureView = new TextureView(context);
         this.AddView(this.textureView, new LayoutParams(ViewGroup.LayoutParams.MatchParent, ViewGroup.LayoutParams.MatchParent));
-        this.maskPaint.SetXfermode(new PorterDuffXfermode(PorterDuff.Mode.DstIn!));
+        this.maskPaint.SetXfermode(this.clipToText);
     }
 
     public TextureView TextureView => this.textureView;
@@ -226,6 +227,7 @@ class VideoTextPlatformView : FrameLayout, IVideoTextureOutput
             this.textPaint.Dispose();
             this.maskPaint.Dispose();
             this.knockout.Dispose();
+            this.clipToText.Dispose();
             this.transform.Dispose();
         }
 

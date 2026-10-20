@@ -222,20 +222,24 @@ public partial class VideoText : IAsyncDisposable
     {
         this.disposed = true;
 
-        if (this.module is not null)
+        try
         {
-            try
+            if (this.module is not null)
             {
-                await this.module.InvokeVoidAsync("stop", this.containerEl).ConfigureAwait(true);
+                await this.module.InvokeVoidAsync("stop", this.containerEl, this.videoEl).ConfigureAwait(true);
                 await this.module.DisposeAsync().ConfigureAwait(true);
             }
-            catch (JSDisconnectedException)
-            {
-                // circuit already gone (Blazor Server)
-            }
         }
-
-        this.selfRef?.Dispose();
-        GC.SuppressFinalize(this);
+        catch (JSDisconnectedException)
+        {
+            // circuit already gone (Blazor Server)
+        }
+        finally
+        {
+            // whatever the JS side threw, the reference must not pin this component
+            this.selfRef?.Dispose();
+            this.selfRef = null;
+            GC.SuppressFinalize(this);
+        }
     }
 }

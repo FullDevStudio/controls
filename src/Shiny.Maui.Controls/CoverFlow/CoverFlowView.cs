@@ -407,7 +407,9 @@ public class CoverFlowView : ContentView
     /// <summary>Lets a headless test start real animations, which otherwise need a handler.</summary>
     internal bool AnimateWithoutHandler { get; set; }
 
-    bool CanAnimate => this.Handler is not null || this.AnimateWithoutHandler;
+    // Only while loaded: a bound CurrentPosition changed after the page is popped would otherwise hold
+    // the view on the window's ticker until the move finished.
+    bool CanAnimate => (this.Handler is not null && this.IsLoaded) || this.AnimateWithoutHandler;
 
     /// <summary>Where the centre cover sits when it is at rest, in stage coordinates.</summary>
     internal Point StageCentre => this.stageCentre;
@@ -636,7 +638,18 @@ public class CoverFlowView : ContentView
         slot.SetBindingContextFor(null);
         AutomationIds.Set(slot, null);
         this.pool.Add(slot);
+
+        // Slots are reused by template reference, so a selector that hands back a new DataTemplate
+        // every call never gets a match: without a cap every move would add slots that are never freed.
+        if (this.pool.Count > this.PoolLimit)
+            this.pool.RemoveRange(0, this.pool.Count - this.PoolLimit);
     }
+
+    /// <summary>Two full windows of covers - room for a couple of templates before the oldest go.</summary>
+    internal int PoolLimit => 2 * ((2 * (Math.Max(1, this.VisibleItems) + 1)) + 1);
+
+    /// <summary>The released covers waiting to be reused.</summary>
+    internal int PooledCount => this.pool.Count;
 
     // By the item's index rather than the virtual one, so an infinite loop's covers keep the names a
     // test knows from the data.

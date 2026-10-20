@@ -262,6 +262,22 @@ public sealed class OfficeDocumentStoreTests : IDisposable
         => DocumentExport.CanWrite(OfficeFileFormats.Csv).ShouldBeFalse();
 
     [Fact]
+    public async Task ACancelledOpenDoesNotLeaveTheFileOpen()
+    {
+        var store = this.Store();
+        var session = new OfficeDocumentSession(OfficeApp.Word);
+        var saved = await session.SaveAsync(store, OfficeFileFormats.Docx, OfficeFileAction.Save, "Report", Text("doc"));
+        using var cancelled = new CancellationTokenSource();
+        await cancelled.CancelAsync();
+
+        // The recent-list update after the file is opened is what sees the cancellation.
+        await Should.ThrowAsync<OperationCanceledException>(() => store.OpenReadAsync(saved!, cancelled.Token));
+
+        // A handle left behind would hold its share lock until a finalizer ran.
+        Should.NotThrow(() => new FileStream(saved!.Id, FileMode.Open, FileAccess.ReadWrite, FileShare.None).Dispose());
+    }
+
+    [Fact]
     public void TheDisplayNameDropsTheExtension()
     {
         new OfficeDocumentRef("1", "Budget 2026.xlsx").DisplayName.ShouldBe("Budget 2026");

@@ -50,13 +50,40 @@ static class AutomationIds
     /// Runs <paramref name="apply"/> now and every time <paramref name="owner"/>'s id changes. For parts
     /// that come and go (generated items, a swapped template), where <see cref="Link"/> cannot hold them.
     /// </summary>
-    public static void Track(Element owner, Action apply)
+    /// <returns>
+    /// The subscription. A control tracking its own id can ignore it: the handler lives and dies with the
+    /// control. Anything tracking <em>another</em> element's id must dispose it, or that element keeps it
+    /// (and everything <paramref name="apply"/> captures) alive for as long as it lives itself.
+    /// </returns>
+    public static IDisposable Track(Element owner, Action apply)
     {
         apply();
-        owner.PropertyChanged += (_, e) =>
+        return new Tracking(owner, apply);
+    }
+
+    sealed class Tracking : IDisposable
+    {
+        Element? owner;
+        readonly Action apply;
+
+        public Tracking(Element owner, Action apply)
+        {
+            this.owner = owner;
+            this.apply = apply;
+            owner.PropertyChanged += this.OnPropertyChanged;
+        }
+
+        void OnPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
             if (e.PropertyName == Element.AutomationIdProperty.PropertyName)
-                apply();
-        };
+                this.apply();
+        }
+
+        public void Dispose()
+        {
+            if (this.owner is { } o)
+                o.PropertyChanged -= this.OnPropertyChanged;
+            this.owner = null;
+        }
     }
 }

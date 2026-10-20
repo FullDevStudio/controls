@@ -58,7 +58,16 @@ public class FileSystemOfficeDocumentStore : IOfficeDocumentStore
     {
         ArgumentNullException.ThrowIfNull(document);
         var stream = new FileStream(document.Id, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, useAsync: true);
-        await this.TouchAsync(document.Id, null, cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await this.TouchAsync(document.Id, null, cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            // Never handed out, so nobody else will close it - and an open handle blocks the next save over it.
+            await stream.DisposeAsync().ConfigureAwait(false);
+            throw;
+        }
         return stream;
     }
 

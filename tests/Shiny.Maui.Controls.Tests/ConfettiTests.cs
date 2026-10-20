@@ -113,6 +113,19 @@ public class ConfettiTests
 
 
     [Fact]
+    public void ACanvasThatWasNeverLaidOutDoesNotTick()
+    {
+        // A burst fired at a page that was already popped: the window-wide ticker must not hold it.
+        var canvas = new ConfettiCanvas(new Random(5));
+
+        _ = canvas.Fire([new ConfettiShot(TimeSpan.Zero, new ConfettiOptions { ParticleCount = 5 })]);
+
+        canvas.IsRunning.ShouldBeFalse();
+        canvas.Simulation.IsEmpty.ShouldBeTrue();
+    }
+
+
+    [Fact]
     public void OriginsAreFractionsOfTheCanvas()
     {
         var canvas = new ConfettiCanvas(new Random(6));

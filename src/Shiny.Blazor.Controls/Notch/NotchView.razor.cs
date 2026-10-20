@@ -230,17 +230,25 @@ public partial class NotchView
     public async ValueTask DisposeAsync()
     {
         disposed = true;
-        if (module is not null)
+        var loaded = module;
+        module = null;
+        if (loaded is not null)
         {
+            // The module is released whether or not the JS teardown got through: a failed dispose call
+            // must not leave the module reference tracked for the life of the circuit.
             try
             {
-                await module.InvokeVoidAsync("dispose", root);
-                await module.DisposeAsync();
+                await loaded.InvokeVoidAsync("dispose", root);
             }
             catch (JSDisconnectedException) { }
             catch (JSException) { }
+            catch (ObjectDisposedException) { }
+            catch (OperationCanceledException) { }
+
+            await loaded.ReleaseLateAsync();
         }
         selfRef?.Dispose();
+        selfRef = null;
     }
 }
 

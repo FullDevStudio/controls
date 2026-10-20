@@ -1,4 +1,5 @@
-// Shiny cover flow engine. One instance per stage element.
+// Shiny cover flow engine. One instance per stage element, keyed by an id from C#: by the time a
+// dispose arrives the stage may already be out of the DOM, and a removed element arrives as null.
 //
 // The whole control is one continuous scalar, `pos`: the (fractional) index sitting in the centre.
 // Every slide's transform is a function of `index - pos`, so a drag, a settle animation and a jump
@@ -9,13 +10,14 @@
 // C# callbacks: OnCenterChanged(virtualIndex) while moving, OnSettled(virtualIndex) when motion
 // stops, OnItemClicked(virtualIndex) for a tap on the centre slide.
 
-const states = new WeakMap();
+const states = new Map();
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const now = () => performance.now();
 const easeOut = t => 1 - Math.pow(1 - t, 3);
 
-export function init(root, stage, dotnetRef, options) {
+export function init(id, root, stage, dotnetRef, options) {
+    dispose(id);
     if (!root || !stage) return;
 
     const state = {
@@ -38,7 +40,7 @@ export function init(root, stage, dotnetRef, options) {
         wheelTimer: 0,
         reducedMotion: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
     };
-    states.set(stage, state);
+    states.set(id, state);
 
     collect(state);
     apply(state);
@@ -46,8 +48,8 @@ export function init(root, stage, dotnetRef, options) {
     root.setAttribute('data-ready', '');
 }
 
-export function update(stage, options) {
-    const state = states.get(stage);
+export function update(id, options) {
+    const state = states.get(id);
     if (!state) return;
     state.opts = normalize(options);
     collect(state);
@@ -67,29 +69,29 @@ export function update(stage, options) {
 }
 
 /** Move to a virtual index; `animate=false` jumps without reporting a settle back. */
-export function goTo(stage, index, animate) {
-    const state = states.get(stage);
+export function goTo(id, index, animate) {
+    const state = states.get(id);
     if (!state) return;
     animateTo(state, clampIndex(state, index), animate !== false);
 }
 
-export function next(stage) {
-    const state = states.get(stage);
+export function next(id) {
+    const state = states.get(id);
     if (state) animateTo(state, clampIndex(state, currentTarget(state) + 1), true);
 }
 
-export function prev(stage) {
-    const state = states.get(stage);
+export function prev(id) {
+    const state = states.get(id);
     if (state) animateTo(state, clampIndex(state, currentTarget(state) - 1), true);
 }
 
-export function dispose(stage) {
-    const state = states.get(stage);
+export function dispose(id) {
+    const state = states.get(id);
     if (!state) return;
     cancelAnimationFrame(state.raf);
     clearTimeout(state.wheelTimer);
     state.unwire?.();
-    states.delete(stage);
+    states.delete(id);
 }
 
 function normalize(o) {

@@ -32,10 +32,24 @@ public sealed class BrowserOfficeDocumentStore(IJSRuntime js) : IOfficeDocumentS
     /// <summary>The largest file Browse will read, in bytes. 100 MB by default.</summary>
     public long MaxFileSize { get; init; } = 100 * 1024 * 1024;
 
-    IJSObjectReference? module;
+    // The task, not the reference: two calls racing the first import share one, so none is left undisposed.
+    Task<IJSObjectReference>? module;
 
-    async ValueTask<IJSObjectReference> ModuleAsync()
-        => this.module ??= await js.InvokeAsync<IJSObjectReference>("import", "./_content/Shiny.Blazor.Controls.Office/officeFiles.js");
+    async Task<IJSObjectReference> ModuleAsync()
+    {
+        var pending = this.module ??= js.InvokeAsync<IJSObjectReference>("import", "./_content/Shiny.Blazor.Controls.Office/officeFiles.js").AsTask();
+        try
+        {
+            return await pending;
+        }
+        catch
+        {
+            // A failed import is not cached: the next call tries again.
+            if (ReferenceEquals(this.module, pending))
+                this.module = null;
+            throw;
+        }
+    }
 
     /// <inheritdoc />
     public async Task<OfficeDocumentRef?> PickOpenAsync(OfficeApp app, CancellationToken cancellationToken = default)
@@ -110,11 +124,18 @@ public sealed class BrowserOfficeDocumentStore(IJSRuntime js) : IOfficeDocumentS
         {
             try
             {
-                await m.DisposeAsync();
+                await (await m).DisposeAsync();
             }
             catch (JSDisconnectedException)
             {
                 // The circuit is already gone; so is the module.
+            }
+            catch (JSException)
+            {
+                // The import itself failed; there is nothing to release.
+            }
+            catch (TaskCanceledException)
+            {
             }
         }
     }

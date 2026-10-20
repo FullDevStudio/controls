@@ -26,10 +26,15 @@ public partial class TapTargetHandler : ContentViewHandler
 
     static TapTargetHandler()
     {
-        TapTargetMapper.AppendToMapping(nameof(IView.Semantics), (handler, _) =>
+        // Wrapped rather than appended: on Android MAUI's own mapping looks for its delegate on top of
+        // the view, and finding ours there it wraps ours again — one more pair of delegates on every
+        // semantics change. Ours is taken off first, so MAUI updates its own in place.
+        TapTargetMapper.ModifyMapping<IContentView, IContentViewHandler>(nameof(IView.Semantics), (handler, view, previous) =>
         {
-            if (handler is TapTargetHandler tapTarget)
-                tapTarget.ApplyButtonSemantics();
+            var tapTarget = handler as TapTargetHandler;
+            tapTarget?.RemoveButtonSemantics();
+            previous?.Invoke(handler, view);
+            tapTarget?.ApplyButtonSemantics();
         });
     }
 
@@ -40,5 +45,8 @@ public partial class TapTargetHandler : ContentViewHandler
     internal ITapTarget? Target => this.VirtualView as ITapTarget;
 
     partial void ApplyButtonSemantics();
+
+    /// <summary>Takes off what <see cref="ApplyButtonSemantics"/> put on, where it wraps something of MAUI's.</summary>
+    partial void RemoveButtonSemantics();
 }
 #endif

@@ -105,7 +105,11 @@ sealed class DesktopNotchWindowService : INotchWindowService, IDisposable
             }
             else
             {
+                // Swapping the page does not tear down the old one's handlers, and every swap builds a
+                // whole new page: without this each one leaves its native view tree behind.
+                var previous = this.window.Page;
                 this.window.Page = page;
+                previous?.DisconnectHandlers();
             }
 
             this.notch.Refresh();
@@ -207,6 +211,10 @@ sealed class DesktopNotchWindowService : INotchWindowService, IDisposable
         catch (OperationCanceledException)
         {
             this.logger?.LogError("Timed out waiting for the notch window handler. The notch will not show on this host.");
+
+            // A handler arriving after this would otherwise hand a closed window to platformWindow.
+            w.HandlerChanged -= OnHandlerChanged;
+            this.platformWindow = null;
             this.window = null;
             try { app.CloseWindow(w); }
             catch (Exception ex) { this.logger?.LogDebug(ex, "Closing the notch window failed"); }

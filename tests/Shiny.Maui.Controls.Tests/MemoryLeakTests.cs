@@ -125,6 +125,9 @@ public class MemoryLeakTests
         nameof(TimelineView),
         nameof(TableView),
         nameof(FabMenu),
+        nameof(AvatarGroup),
+        nameof(CoverFlowView),
+        nameof(Marquee),
     };
 
 
@@ -137,6 +140,9 @@ public class MemoryLeakTests
         nameof(TimelineView) => new TimelineView { ItemsSource = source },
         nameof(TableView) => new TableView { ItemsSource = source },
         nameof(FabMenu) => new FabMenu { Items = new ObservableCollection<FabMenuItem>() },
+        nameof(AvatarGroup) => new AvatarGroup { ItemsSource = source },
+        nameof(CoverFlowView) => new CoverFlowView { ItemsSource = source },
+        nameof(Marquee) => new Marquee { ItemTemplate = new DataTemplate(() => new Label()), ItemsSource = source },
         _ => throw new ArgumentOutOfRangeException(nameof(name))
     };
 
@@ -195,6 +201,45 @@ public class MemoryLeakTests
     }
 
 
+    [Fact]
+    public void AnAvatarGroupStillFollowsItsCollectionAfterACollection()
+    {
+        var source = new ObservableCollection<string> { "Ada Lovelace" };
+        var group = new AvatarGroup { ItemsSource = source };
+
+        Collect();
+        source.Add("Alan Turing");
+
+        group.VisibleAvatars.Count.ShouldBe(2);
+    }
+
+
+    sealed class FreshTemplateSelector : DataTemplateSelector
+    {
+        // A new template on every call: the pool can never match one, so only its cap bounds it.
+        protected override DataTemplate OnSelectTemplate(object item, BindableObject container)
+            => new(() => new Label());
+    }
+
+
+    [Fact]
+    public void ACoverFlowSelectorThatNeverRepeatsATemplateDoesNotGrowThePool()
+    {
+        var view = new CoverFlowView
+        {
+            ItemTemplate = new FreshTemplateSelector(),
+            ItemsSource = Enumerable.Range(0, 40).Select(i => $"Item {i}").ToList()
+        };
+
+        for (var i = 0; i < 40; i++)
+            view.GoTo(i);
+        for (var i = 39; i >= 0; i--)
+            view.GoTo(i);
+
+        view.PooledCount.ShouldBeLessThanOrEqualTo(view.PoolLimit);
+    }
+
+
     // ---------------------------------------------------------------------------------------------
     // ProgressLine (the singleton service's line)
     // ---------------------------------------------------------------------------------------------
@@ -243,6 +288,43 @@ public class MemoryLeakTests
 
 
     [Fact]
+    public void AMarqueeStillFollowsItsCollectionAfterACollection()
+    {
+        var source = new ObservableCollection<string> { "a" };
+        var marquee = new Marquee { ItemTemplate = new DataTemplate(() => new Label()), ItemsSource = source };
+
+        Collect();
+        source.Add("b");
+
+        marquee.GroupSize.ShouldBe(2);
+    }
+
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    static WeakReference OpenARangePickerThenLeaveThePage()
+    {
+        var picker = new DateRangePicker();
+        var page = new ContentPage { Content = new VerticalStackLayout { Children = { picker } } };
+
+        picker.Open();
+        picker.IsOpen.ShouldBeTrue();
+        SendUnloaded(picker);
+        return new WeakReference(page);
+    }
+
+
+    [Fact]
+    public void ARangePickerLeftOpenDoesNotKeepItsPageAlive()
+    {
+        // An open popup claims the back button in a static list; leaving the page must give it up.
+        var page = OpenARangePickerThenLeaveThePage();
+        Collect();
+
+        page.IsAlive.ShouldBeFalse();
+    }
+
+
+    [Fact]
     public void UnloadingAProgressBarStopsItsPulseTimer()
     {
         var bar = new ProgressBar { PulseInterval = TimeSpan.FromSeconds(1), PulseEnabled = true };
@@ -252,5 +334,71 @@ public class MemoryLeakTests
         SendUnloaded(bar);
 
         timer.IsRunning.ShouldBeFalse();
+    }
+
+
+    // ---------------------------------------------------------------------------------------------
+    // AutomationIds.Track on another element's id (the chat's rows)
+    // ---------------------------------------------------------------------------------------------
+
+    static Chat.ChatMessage BubbleMessage(string id) => new(
+        id, null, "them", "hello", null,
+        Chat.MessageStatus.Sent, null, DateTimeOffset.Now, null, [], []);
+
+
+    [Fact]
+    public void DisposingAnIdTrackingStopsFollowingTheOwner()
+    {
+        var owner = new ContentView();
+        var calls = 0;
+        var tracking = AutomationIds.Track(owner, () => calls++);
+        calls.ShouldBe(1);
+
+        owner.AutomationId = "First";
+        calls.ShouldBe(2);
+
+        tracking.Dispose();
+        tracking.Dispose();
+        owner.SetValue(Element.AutomationIdProperty, "Second");
+        calls.ShouldBe(2);
+    }
+
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    static WeakReference LoadThenUnloadABubble(Chat.ChatView chat)
+    {
+        var bubble = new Chat.Internal.ChatBubbleView(chat, isMe: false) { BindingContext = BubbleMessage("1") };
+        SendUnloaded(bubble);
+        return new WeakReference(bubble);
+    }
+
+
+    [Fact]
+    public void AnUnloadedChatBubbleIsNotKeptAliveByTheChat()
+    {
+        // The row tracks the chat's id, and the chat outlives every row the CollectionView builds.
+        var chat = new Chat.ChatView { AutomationId = "Chat" };
+
+        var bubble = LoadThenUnloadABubble(chat);
+        Collect();
+
+        bubble.IsAlive.ShouldBeFalse();
+        GC.KeepAlive(chat);
+    }
+
+
+    [Fact]
+    public void ARecycledChatBubbleFollowsTheChatsIdAgainOnceReloaded()
+    {
+        var chat = new Chat.ChatView { AutomationId = "Chat" };
+        var bubble = new Chat.Internal.ChatBubbleView(chat, isMe: false) { BindingContext = BubbleMessage("7") };
+        bubble.TextLabel.AutomationId.ShouldBe("Chat" + Chat.ChatView.MessageTextAutomationIdSuffix + "_7");
+
+        SendUnloaded(bubble);
+        chat.SetValue(Element.AutomationIdProperty, "Renamed");
+        bubble.TextLabel.AutomationId.ShouldBe("Chat" + Chat.ChatView.MessageTextAutomationIdSuffix + "_7");
+
+        Send(bubble, "SendLoaded");
+        bubble.TextLabel.AutomationId.ShouldBe("Renamed" + Chat.ChatView.MessageTextAutomationIdSuffix + "_7");
     }
 }

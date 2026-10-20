@@ -39,6 +39,8 @@ function rgba(color, alpha = 1) {
             const m = v.match(/[\d.]+/g) || [0, 0, 0, 1];
             c = [+m[0], +m[1], +m[2], m.length > 3 ? +m[3] : 1];
         }
+        // Capped: an app that animates its colours would otherwise add a new entry for every frame.
+        if (colorCache.size >= 256) colorCache.clear();
         colorCache.set(color, c);
     }
     return `rgba(${c[0]},${c[1]},${c[2]},${clamp(c[3] * alpha, 0, 1)})`;

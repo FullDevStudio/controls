@@ -264,12 +264,20 @@ sealed class MacTrayIcon : TrayIconBase
         var title = new NSMutableAttributedString(label + "  ", new NSStringAttributes { Font = NSFont.MenuFontOfSize(0) }.Dictionary);
         var fill = AppleTrayDrawing.ToneColor(pill.Tone, NSColor.ControlAccent.CGColor);
         var (cg, size) = AppleTrayDrawing.RenderPill(pill.Text, fill, 2);
-        var attachment = new NSTextAttachment
+
+        // The attachment and the attributed title retain what they need natively; our wrappers (and
+        // the CGImage, which the NSImage retains) are released now rather than left to the finalizer.
+        using (cg)
+        using (var image = new NSImage(cg, size))
+        using (var attachment = new NSTextAttachment
         {
-            Image = new NSImage(cg, size),
+            Image = image,
             Bounds = new CGRect(0, AppleTrayDrawing.PillBaselineOffset(), size.Width, size.Height)
-        };
-        title.Append(NSAttributedString.FromAttachment(attachment));
+        })
+        using (var pillString = NSAttributedString.FromAttachment(attachment))
+        {
+            title.Append(pillString);
+        }
         return title;
     }
 
