@@ -151,7 +151,7 @@ MotionIconLibrary.Register(icon);   // now available as Icon="toggle" everywhere
 7. **`Interval` is folded into the animation, not run off a timer**, so a looping icon needs nothing but `animation-iteration-count: infinite` on the web. Don't try to schedule replays yourself.
 8. **Give Blazor icons a `Title`** when they carry meaning; without one they are correctly hidden from screen readers as decoration.
 9. **Nothing plays before the view is loaded on MAUI.** Setting `IsPlaying` from an implicit `Style` — which MAUI applies from inside the base constructor — records the intent and starts it at `Loaded`, so it never reaches for a dispatcher that does not exist yet.
-10. **A reload keeps the kind of play on MAUI.** Unloaded then Loaded mid-play (a re-parented view, a tab bar moving onto the next page) restarts a finite `Play()` or `Appear` for the same `RepeatCount`, and it still ends; only a bound `IsPlaying` or a `Loop` comes back looping. There is no need to call `StopAtCycleEnd()` to make a finite play end.
+10. **On MAUI only the app's `IsPlaying` survives an unload.** A play the icon started itself (`Play()`, `Loop()`, Press, Hover, `Appear`) that is cut off by Unloaded ends at rest with `IsPlaying` false and is not replayed at the next Loaded (`Appear` plays again, as on every load). `IsPlaying = true` from code, a `Binding` or a `Style`, and `Trigger="Loop"`, resume looping after a reload. To keep an icon animating across navigation, set `IsPlaying`; to animate it on a new parent, call `Play()` there. Don't add `StopAtCycleEnd()` workarounds to make a finite play end.
 
 ## Channels
 

@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Reflection;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
@@ -329,12 +330,13 @@ public class MotionIconPlaybackTests
         view.Stop();
     }
 
-    // Unloaded then Loaded mid-play: a finite play comes back finite. IsPlaying is still true across
-    // the gap, and Loaded used to read that as the busy flag and loop forever — which is what a tab
-    // bar's icons did, because the bar is moved onto the next page right after it plays the icon.
+    // Unloaded mid-play. IsPlaying used to stay true across the gap, and Loaded reads a bare IsPlaying
+    // as the app's busy flag, so a finite play came back looping forever — what a tab bar's icons
+    // did, because the bar is moved onto the next page right after it plays the icon. Now only the
+    // app's IsPlaying survives an unload; a play the view started itself ends there, at rest.
 
     [Fact]
-    public void AFinitePlayCutOffByAReloadStillEnds()
+    public void AFinitePlayCutOffByAnUnloadEndsAtRestAndIsNotReplayed()
     {
         _ = new Application();
 
@@ -343,27 +345,27 @@ public class MotionIconPlaybackTests
             Icon = "loader",
             Trigger = MotionTrigger.Manual,
             RepeatCount = 1,
-            Duration = TimeSpan.FromMilliseconds(20)
+            Duration = TimeSpan.FromSeconds(1)
         };
         try
         {
             view.OnLoadedInternal();
-            view.Play();
-
-            view.OnUnloadedInternal();
-            view.OnLoadedInternal();
-
-            view.PlayIterations.ShouldBe(1d);
-            view.IsPlaying.ShouldBeTrue();
-
-            var completed = false;
-            view.Completed += (_, _) => completed = true;
+            var play = view.PlayAsync();
 
             var timer = TimerOf(view);
             Frame(timer);
+            view.Progress.ShouldBeGreaterThan(0d);
 
-            completed.ShouldBeTrue();
+            view.OnUnloadedInternal();
+
             view.IsPlaying.ShouldBeFalse();
+            view.Progress.ShouldBe(0d);
+            play.IsCompleted.ShouldBeTrue();
+
+            view.OnLoadedInternal();
+
+            view.IsPlaying.ShouldBeFalse();
+            MotionTicker.For(view)!.IsRunning.ShouldBeFalse();
 
             var writes = 0;
             view.PropertyChanged += (_, e) =>
@@ -372,7 +374,6 @@ public class MotionIconPlaybackTests
                     writes++;
             };
 
-            Frame(timer);
             Frame(timer);
 
             writes.ShouldBe(0);
@@ -385,7 +386,7 @@ public class MotionIconPlaybackTests
     }
 
     [Fact]
-    public void AnAppearPlayCutOffByAReloadStillEnds()
+    public void AnAppearPlayCutOffByAnUnloadEndsAndAppearsAgainOnTheNextLoad()
     {
         _ = new Application();
 
@@ -402,8 +403,11 @@ public class MotionIconPlaybackTests
             view.IsPlaying.ShouldBeTrue();
 
             view.OnUnloadedInternal();
-            view.OnLoadedInternal();
+            view.IsPlaying.ShouldBeFalse();
 
+            // Appear plays on every load, as it does after a play that ran to its end — and it
+            // is still the RepeatCount play, not a loop.
+            view.OnLoadedInternal();
             view.PlayIterations.ShouldBe(1d);
 
             Frame(TimerOf(view));
@@ -417,13 +421,13 @@ public class MotionIconPlaybackTests
     }
 
     [Fact]
-    public void ClearingIsPlayingWhileUnloadedDropsTheCarriedPlay()
+    public void ClearingIsPlayingWhileUnloadedDropsTheAppsLoop()
     {
         _ = new Application();
 
         var view = new MotionIconView { Icon = "loader", Trigger = MotionTrigger.Manual, RepeatCount = 1 };
         view.OnLoadedInternal();
-        view.Play();
+        view.IsPlaying = true;
 
         view.OnUnloadedInternal();
         view.IsPlaying = false;
@@ -431,6 +435,99 @@ public class MotionIconPlaybackTests
 
         view.IsPlaying.ShouldBeFalse();
         MotionTicker.For(view)!.IsRunning.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void SettingIsPlayingDuringAFinitePlayHandsItToTheApp()
+    {
+        _ = new Application();
+
+        var view = new MotionIconView
+        {
+            Icon = "loader",
+            Trigger = MotionTrigger.Manual,
+            RepeatCount = 1,
+            Duration = TimeSpan.FromMilliseconds(20)
+        };
+        try
+        {
+            view.OnLoadedInternal();
+            view.Play();
+
+            // Already true, so no property change: the write itself has to count.
+            view.IsPlaying = true;
+
+            double.IsPositiveInfinity(view.PlayIterations).ShouldBeTrue();
+
+            Frame(TimerOf(view));
+            view.IsPlaying.ShouldBeTrue();
+
+            view.OnUnloadedInternal();
+            view.IsPlaying.ShouldBeTrue();
+
+            view.OnLoadedInternal();
+            double.IsPositiveInfinity(view.PlayIterations).ShouldBeTrue();
+        }
+        finally
+        {
+            view.Stop();
+        }
+    }
+
+    [Fact]
+    public void ABindingClearingIsPlayingStopsAPlayTheViewStarted()
+    {
+        _ = new Application();
+
+        var busy = new BusyFlag();
+        var view = new MotionIconView
+        {
+            Icon = "loader",
+            Trigger = MotionTrigger.Manual,
+            RepeatCount = 1,
+            Duration = TimeSpan.FromSeconds(1),
+            BindingContext = busy
+        };
+        view.SetBinding(MotionIconView.IsPlayingProperty, nameof(BusyFlag.IsBusy));
+
+        try
+        {
+            view.OnLoadedInternal();
+            view.Play();
+
+            // IsPlaying binds two-way by default, so the view's own play shows on the source.
+            busy.IsBusy.ShouldBeTrue();
+
+            busy.IsBusy = false;
+
+            view.IsPlaying.ShouldBeFalse();
+            view.Progress.ShouldBe(0d);
+            MotionTicker.For(view)!.IsRunning.ShouldBeFalse();
+        }
+        finally
+        {
+            view.Stop();
+        }
+    }
+
+    sealed class BusyFlag : INotifyPropertyChanged
+    {
+        bool isBusy;
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        public bool IsBusy
+        {
+            get => this.isBusy;
+            set
+            {
+                if (this.isBusy == value)
+                    return;
+
+                this.isBusy = value;
+                this.PropertyChanged?.Invoke(this, new(nameof(this.IsBusy)));
+            }
+        }
     }
 
     [Fact]
@@ -449,6 +546,8 @@ public class MotionIconPlaybackTests
         view.IsPlaying = true;
 
         view.OnUnloadedInternal();
+        view.IsPlaying.ShouldBeTrue();
+
         view.OnLoadedInternal();
 
         double.IsPositiveInfinity(view.PlayIterations).ShouldBeTrue();
@@ -488,7 +587,7 @@ public class MotionIconPlaybackTests
 
     // The ticker is shared per dispatcher and created once per process, so the constructor's
     // Timers.Clear() has usually dropped it from the list by the time a test runs.
-    static TestDispatcher.ControllableTimer TimerOf(MotionIconView view)
+    internal static TestDispatcher.ControllableTimer TimerOf(MotionIconView view)
     {
         var ticker = MotionTicker.For(view)!;
         var field = typeof(MotionTicker).GetField("timer", BindingFlags.Instance | BindingFlags.NonPublic)!;
@@ -498,7 +597,7 @@ public class MotionIconPlaybackTests
 
     // The ticker advances by real elapsed time (clamped to 250 ms), so one frame after a short wait
     // carries a 20 ms cycle past its end.
-    static void Frame(TestDispatcher.ControllableTimer timer)
+    internal static void Frame(TestDispatcher.ControllableTimer timer)
     {
         Thread.Sleep(60);
         timer.Fire();

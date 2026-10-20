@@ -67,6 +67,14 @@ public partial class ShinyTabBar : Grid
     readonly Label centerLabel;
 
     View? centerIconView;
+
+    /// <summary>
+    /// The selected tab's icon while the play the bar gave it has not finished. A play the icon
+    /// started itself ends at rest when the icon is unloaded, and in a Shell the bar is moved onto
+    /// the next page straight after it plays the new tab's icon — so the bar replays it once it has
+    /// landed. See <see cref="ReplayIconInFlight"/>.
+    /// </summary>
+    MotionIconView? iconInFlight;
     bool suppressSelectionSync;
     int menuToken;
 
@@ -216,9 +224,7 @@ public partial class ShinyTabBar : Grid
             this.OnBarSizeChanged();
         };
 
-        // Loaded as well as SizeChanged: a bar that is measured once and never resized still needs
-        // the inset it could not read from the constructor.
-        this.Loaded += (_, _) => this.RefreshBottomInset();
+        this.Loaded += (_, _) => this.OnLoadedInternal();
 
         this.RebuildCells();
 
@@ -398,7 +404,7 @@ public partial class ShinyTabBar : Grid
         this.ApplyCenterAvailability();
 
         if (this.AnimateIcons && newItem is not null && this.FindCell(newItem) is { } cell)
-            TabIcons.Play(cell.IconView);
+            this.PlayTabIcon(cell);
 
         this.SelectionChanged?.Invoke(this, new TabSelectionChangedEventArgs(oldIndex, newIndex, oldItem, newItem));
 
@@ -409,6 +415,71 @@ public partial class ShinyTabBar : Grid
 
 
     ShinyTabItem? ItemAt(int index) => index >= 0 && index < this.items.Count ? this.items[index] : null;
+
+
+    // Internal so tests can stand in for Loaded, which only a real handler raises.
+    internal void OnLoadedInternal()
+    {
+        // Loaded as well as SizeChanged: a bar that is measured once and never resized still needs
+        // the inset it could not read from the constructor.
+        this.RefreshBottomInset();
+        this.ReplayIconInFlight();
+    }
+
+
+    /// <summary>Plays a tab's icon for a selection or a reselect, if it is a motion icon.</summary>
+    void PlayTabIcon(TabCell cell)
+    {
+        this.ForgetIconInFlight();
+
+        if (cell.IconView is not MotionIconView icon)
+            return;
+
+        // Completed is raised only when the cycles run out, not when an unload cuts the play off -
+        // which is exactly the difference between "done" and "replay it on the new page".
+        icon.Completed += this.OnIconInFlightCompleted;
+        this.iconInFlight = icon;
+
+        icon.Play();
+    }
+
+
+    /// <summary>
+    /// Replays the selected tab's icon when the bar lands on a new parent before that icon's play
+    /// finished. A ShinyTabBarBehavior moves the one bar onto the next page right after the
+    /// selection changed, which unloads the icon mid-cycle and ends its play at rest; without this
+    /// the tap would show no animation at all.
+    /// </summary>
+    void ReplayIconInFlight()
+    {
+        if (this.iconInFlight is not { } icon || icon.IsPlaying)
+            return;
+
+        // Only the icon that is still the selected tab's: the selection or the cells may have
+        // changed while the bar was off the tree, and nothing else should start moving.
+        if (this.AnimateIcons
+            && this.SelectedItem is { } item
+            && this.FindCell(item) is { } cell
+            && ReferenceEquals(cell.IconView, icon))
+        {
+            this.PlayTabIcon(cell);
+            return;
+        }
+
+        this.ForgetIconInFlight();
+    }
+
+
+    void OnIconInFlightCompleted(object? sender, EventArgs e) => this.ForgetIconInFlight();
+
+
+    void ForgetIconInFlight()
+    {
+        if (this.iconInFlight is { } icon)
+            icon.Completed -= this.OnIconInFlightCompleted;
+
+        this.iconInFlight = null;
+    }
 
 
     /// <summary>
@@ -461,7 +532,7 @@ public partial class ShinyTabBar : Grid
             // Replaying the icon is the whole visible answer to a reselect, so it happens whether or
             // not the app handles the event.
             if (this.AnimateIcons)
-                TabIcons.Play(cell.IconView);
+                this.PlayTabIcon(cell);
 
             this.TabReselected?.Invoke(this, new TabReselectedEventArgs(index, cell.Item));
             return;
@@ -571,6 +642,9 @@ public partial class ShinyTabBar : Grid
     /// the gesture uses and nothing more.
     /// </remarks>
     internal void TapCellAt(int index) => this.OnCellTapped(this.cells[index]);
+
+    /// <summary>The icon view of the cell at <paramref name="index"/>. For tests.</summary>
+    internal View? IconViewAt(int index) => this.cells[index].IconView;
 
     /// <summary>The centre button's own view, so a test can assert it is (or is not) there.</summary>
     internal View CenterHost => this.centerHost;
