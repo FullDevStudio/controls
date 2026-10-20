@@ -186,8 +186,10 @@ sealed class KeyboardShortcutHost
         if (window == null)
         {
             // Out of the window: the engine lets go of the scope, and with it of the element. Back
-            // in a window — a tab or Shell switched back to, a page pushed again — Scope builds a
-            // fresh one from the collection.
+            // in a window — a Shell switched back to, a page pushed again, content the overlay root
+            // has just re-parented — Scope builds a fresh one from the collection. A Shell tab that
+            // is switched away never gets here: Shell keeps it in the window, so it is only switched
+            // off by Disappearing, and goes when its Shell does.
             if (this.scope is { } released)
             {
                 this.scope = null;

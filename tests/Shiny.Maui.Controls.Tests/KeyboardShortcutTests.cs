@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using Microsoft.Maui.Controls;
 using Shiny.Controls.Keyboard;
 using Shiny.Maui.Controls.Dialogs;
+using Shiny.Maui.Controls.Infrastructure;
 using Shouldly;
 using Xunit;
 
@@ -308,12 +309,161 @@ public class KeyboardShortcutTests
         KeyboardShortcutManager.Process(CtrlShift("F3"), window).ShouldBeFalse();
         KeyboardShortcutManager.Process(CtrlShift("F4"), window).ShouldBeFalse();
 
-        // A tab or Shell switched back to: the same page, the same collections, a fresh scope.
+        // A Shell switched back to, a page pushed again: the same page, the same collections, a fresh scope.
         window.Page = page;
         KeyboardShortcutManager.Process(CtrlShift("F3"), window).ShouldBeTrue();
         KeyboardShortcutManager.Process(CtrlShift("F4"), window).ShouldBeTrue();
 
         log.ShouldBe(["page", "page", "view"]);
+    }
+
+    static List<Window?> RecordWindows(VisualElement element)
+    {
+        var seen = new List<Window?>();
+        element.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(VisualElement.Window))
+                seen.Add(element.Window);
+        };
+        return seen;
+    }
+
+    [Fact]
+    public void A_view_keeps_its_shortcuts_and_precedence_when_the_overlay_root_moves_it()
+    {
+        // Installing the overlay root detaches the page's content and adds it back inside the root,
+        // so the view loses its window for a moment and its scope is released and rebuilt.
+        var log = new List<string>();
+        var view = new ContentView();
+        var page = new ContentPage { Content = view };
+
+        var pageShortcut = new KeyboardShortcut { Gesture = "Ctrl+Shift+F5" };
+        pageShortcut.Pressed += (_, _) => log.Add("page");
+        KeyboardShortcuts.GetShortcuts(page).Add(pageShortcut);
+
+        var viewShortcut = new KeyboardShortcut { Gesture = "Ctrl+Shift+F5" };
+        viewShortcut.Pressed += (_, _) => log.Add("view");
+        KeyboardShortcuts.GetShortcuts(view).Add(viewShortcut);
+
+        var viewOnly = new KeyboardShortcut { Gesture = "Ctrl+Shift+F6" };
+        viewOnly.Pressed += (_, _) => log.Add("view only");
+        KeyboardShortcuts.GetShortcuts(view).Add(viewOnly);
+
+        var window = new Window(page);
+        KeyboardShortcutManager.Process(CtrlShift("F5"), window).ShouldBeTrue();
+
+        var seen = RecordWindows(view);
+        PageOverlay.GetOrCreateRoot(page);
+
+        view.Parent.ShouldBeOfType<PageOverlay.ShinyOverlayRoot>();
+        seen.ShouldBe([null, window], "the re-parent should take the view out of the window and back");
+
+        KeyboardShortcutManager.Process(CtrlShift("F5"), window).ShouldBeTrue();
+        KeyboardShortcutManager.Process(CtrlShift("F6"), window).ShouldBeTrue();
+
+        // And the page still sits underneath: hiding the view hands the keys back to it.
+        view.IsVisible = false;
+        KeyboardShortcutManager.Process(CtrlShift("F5"), window).ShouldBeTrue();
+        KeyboardShortcutManager.Process(CtrlShift("F6"), window).ShouldBeFalse();
+
+        log.ShouldBe(["view", "view", "view only", "page"]);
+    }
+
+    [Fact]
+    public void A_modal_view_stays_modal_when_the_overlay_root_moves_it()
+    {
+        var log = new List<string>();
+        var dialog = new ContentView();
+        var page = new ContentPage { Content = new Grid { Children = { dialog } } };
+
+        var pageShortcut = new KeyboardShortcut { Gesture = "Ctrl+Shift+F7" };
+        pageShortcut.Pressed += (_, _) => log.Add("page");
+        KeyboardShortcuts.GetShortcuts(page).Add(pageShortcut);
+
+        var dialogShortcut = new KeyboardShortcut { Gesture = "Ctrl+Shift+F8" };
+        dialogShortcut.Pressed += (_, _) => log.Add("dialog");
+        KeyboardShortcuts.GetShortcuts(dialog).Add(dialogShortcut);
+        KeyboardShortcuts.SetIsModal(dialog, true);
+
+        var window = new Window(page);
+        KeyboardShortcutManager.Process(CtrlShift("F7"), window).ShouldBeFalse();
+
+        var seen = RecordWindows(dialog);
+        PageOverlay.GetOrCreateRoot(page);
+        seen.ShouldBe([null, window], "the re-parent should take the dialog out of the window and back");
+
+        KeyboardShortcutManager.Process(CtrlShift("F7"), window).ShouldBeFalse();
+        KeyboardShortcutManager.Process(CtrlShift("F8"), window).ShouldBeTrue();
+
+        log.ShouldBe(["dialog"]);
+
+        // The engine is shared: a modal left live would block the other tests' keys.
+        window.Page = new ContentPage();
+    }
+
+    [Fact]
+    public void IsModal_changed_while_out_of_the_window_applies_when_it_comes_back()
+    {
+        // With no scope to set it on, the change is only in the attached property — the rebuilt
+        // scope has to read it from there.
+        var hits = 0;
+        var dialog = new ContentView();
+        var page = new ContentPage { Content = new Grid { Children = { dialog } } };
+
+        var pageShortcut = new KeyboardShortcut { Gesture = "Ctrl+Shift+F9" };
+        pageShortcut.Pressed += (_, _) => hits++;
+        KeyboardShortcuts.GetShortcuts(page).Add(pageShortcut);
+        KeyboardShortcuts.SetIsModal(dialog, true);
+
+        var window = new Window(page);
+        KeyboardShortcutManager.Process(CtrlShift("F9"), window).ShouldBeFalse();
+
+        window.Page = new ContentPage();
+        KeyboardShortcuts.SetIsModal(dialog, false);
+        window.Page = page;
+
+        KeyboardShortcutManager.Process(CtrlShift("F9"), window).ShouldBeTrue();
+        hits.ShouldBe(1);
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    static (WeakReference Page, Window Window) ShowShellTabThenSwapOutShell()
+    {
+        var first = new ContentPage();
+        KeyboardShortcuts.GetShortcuts(first).Add(new KeyboardShortcut
+        {
+            Gesture = "Ctrl+Shift+F10",
+            Command = new Command(() => first.Title = "saved")
+        });
+
+        var tabBar = new TabBar();
+        tabBar.Items.Add(new Tab { Items = { new ShellContent { Content = first } } });
+        tabBar.Items.Add(new Tab { Items = { new ShellContent { Content = new ContentPage() } } });
+        var shell = new Shell { Items = { tabBar } };
+        var window = new Window(shell);
+        KeyboardShortcutManager.Process(CtrlShift("F10"), window).ShouldBeTrue();
+
+        // Switching tabs inside a Shell does not take the page out of the window: Shell keeps it
+        // under its ShellContent, so its scope stays registered (switched off by Disappearing on a
+        // device) for as long as the Shell itself holds the page.
+        tabBar.CurrentItem = tabBar.Items[1];
+        first.Window.ShouldBe(window);
+
+        // Replacing the Shell, which is what Shiny's SwitchShell does to Window.Page, takes every
+        // page it kept out of the window with it.
+        window.Page = new ContentPage();
+        return (new WeakReference(first), window);
+    }
+
+    [Fact]
+    public void A_Shell_tab_switched_away_is_let_go_with_its_Shell()
+    {
+        var (weak, window) = ShowShellTabThenSwapOutShell();
+
+        KeyboardShortcutManager.Process(CtrlShift("F10"), window).ShouldBeFalse();
+        Collect();
+
+        weak.IsAlive.ShouldBeFalse("the shortcut engine still holds the page of a Shell that left the window");
     }
 
     [Fact]
