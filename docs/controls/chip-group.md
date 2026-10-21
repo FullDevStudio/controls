@@ -79,7 +79,7 @@ At `MaxSelectionCount` a tap on an unselected chip does **nothing**. The oldest 
 
 > On Blazor, `SelectedItem` cannot express "nothing selected" for a **value type** — `default(TItem)` is a perfectly good item. Bind `SelectedItems`, or make the type nullable (`ChipGroup<int?>`).
 
-Anything selected that the source no longer offers is dropped: a selection with no chip to show for it is one the user cannot see and cannot undo. The reverse is kept: a `SelectedItem` that arrives before `ItemsSource` (XAML attribute order, or a view model that picks a default while building its list) is shown as soon as the items contain it.
+Anything selected that the source no longer offers is dropped: a selection with no chip to show for it is one the user cannot see and cannot undo. The reverse is kept: a `SelectedItem` that arrives before `ItemsSource` (XAML attribute order, or a view model that picks a default while building its list) is shown as soon as the items contain it. On MAUI a `null` `ItemsSource` counts as no source rather than an empty one: the selection is held and checked against the next items, so a binding context that briefly goes away (MAUI clears it while a view is re-parented) does not write `null` back into the view model. That holds for a view model that sets `ItemsSource` to `null` itself, too: it keeps its `SelectedItem` and `SelectedItems` until new items arrive and is pruned against those. An empty collection is a source with no items and drops the selection straight away; to have "no items" also mean "nothing selected", clear the selection with the source.
 
 ## What a chip shows
 

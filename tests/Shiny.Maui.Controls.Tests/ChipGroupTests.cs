@@ -1,6 +1,8 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
+using Shiny.Maui.Controls.Infrastructure;
 using Shouldly;
 using Xunit;
 
@@ -475,6 +477,259 @@ public class ChipGroupTests
 
         group.SelectedItems!.Count.ShouldBe(0);
         group.Chips.Any(x => x.IsSelected).ShouldBeFalse();
+    }
+
+
+    // ---------------------------------------------------------------------------------------------
+    // A binding context that goes away and comes back
+    // ---------------------------------------------------------------------------------------------
+
+    /// <summary>
+    /// A group bound the way a page binds it: both properties on the inherited context, in the order
+    /// the markup declares them.
+    /// </summary>
+    static (ChipGroup Group, ContentPage Page) BoundOnAPage(Model model, bool itemsSourceFirst)
+    {
+        var group = new ChipGroup { SelectionMode = ChipSelectionMode.Single };
+        if (itemsSourceFirst)
+        {
+            group.SetBinding(ChipGroup.ItemsSourceProperty, nameof(Model.Items));
+            group.SetBinding(ChipGroup.SelectedItemProperty, new Binding(nameof(Model.Selected), BindingMode.TwoWay));
+        }
+        else
+        {
+            group.SetBinding(ChipGroup.SelectedItemProperty, new Binding(nameof(Model.Selected), BindingMode.TwoWay));
+            group.SetBinding(ChipGroup.ItemsSourceProperty, nameof(Model.Items));
+        }
+
+        var page = new ContentPage { Content = new VerticalStackLayout { Children = { group } } };
+        page.BindingContext = model;
+        return (group, page);
+    }
+
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void APresetSelectionIsShownWhenThePageContextArrives(bool itemsSourceFirst)
+    {
+        var model = new Model();
+        var (group, _) = BoundOnAPage(model, itemsSourceFirst);
+
+        group.IsSelected("Second").ShouldBeTrue();
+        group.Chips[1].IsSelected.ShouldBeTrue();
+        model.Selected.ShouldBe("Second");
+    }
+
+
+    /// <summary>
+    /// Moving the page's content into the overlay root - which a progress line, a toast or a tooltip
+    /// does on first use - takes the inherited context away and brings it back. With ItemsSource
+    /// declared first, the null source used to publish a null selection while the SelectedItem binding
+    /// still pointed at the view model: the model lost its preset and no chip was selected afterwards.
+    /// </summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void ReParentingThePageContentKeepsTheSelection(bool itemsSourceFirst)
+    {
+        var model = new Model();
+        var (group, page) = BoundOnAPage(model, itemsSourceFirst);
+
+        PageOverlay.GetOrCreateRoot(page);
+
+        model.Selected.ShouldBe("Second");
+        group.SelectedItem.ShouldBe("Second");
+        group.IsSelected("Second").ShouldBeTrue();
+        group.Chips[1].IsSelected.ShouldBeTrue();
+        group.SelectedItems!.Cast<object>().ShouldBe(["Second"]);
+    }
+
+
+    /// <summary>
+    /// A view model that notifies like an [ObservableProperty] one and remembers every value the
+    /// binding wrote into it - so a test can tell "the binding re-applied a stale value" apart from
+    /// "something wrote null into the model".
+    /// </summary>
+    class RecordingModel : INotifyPropertyChanged
+    {
+        object? selected = "Second";
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        public ObservableCollection<string> Items { get; } = new(["First", "Second", "Third"]);
+
+        public List<object?> Writes { get; } = new();
+
+        public object? Selected
+        {
+            get => this.selected;
+            set
+            {
+                this.Writes.Add(value);
+                if (Equals(this.selected, value))
+                    return;
+
+                this.selected = value;
+                this.PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(this.Selected)));
+            }
+        }
+    }
+
+
+    static ChipGroup BoundInOrder(bool itemsSourceFirst)
+    {
+        var group = new ChipGroup { SelectionMode = ChipSelectionMode.Single };
+        if (itemsSourceFirst)
+        {
+            group.SetBinding(ChipGroup.ItemsSourceProperty, nameof(RecordingModel.Items));
+            group.SetBinding(ChipGroup.SelectedItemProperty, new Binding(nameof(RecordingModel.Selected), BindingMode.TwoWay));
+        }
+        else
+        {
+            group.SetBinding(ChipGroup.SelectedItemProperty, new Binding(nameof(RecordingModel.Selected), BindingMode.TwoWay));
+            group.SetBinding(ChipGroup.ItemsSourceProperty, nameof(RecordingModel.Items));
+        }
+
+        return group;
+    }
+
+
+    /// <summary>
+    /// The context set, taken away and given back, with nothing but bindings in between. A two-way
+    /// SelectedItem that is re-applied would push the model's value back - but only if the model still
+    /// has it. With ItemsSource declared first, the ItemsSource binding is re-applied first: the null
+    /// source pruned the selection and published SelectedItem = null while the SelectedItem binding
+    /// was still attached to the model, so the null went into the model before that binding was
+    /// re-applied, and the re-apply then faithfully pushed the null back.
+    /// </summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void ABindingContextThatGoesAwayAndComesBackKeepsTheSelection(bool itemsSourceFirst)
+    {
+        var model = new RecordingModel();
+        var group = BoundInOrder(itemsSourceFirst);
+
+        group.BindingContext = model;
+
+        // The null has to be caught here, while the context is away: once it is back, a model that
+        // already holds null is indistinguishable from one that never had a selection.
+        group.BindingContext = null;
+        model.Writes.ShouldNotContain((object?)null);
+        model.Selected.ShouldBe("Second");
+
+        group.BindingContext = model;
+
+        model.Writes.ShouldNotContain((object?)null);
+        model.Selected.ShouldBe("Second");
+        group.SelectedItem.ShouldBe("Second");
+        group.Chips[1].IsSelected.ShouldBeTrue();
+    }
+
+
+    /// <summary>
+    /// The same round trip through an inherited context, which is what a re-parent actually does: the
+    /// group's own BindingContext is never touched, its parent's is.
+    /// </summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void AnInheritedContextThatGoesAwayAndComesBackKeepsTheSelection(bool itemsSourceFirst)
+    {
+        var model = new RecordingModel();
+        var group = BoundInOrder(itemsSourceFirst);
+        var stack = new VerticalStackLayout { Children = { group } };
+
+        stack.BindingContext = model;
+
+        stack.BindingContext = null;
+        model.Selected.ShouldBe("Second");
+
+        stack.BindingContext = model;
+
+        model.Writes.ShouldNotContain((object?)null);
+        model.Selected.ShouldBe("Second");
+        group.Chips[1].IsSelected.ShouldBeTrue();
+    }
+
+
+    /// <summary>
+    /// Clearing the source is not the same as offering items without the selection: the model keeps
+    /// its value until there are items to judge it against, and loses it only if they do not have it.
+    /// </summary>
+    [Fact]
+    public void AViewModelThatClearsItsSourceKeepsItsSelectionUntilNewItemsArrive()
+    {
+        var model = new SourceModel();
+        var group = new ChipGroup { SelectionMode = ChipSelectionMode.Single };
+        group.SetBinding(ChipGroup.ItemsSourceProperty, nameof(SourceModel.Items));
+        group.SetBinding(ChipGroup.SelectedItemProperty, new Binding(nameof(SourceModel.Selected), BindingMode.TwoWay));
+        group.BindingContext = model;
+
+        model.Items = null;
+        model.Selected.ShouldBe("Second");
+
+        model.Items = ["First", "Third"];
+        model.Selected.ShouldBeNull();
+    }
+
+
+    class SourceModel : INotifyPropertyChanged
+    {
+        IEnumerable<string>? items = ["First", "Second", "Third"];
+        object? selected = "Second";
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        public IEnumerable<string>? Items
+        {
+            get => this.items;
+            set
+            {
+                this.items = value;
+                this.PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(this.Items)));
+            }
+        }
+
+        public object? Selected
+        {
+            get => this.selected;
+            set
+            {
+                this.selected = value;
+                this.PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(this.Selected)));
+            }
+        }
+    }
+
+
+    [Fact]
+    public void ANullSourceHoldsTheSelectionUntilTheNextItems()
+    {
+        var group = Group("design", "engineering");
+        group.SelectedItem = "engineering";
+
+        group.ItemsSource = null;
+        group.SelectedItem.ShouldBe("engineering");
+
+        group.ItemsSource = new[] { "design", "engineering", "sales" };
+        group.IsSelected("engineering").ShouldBeTrue();
+        group.Chips[1].IsSelected.ShouldBeTrue();
+    }
+
+
+    [Fact]
+    public void ANullSourceFollowedByItemsWithoutTheSelectionStillDropsIt()
+    {
+        var group = Group("design", "engineering");
+        group.SelectedItem = "engineering";
+
+        group.ItemsSource = null;
+        group.ItemsSource = new[] { "design", "sales" };
+
+        group.SelectedItem.ShouldBeNull();
+        group.SelectedItems!.Count.ShouldBe(0);
     }
 
 
