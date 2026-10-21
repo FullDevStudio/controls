@@ -1,28 +1,32 @@
-#if MACOS
+#if !ANDROID && !IOS && !MACCATALYST
 namespace Shiny.Maui.Controls.Desktop.Notch;
 
 /// <summary>
-/// Puts a <see cref="NotchView"/> in the MacBook camera notch — in a borderless window above the menu
-/// bar and every other application — and grows it out of the notch to fit whatever content you give it.
+/// Puts a <see cref="NotchView"/> at the top-centre of the screen, in a borderless window above every
+/// other application, and morphs it to fit whatever content you give it. On a MacBook it lives in the
+/// camera notch and grows out of it.
 /// </summary>
 /// <remarks>
 /// <para>
 /// On a Mac whose display has a notch, the empty notch is exactly the size of the hardware cut-out, so
-/// it disappears into it; give it content and it extends down out of the notch. On a display without
-/// one it is a floating island centred under the menu bar.
+/// it disappears into it; give it content and it extends down out of the notch. Everywhere else — a Mac
+/// display without one, Windows, Linux — it is a floating island centred at the top of the screen.
 /// </para>
 /// <para>
-/// macOS AppKit (<c>net10.0-macos</c>) only — the type does not exist on any other target, so shared
-/// code guards it with <c>#if MACOS</c>. Elsewhere, put an in-app <see cref="NotchView"/> on the page.
+/// macOS AppKit (<c>net10.0-macos</c>), Windows and Linux (GTK4, the <c>net10.0</c> asset) only. The
+/// type does not exist on Android, iOS or Mac Catalyst, so shared code guards it with
+/// <c>#if !ANDROID &amp;&amp; !IOS &amp;&amp; !MACCATALYST</c>; put an in-app <see cref="NotchView"/> on the page
+/// there instead. Under a Linux Wayland session the compositor decides where the window goes and how
+/// it stacks.
 /// </para>
 /// <para>
-/// The window never takes keyboard focus (a borderless window cannot become key), so the content is for
-/// glancing and clicking — status, media controls, a timer, a progress readout — not for typing.
+/// The window never takes keyboard focus, so the content is for glancing and clicking — status, media
+/// controls, a timer, a progress readout — not for typing.
 /// </para>
 /// </remarks>
 public interface INotchWindowService
 {
-    /// <summary>True when the screen the notch is shown on has a camera notch.</summary>
+    /// <summary>True when the screen the notch is shown on has a camera notch. Only ever true on macOS.</summary>
     bool HasHardwareNotch { get; }
 
     /// <summary>
@@ -36,8 +40,8 @@ public interface INotchWindowService
     bool IsPointerOver { get; }
 
     /// <summary>
-    /// The pointer moved onto the notch. Raised for pointer movement anywhere on screen, without
-    /// accessibility permission, so a notch that expands on hover can be built on it.
+    /// The pointer moved onto the notch, whether or not your app is active, so a notch that expands on
+    /// hover can be built on it. No accessibility permission is needed on any platform.
     /// </summary>
     event EventHandler? PointerEntered;
 

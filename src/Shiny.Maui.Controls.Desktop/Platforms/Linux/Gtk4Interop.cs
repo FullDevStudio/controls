@@ -104,4 +104,44 @@ static partial class Gtk4Interop
     public static partial void ObjectSetProperty(IntPtr obj, IntPtr name, IntPtr value);
 
     public const uint StyleProviderPriorityApplication = 600;
+
+    // ---- notch window ------------------------------------------------------------------------
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct GdkRectangle
+    {
+        public int X;
+        public int Y;
+        public int Width;
+        public int Height;
+    }
+
+    /// <summary>Pointer enter/leave on a widget. Unlike a global pointer query, this works under Wayland too.</summary>
+    [LibraryImport(Gtk, EntryPoint = "gtk_event_controller_motion_new")]
+    public static partial IntPtr EventControllerMotionNew();
+
+    /// <summary>A GListModel of GdkMonitor, owned by the display.</summary>
+    [LibraryImport(Gtk, EntryPoint = "gdk_display_get_monitors")]
+    public static partial IntPtr DisplayGetMonitors(IntPtr display);
+
+    [LibraryImport(Gtk, EntryPoint = "gdk_monitor_get_geometry")]
+    public static partial void MonitorGetGeometry(IntPtr monitor, out GdkRectangle geometry);
+
+    [LibraryImport(Gtk, EntryPoint = "gdk_monitor_get_scale_factor")]
+    public static partial int MonitorGetScaleFactor(IntPtr monitor);
+
+    /// <summary>X11 backend only. Transfer none.</summary>
+    [LibraryImport(Gtk, EntryPoint = "gdk_x11_display_get_primary_monitor")]
+    public static partial IntPtr X11DisplayGetPrimaryMonitor(IntPtr display);
+
+    /// <summary>X11 backend only: the monitor minus panels and docks (<c>_NET_WORKAREA</c>).</summary>
+    [LibraryImport(Gtk, EntryPoint = "gdk_x11_monitor_get_workarea")]
+    public static partial void X11MonitorGetWorkarea(IntPtr monitor, out GdkRectangle workarea);
+
+    /// <summary>Transfer full: the caller unrefs the item.</summary>
+    [LibraryImport("libgio-2.0.so.0", EntryPoint = "g_list_model_get_item")]
+    public static partial IntPtr ListModelGetItem(IntPtr list, uint position);
+
+    [LibraryImport(GObject, EntryPoint = "g_object_unref")]
+    public static partial void ObjectUnref(IntPtr obj);
 }

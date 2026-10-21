@@ -242,7 +242,7 @@ static unsafe class QuickEntryPlatform
         X11Interop.Flush(display);
     }
 
-    static IntPtr EnsureX11Display()
+    internal static IntPtr EnsureX11Display()
     {
         if (x11Display != IntPtr.Zero)
             return x11Display;

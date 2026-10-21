@@ -74,12 +74,12 @@ On MAUI it positions like any other view: `HorizontalOptions="Center"` and `Vert
 
 **Accessibility.** Blazor turns the morph and the fade off under `prefers-reduced-motion`.
 
-## In the MacBook camera notch (macOS)
+## Over every app (desktop window)
 
-`Shiny.Maui.Controls.Desktop` can put the same `NotchView` into the **hardware camera notch**, in a borderless window above the menu bar and every other app. The empty notch is exactly the size of the cut-out, so it disappears into it; give it content and it grows down out of the notch. On a display without a notch it floats as an island under the menu bar. See [Desktop → Notch window](desktop.md#notch-window-macos).
+`Shiny.Maui.Controls.Desktop` can put the same `NotchView` in a borderless window at the **top-centre of the screen, above every other app**, on **macOS, Windows and Linux**. On a MacBook it goes into the **hardware camera notch**: the empty notch is exactly the size of the cut-out, so it disappears into it, and content grows down out of it. Everywhere else (a Mac display without a notch, Windows, Linux) it floats as an island at the top of the screen, like the [quick entry](quick-entry.md) popup. See [Desktop → Notch window](desktop.md#notch-window).
 
 ```csharp
-#if MACOS
+#if !ANDROID && !IOS && !MACCATALYST
 builder.UseDesktopNotch(o => o.MaxWidth = 520);
 
 await notchWindow.ShowAsync(new Label { Text = "Recording 0:42", TextColor = Colors.White });
@@ -89,8 +89,11 @@ await notchWindow.SetContentAsync(new NowPlayingView());
 
 **Platform notes**
 
-- The desktop notch window is macOS AppKit (`net10.0-macos`) only. The API does not exist on other targets, so guard it with `#if MACOS`.
-- On the AppKit head the window, not the surface, animates the resize (a native frame animation). A content swap there builds a fresh page, because AppKit never realizes a child added to an already-realized layout.
+- macOS (AppKit), Windows and Linux (GTK4) only. The API doesn't exist on Android, iOS or Mac Catalyst, so guard it with `#if !ANDROID && !IOS && !MACCATALYST`.
+- Only macOS has a camera notch to find. Windows and Linux always get the floating island.
+- On the AppKit head the window, not the surface, animates the resize (a native frame animation). Windows and GTK have no animated window resize, so the window is resized once per frame instead.
+- On Windows the window is clipped to the notch outline with a window region, because a WinUI window can't be transparent. The edges are not antialiased and a `Stroke` is clipped off.
+- Under a Linux Wayland session the compositor decides where the window goes and it is not kept above other windows. X11 behaves like Windows and macOS.
 - The window never takes keyboard focus. It is for glancing and clicking, not typing.
 
 <!-- TODO: capture screenshots for notch -->

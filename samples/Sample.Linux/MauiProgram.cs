@@ -28,6 +28,7 @@ public static class MauiProgram
             .UseShinyShell(x => x.AddGeneratedMaps())
             .UseTrayIcon()
             .UseDesktopQuickEntry()
+            .UseDesktopNotch()
             // AppKit, GTK4 and Catalyst key sources for keyboard shortcuts (Windows/iOS/Android need nothing)
             .UseDesktopKeyboardShortcuts()
             .UseShinyMediaElementGtk()

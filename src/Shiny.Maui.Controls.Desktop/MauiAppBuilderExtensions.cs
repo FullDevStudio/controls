@@ -6,7 +6,7 @@ using Microsoft.Maui.Controls;
 using Microsoft.Maui.Hosting;
 using Shiny.Maui.Controls;
 using Shiny.Maui.Controls.Desktop.Docking;
-#if MACOS
+#if !ANDROID && !IOS && !MACCATALYST
 using Shiny.Maui.Controls.Desktop.Notch;
 #endif
 using Shiny.Maui.Controls.Desktop.QuickEntry;
@@ -111,10 +111,11 @@ public static class DesktopMauiAppBuilderExtensions
         return builder;
     }
 
-#if MACOS
+#if !ANDROID && !IOS && !MACCATALYST
     /// <summary>
-    /// Registers <see cref="INotchWindowService"/>: a <see cref="NotchView"/> in the MacBook camera notch,
-    /// above the menu bar and every other application, that grows out of the notch to fit its content.
+    /// Registers <see cref="INotchWindowService"/>: a <see cref="NotchView"/> at the top-centre of the
+    /// screen, above every other application, that morphs to fit its content — and on a MacBook lives
+    /// in the camera notch and grows out of it.
     /// </summary>
     /// <example>
     /// <code>
@@ -127,8 +128,9 @@ public static class DesktopMauiAppBuilderExtensions
     /// </code>
     /// </example>
     /// <remarks>
-    /// macOS AppKit (<c>net10.0-macos</c>) only, so call it inside <c>#if MACOS</c>. On a display without a
-    /// notch it floats as an island below the menu bar.
+    /// macOS AppKit, Windows and Linux (GTK4) only; it does not exist on Android, iOS or Mac Catalyst, so
+    /// call it inside <c>#if !ANDROID &amp;&amp; !IOS &amp;&amp; !MACCATALYST</c>. Without a camera notch — every
+    /// Windows and Linux screen, and Macs without one — it floats as an island at the top of the screen.
     /// </remarks>
     public static MauiAppBuilder UseDesktopNotch(this MauiAppBuilder builder, Action<NotchWindowOptions>? configure = null)
     {

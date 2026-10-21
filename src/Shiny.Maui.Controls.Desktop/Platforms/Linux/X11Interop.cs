@@ -133,10 +133,18 @@ static partial class X11Interop
     public static partial int DisplayHeight(IntPtr display, int screen);
 
     /// <summary>The window manager can only be asked to raise an already-mapped window through a client message; setting the property directly is only honoured before the first map.</summary>
-    public static void SetAlwaysOnTop(IntPtr display, ulong xid)
+    public static void SetAlwaysOnTop(IntPtr display, ulong xid) => AddWmState(display, xid, "_NET_WM_STATE_ABOVE");
+
+    /// <summary>
+    /// Asks the window manager to add up to two <c>_NET_WM_STATE</c> atoms to a mapped window. The WM
+    /// drops the whole property when a window is unmapped, so a window that is hidden and shown again
+    /// has to ask again.
+    /// </summary>
+    public static void AddWmState(IntPtr display, ulong xid, string state, string? secondState = null)
     {
         var stateAtom = InternAtom(display, "_NET_WM_STATE", 0);
-        var aboveAtom = InternAtom(display, "_NET_WM_STATE_ABOVE", 0);
+        var first = InternAtom(display, state, 0);
+        var second = secondState == null ? IntPtr.Zero : InternAtom(display, secondState, 0);
         var root = DefaultRootWindow(display);
 
         var evt = new XClientMessageEvent
@@ -147,7 +155,8 @@ static partial class X11Interop
             MessageType = stateAtom,
             Format = 32,
             Data0 = 1,                    // _NET_WM_STATE_ADD
-            Data1 = (long)aboveAtom,
+            Data1 = (long)first,
+            Data2 = (long)second,
             Data3 = 1                     // source indication: normal application
         };
 

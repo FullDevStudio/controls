@@ -180,12 +180,14 @@ var registration = hotKeys.Register("Ctrl+Shift+K", () => DoSomething());
 
 > **Wayland caveats.** A Wayland client cannot position its own toplevel or raise itself above other windows, so under Wayland the desktop popup is undecorated but the compositor decides where it appears and it is an ordinary window in the stack; the whole-display glow is unavailable and the in-app one is used instead. Under X11 everything behaves as it does on Windows and macOS.
 
-## Notch window (macOS)
+## Notch window
 
-Puts a [`NotchView`](notch.md) in the **MacBook camera notch**, in a borderless window above the menu bar and every other app. The empty notch is exactly the size of the hardware cut-out (read from `NSScreen.AuxiliaryTopLeftArea`/`AuxiliaryTopRightArea`), so it disappears into it. Give it content and it grows down out of the notch, with the content padded below the camera housing. On a display without a notch, or with `UseHardwareNotch = false`, it floats as an island under the menu bar.
+Puts a [`NotchView`](notch.md) at the **top-centre of the screen**, in a borderless window above every other app, and morphs the window to fit whatever content you give it. Works on **macOS (AppKit), Windows and Linux (GTK4)**.
+
+On a **MacBook** it lives in the **camera notch**, above the menu bar. The empty notch is exactly the size of the hardware cut-out (read from `NSScreen.AuxiliaryTopLeftArea`/`AuxiliaryTopRightArea`), so it disappears into it. Give it content and it grows down out of the notch, with the content padded below the camera housing. **Everywhere else** — a Mac display without a notch (or `UseHardwareNotch = false`), every Windows and Linux screen — it floats as an island centred at the top of the screen, `TopMargin` below the menu bar, a top-docked taskbar or a top panel. Set `TopMargin = 0` and `Shape = NotchShape.Notch` for a notch that hangs from the top edge instead.
 
 ```csharp
-#if MACOS
+#if !ANDROID && !IOS && !MACCATALYST
 builder
     .UseShinyControls()
     .UseDesktopNotch(o =>
@@ -197,15 +199,15 @@ builder
 ```
 
 ```csharp
-#if MACOS
+#if !ANDROID && !IOS && !MACCATALYST
 // INotchWindowService, injected
 await notch.ShowAsync(new Label { Text = "Recording 0:42", TextColor = Colors.White });
-await notch.SetContentAsync(new NowPlayingView());   // grows out of the notch
-await notch.SetContentAsync(null);                   // back into the notch
+await notch.SetContentAsync(new NowPlayingView());   // grows to fit
+await notch.SetContentAsync(null);                   // back to the empty notch
 notch.Hide();
 
-// a "live activity" beside the camera rather than below it
-var cutout = notch.HardwareNotchSize;               // Size.Zero without a notch
+// a "live activity" beside the camera rather than below it (macOS with a notch)
+var cutout = notch.HardwareNotchSize;               // Size.Zero without a notch, always on Windows/Linux
 await notch.SetContentAsync(new PeekView(cutout.Width), n =>
 {
     n.ContentPadding = new Thickness(10, 0);
@@ -218,21 +220,35 @@ notch.PointerExited += (_, _) => ShowPeek();
 #endif
 ```
 
-`SetContentAsync`/`ShowAsync` take an optional `Action<NotchView>` that styles the notch for that content only, after `NotchWindowOptions.Configure`. `PointerEntered`/`PointerExited` (and `IsPointerOver`) report the mouse over the notch window from anywhere on screen. They come from mouse event monitors, which need no accessibility permission.
+`SetContentAsync`/`ShowAsync` take an optional `Action<NotchView>` that styles the notch for that content only, after `NotchWindowOptions.Configure`. `PointerEntered`/`PointerExited` (and `IsPointerOver`) report the mouse over the notch window whether or not your app is active, with no accessibility permission on any platform.
 
 | `NotchWindowOptions` | Default | |
 |---|---|---|
-| `UseHardwareNotch` | true | Hug the camera notch when the screen has one |
-| `TopMargin` | 8 | Gap under the menu bar for the floating island |
+| `UseHardwareNotch` | true | Hug the camera notch when the screen has one (macOS) |
+| `TopMargin` | 8 | Gap between the top of the usable screen area and the floating island |
 | `MaxWidth` / `MaxHeight` | 640 / 480 | Caps, in points |
-| `MorphDuration` | 300 | Window reshape time, ms |
-| `JoinAllSpaces` | true | Stay on every Space and over full-screen apps |
+| `MorphDuration` | 300 | Window reshape time, ms. `0` snaps |
+| `JoinAllSpaces` | true | Every Space and over full-screen apps (macOS); every workspace (Linux X11); ignored on Windows |
 | `Configure` | null | Styles each `NotchView` the service creates; runs last, so it wins |
 
-- **macOS AppKit (`net10.0-macos`) only.** `INotchWindowService`, `NotchWindowOptions` and `UseDesktopNotch` don't exist on any other target, so guard them with `#if MACOS`. Elsewhere, use an in-app `NotchView`.
-- The **window** animates the reshape with a native frame animation and the surface fills it. A managed morph inside the window can't work on the AppKit head, which runs no layout when a realized view changes size.
-- `SetContentAsync` builds a fresh page for the new content, because AppKit never creates a native view for a child added to an already-realized layout.
-- The window never takes keyboard focus (it is borderless), so it suits status, media controls, timers and progress, not typing.
+**How it behaves per platform**
+
+| | macOS | Windows | Linux X11 | Linux Wayland |
+|---|---|---|---|---|
+| Position | Camera notch, or under the menu bar | Top-centre of the primary monitor's work area | Top-centre of the primary monitor's work area | Wherever the compositor puts it |
+| Above other apps | Yes (status level) | Yes (topmost) | Yes (`_NET_WM_STATE_ABOVE`) | No, ordinary window |
+| In taskbar / app switcher | No | No (tool window) | No (skip taskbar + pager) | Compositor's choice |
+| Morph | Native window-frame animation | Window resized every frame | Window resized every frame | Window resized every frame |
+| Outline | Transparent window, antialiased | Window region (aliased edges) | Transparent window (needs a compositor) | Transparent window |
+| Takes focus | Never | Never (`WS_EX_NOACTIVATE`) | Not presented, so not on show | Not presented, so not on show |
+
+- **macOS, Windows and Linux only.** `INotchWindowService`, `NotchWindowOptions` and `UseDesktopNotch` exist in the `net10.0-macos`, Windows and `net10.0` (Linux GTK4) builds and not on Android, iOS or Mac Catalyst, so guard them with `#if !ANDROID && !IOS && !MACCATALYST`. There, use an in-app `NotchView`.
+- **Shape on Windows.** A WinUI window can't be see-through, so the window is clipped to the notch outline with a window region, re-cut on every frame, and the page behind the notch paints the surface colour. Region edges are not antialiased, and a `Stroke` is clipped away with the corners.
+- **Wayland.** A client can't place or raise its own toplevel, so the notch still morphs and reports the pointer but isn't pinned to the top. Doing better needs `wlr-layer-shell`, which GNOME doesn't implement and this package doesn't depend on — the same limit as the quick entry popup.
+- **Windows title bar.** MAUI reserves a title-bar strip across the top of every WinUI window's content, taller than the empty notch. The notch window collapses it through MAUI's internal `WindowRootView.UpdateAppTitleBar` (an `UnsafeAccessor`, so AOT-safe). If a future MAUI renames it, the content just sits lower until this is updated.
+- The **window** does the morph and the surface fills it. On macOS that is a native frame animation, because the AppKit head runs no layout when a realized view changes size. Windows and GTK have no animated resize, so the window is stepped every 16ms with the notch's own ease.
+- `SetContentAsync` builds a fresh page for the new content, because AppKit never creates a native view for a child added to an already-realized layout. The other hosts do the same so they all behave alike.
+- The window never takes keyboard focus, so it suits status, media controls, timers and progress, not typing.
 
 ## Docking
 

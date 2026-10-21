@@ -1,4 +1,4 @@
-#if MACOS
+#if !ANDROID && !IOS && !MACCATALYST
 namespace Shiny.Maui.Controls.Desktop.Notch;
 
 /// <summary>The camera notch on the screen the notch window uses, in points.</summary>

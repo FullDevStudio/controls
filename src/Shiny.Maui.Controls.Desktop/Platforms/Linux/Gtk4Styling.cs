@@ -1,7 +1,7 @@
 namespace Shiny.Maui.Controls.Desktop.QuickEntry;
 
 /// <summary>
-/// Installs the one stylesheet both Linux overlays need. GTK paints a window's own background
+/// Installs the one stylesheet every Linux overlay window needs. GTK paints a window's own background
 /// before any content, so a MAUI page with a transparent background is not enough on its own — the
 /// toplevel has to be told to paint nothing.
 /// </summary>
@@ -11,7 +11,9 @@ static class Gtk4Styling
         window.shiny-quick-entry,
         window.shiny-quick-entry > *,
         window.shiny-screen-glow,
-        window.shiny-screen-glow > * { background-color: transparent; }
+        window.shiny-screen-glow > *,
+        window.shiny-notch,
+        window.shiny-notch > * { background-color: transparent; }
 
         window.shiny-quick-entry entry,
         window.shiny-quick-entry text {

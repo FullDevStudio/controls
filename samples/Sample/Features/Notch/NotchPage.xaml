@@ -43,8 +43,8 @@
                 <Label x:Name="TapStatus" Text="Tap the notch surface." AutomationId="NotchTapStatus" />
 
                 <VerticalStackLayout x:Name="DesktopSection" Spacing="8" IsVisible="False">
-                    <Label Text="In the hardware notch (macOS)" FontSize="18" FontAttributes="Bold" />
-                    <Label x:Name="DesktopStatus" Text="INotchWindowService puts a notch in the MacBook camera notch, over every app. Without a notch it floats under the menu bar." />
+                    <Label Text="Over every app (desktop)" FontSize="18" FontAttributes="Bold" />
+                    <Label x:Name="DesktopStatus" Text="INotchWindowService puts the notch at the top of the screen, over every app. On a MacBook it lives in the camera notch; everywhere else it floats as an island." />
                     <HorizontalStackLayout Spacing="8">
                         <Button Text="Show" AutomationId="DesktopNotchShow" Clicked="OnDesktopShow" />
                         <Button Text="Next content" AutomationId="DesktopNotchNext" Clicked="OnDesktopNext" />

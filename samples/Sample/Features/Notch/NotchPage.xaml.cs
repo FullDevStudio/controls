@@ -1,6 +1,6 @@
 using Microsoft.Maui.Controls.Shapes;
 using Shiny.Maui.Controls;
-#if MACOS
+#if !ANDROID && !IOS && !MACCATALYST
 using Shiny.Maui.Controls.Desktop.Notch;
 #endif
 
@@ -25,7 +25,8 @@ public partial class NotchPage : ContentPage
         SampleSourceCode.Attach(this);
         this.OnRecording(this, EventArgs.Empty);
 
-#if MACOS
+        // The notch window exists on macOS, Windows and Linux (this file's net10.0 build is the GTK head).
+#if !ANDROID && !IOS && !MACCATALYST
         this.DesktopSection.IsVisible = true;
 #endif
     }
@@ -124,7 +125,7 @@ public partial class NotchPage : ContentPage
         }
     };
 
-#if MACOS
+#if !ANDROID && !IOS && !MACCATALYST
     int desktopIndex;
 
     static INotchWindowService? DesktopNotch
@@ -137,7 +138,7 @@ public partial class NotchPage : ContentPage
 
         this.DesktopStatus.Text = service.HasHardwareNotch
             ? "This screen has a camera notch: the empty notch hides inside it, content grows out of it."
-            : "No camera notch on this screen, so it floats under the menu bar.";
+            : "No camera notch on this screen, so it floats at the top of it.";
         await service.ShowAsync(Recording());
     }
 

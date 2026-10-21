@@ -82,6 +82,10 @@ public static class MauiProgram
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
             });
 
+#if WINDOWS
+        // the notch window, floating over every app at the top of the screen (macOS and Linux register it in their own heads)
+        builder.UseDesktopNotch();
+#endif
 #if IOS
         builder.ConfigureMauiHandlers(handlers =>
         {

@@ -1,4 +1,4 @@
-#if MACOS
+#if !ANDROID && !IOS && !MACCATALYST
 using Microsoft.Extensions.Logging;
 
 namespace Shiny.Maui.Controls.Desktop.Notch;
@@ -8,10 +8,16 @@ namespace Shiny.Maui.Controls.Desktop.Notch;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The notch's surface fills the window and the <em>window</em> does the morphing, with a native frame
-/// animation. A managed morph inside the window cannot work on the AppKit head: it runs no layout when
-/// a realized view changes size, so the surface would sit still and then jump, whereas every step of a
-/// window-frame animation is a resize and lays out.
+/// The notch's surface fills the window and the <em>window</em> does the morphing. On macOS that is a
+/// native frame animation: a managed morph inside the window cannot work on the AppKit head, which runs
+/// no layout when a realized view changes size, so the surface would sit still and then jump, whereas
+/// every step of a window-frame animation is a resize and lays out. Windows and GTK have no such
+/// animation, so <see cref="NotchFrameAnimator"/> resizes the window once per frame instead.
+/// </para>
+/// <para>
+/// The window has to be the notch, not a larger transparent canvas the notch morphs inside: a WinUI
+/// window cannot be made see-through, and a transparent region of a window still takes the clicks
+/// meant for whatever is behind it.
 /// </para>
 /// <para>
 /// A content swap builds a fresh page rather than handing the new view to the existing notch: AppKit
@@ -24,6 +30,7 @@ sealed class DesktopNotchWindowService : INotchWindowService, IDisposable
     readonly NotchWindowOptions options;
     readonly ILogger<DesktopNotchWindowService>? logger;
     readonly SemaphoreSlim gate = new(1, 1);
+    readonly NotchFrameAnimator frames;
 
     Window? window;
     object? platformWindow;
@@ -35,6 +42,7 @@ sealed class DesktopNotchWindowService : INotchWindowService, IDisposable
     {
         this.options = options;
         this.logger = logger;
+        this.frames = new NotchFrameAnimator(NotchView.DefaultEasing.Ease, size => this.PlaceFrame(size, 0));
     }
 
     public bool HasHardwareNotch => NotchWindowPlatform.GetGeometry().HasNotch;
@@ -94,7 +102,9 @@ sealed class DesktopNotchWindowService : INotchWindowService, IDisposable
 
             var page = new ContentPage
             {
-                BackgroundColor = Colors.Transparent,
+                // Where the window cannot be see-through (Windows), it is clipped to the notch's outline
+                // instead, so whatever the page paints *is* the notch: the surface colour, not white.
+                BackgroundColor = NotchWindowPlatform.IsTransparent ? Colors.Transparent : this.notch.SurfaceColor,
                 Padding = 0,
                 Content = this.notch
             };
@@ -124,6 +134,7 @@ sealed class DesktopNotchWindowService : INotchWindowService, IDisposable
 
     public void Hide()
     {
+        this.frames.Stop();
         if (this.platformWindow != null)
             NotchWindowPlatform.Hide(this.platformWindow);
         this.IsVisible = false;
@@ -234,18 +245,44 @@ sealed class DesktopNotchWindowService : INotchWindowService, IDisposable
         if (this.platformWindow == null || size.Width <= 0 || size.Height <= 0)
             return;
 
+        var duration = animate ? this.options.MorphDuration : 0;
+        if (NotchWindowPlatform.AnimatesFrame)
+            this.PlaceFrame(size, duration);
+        else if (duration <= 0)
+            this.frames.Jump(size);
+        else
+            this.frames.AnimateTo(size, duration, Application.Current?.Dispatcher);
+    }
+
+    void PlaceFrame(Size size, double durationMs)
+    {
+        if (this.platformWindow == null)
+            return;
+
         NotchWindowPlatform.Place(
             this.platformWindow,
             size.Width,
             size.Height,
+            CornersFor(size, this.notch?.CornerRadius ?? -1, this.notch?.Shape ?? NotchShape.Island),
             this.geometry.HasNotch,
             this.options.TopMargin,
-            animate ? this.options.MorphDuration : 0
+            durationMs
         );
+    }
+
+    /// <summary>
+    /// The outline at a given frame size, for a host that clips the window to it. Resolved per frame
+    /// rather than read off the notch, which only knows its corners at the size it is heading to.
+    /// </summary>
+    internal static CornerRadius CornersFor(Size size, double requested, NotchShape shape)
+    {
+        var r = NotchView.ResolveCornerRadius(requested, size.Width, size.Height);
+        return shape == NotchShape.Notch ? new CornerRadius(0, 0, r, r) : new CornerRadius(r);
     }
 
     public void Dispose()
     {
+        this.frames.Dispose();
         this.pointerTracking?.Dispose();
         this.pointerTracking = null;
 

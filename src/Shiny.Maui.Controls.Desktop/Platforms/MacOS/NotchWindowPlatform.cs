@@ -16,6 +16,12 @@ namespace Shiny.Maui.Controls.Desktop.Notch;
 /// </remarks>
 static class NotchWindowPlatform
 {
+    /// <summary>The window animates its own frame (see <see cref="Place"/>), so the service hands it the whole morph.</summary>
+    public static bool AnimatesFrame => true;
+
+    /// <summary>A clear, non-opaque NSWindow shows the notch's own rounded outline, so nothing has to clip it.</summary>
+    public static bool IsTransparent => true;
+
     /// <summary>
     /// The notch on the screen that has one (the built-in display), measured from the menu-bar areas
     /// either side of it. Falls back to <see cref="NotchGeometry.None"/> on displays without a notch
@@ -141,7 +147,7 @@ static class NotchWindowPlatform
     /// </summary>
     static readonly CAMediaTimingFunction MorphTiming = CAMediaTimingFunction.FromControlPoints(1f / 3f, 1.3f, 2f / 3f, 1f);
 
-    public static void Place(object platformWindow, double width, double height, bool hugNotch, double topMargin, double durationMs)
+    public static void Place(object platformWindow, double width, double height, CornerRadius corners, bool hugNotch, double topMargin, double durationMs)
     {
         if (platformWindow is not NSWindow window)
             return;
