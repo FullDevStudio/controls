@@ -16,6 +16,7 @@
 
         <Description>Shiny Controls for Blazor and .NET MAUI - Makes your UI shine beautifully with complex controls for free</Description>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <Copyright>Copyright (c) $([System.DateTime]::Now.Year) Allan Ritchie</Copyright>
         <PackageProjectUrl>https://shinylib.net/controls/</PackageProjectUrl>
         <PackageIcon>icon.png</PackageIcon>
         <PackageReadmeFile>readme.md</PackageReadmeFile>
