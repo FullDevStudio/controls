@@ -1332,4 +1332,74 @@ public class ShinyTabBarTests
         bar.OpenMenu();
         bar.IsMenuOpen.ShouldBeTrue();
     }
+
+
+    // A Shell moves the one bar onto the next page right after a tab change, which unloads the new
+    // tab's icon mid-play. The icon ends that play at rest, so the bar plays it again once it has
+    // landed - and only then: an icon whose play ran to its end is not replayed by the next load.
+    // Which of the bar and its icons hears Loaded first is the platform's business, so both orders.
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void TheSelectedIconPlaysAgainAfterTheBarIsReparented(bool barLoadsFirst)
+    {
+        var bar = new ShinyTabBar { AnimationDuration = 0 };
+        bar.Items.Add(new ShinyTabItem { Title = "One", Icon = "bell" });
+        bar.Items.Add(new ShinyTabItem { Title = "Two", Icon = "heart" });
+
+        var icons = new[] { (MotionIconView)bar.IconViewAt(0)!, (MotionIconView)bar.IconViewAt(1)! };
+        foreach (var icon in icons)
+            icon.Duration = TimeSpan.FromMilliseconds(20);
+
+        void Load()
+        {
+            if (barLoadsFirst)
+                bar.OnLoadedInternal();
+
+            foreach (var icon in icons)
+                icon.OnLoadedInternal();
+
+            if (!barLoadsFirst)
+                bar.OnLoadedInternal();
+        }
+
+        void Unload()
+        {
+            foreach (var icon in icons)
+                icon.OnUnloadedInternal();
+        }
+
+        try
+        {
+            Load();
+            var timer = MotionIconPlaybackTests.TimerOf(icons[0]);
+            MotionIconPlaybackTests.Frame(timer);
+            icons[0].IsPlaying.ShouldBeFalse();
+
+            bar.SelectedIndex = 1;
+            icons[1].IsPlaying.ShouldBeTrue();
+
+            Unload();
+            icons[1].IsPlaying.ShouldBeFalse();
+
+            Load();
+            icons[1].IsPlaying.ShouldBeTrue();
+            icons[1].PlayIterations.ShouldBe(1d);
+            icons[0].IsPlaying.ShouldBeFalse();
+
+            MotionIconPlaybackTests.Frame(timer);
+            icons[1].IsPlaying.ShouldBeFalse();
+
+            Unload();
+            Load();
+            icons[1].IsPlaying.ShouldBeFalse();
+        }
+        finally
+        {
+            // a play left running would keep the shared ticker going into the next test
+            foreach (var icon in icons)
+                icon.Stop();
+        }
+    }
 }

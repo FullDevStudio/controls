@@ -94,7 +94,7 @@ public class MotionIconView : GraphicsView
     /// <summary>Backing store for <see cref="IsPlaying"/>.</summary>
     public static readonly BindableProperty IsPlayingProperty =
         BindableProperty.Create(nameof(IsPlaying), typeof(bool), typeof(MotionIconView), false,
-            BindingMode.TwoWay, propertyChanged: OnIsPlayingChanged);
+            BindingMode.TwoWay, propertyChanged: OnIsPlayingChanged, coerceValue: OnIsPlayingWritten);
 
     /// <summary>Backing store for <see cref="Progress"/>.</summary>
     public static readonly BindableProperty ProgressProperty =
@@ -121,6 +121,12 @@ public class MotionIconView : GraphicsView
     bool loaded;
     bool ticking;
     bool pendingAutoPlay;
+
+    // True while the current (or pending) play is the app's: IsPlaying set from outside — a local
+    // value, a Binding, a Style. False when the view started it itself (Play, Loop, Press, Hover,
+    // Appear, the Loop trigger). IsPlaying alone cannot tell the two apart, and only the app's loop
+    // may survive the view leaving the tree.
+    bool playRequested;
     bool stopAtCycleEnd;
     bool suppressPlaybackFeedback;
     bool suppressProgressFeedback;
@@ -137,7 +143,7 @@ public class MotionIconView : GraphicsView
         this.SetDynamicResource(ThemeColorProperty, ShinyThemeKeys.Color.OnSurface);
 
         Loaded += (_, _) => OnLoadedInternal();
-        Unloaded += (_, _) => Detach();
+        Unloaded += (_, _) => OnUnloadedInternal();
         SizeChanged += (_, _) => native?.Relayout();
 
         ApplyTriggerGestures();
@@ -236,7 +242,9 @@ public class MotionIconView : GraphicsView
     /// <summary>
     /// Whether the icon is animating. Settable: true loops (ignoring <see cref="RepeatCount"/>) until it
     /// is set false, which stops and returns to rest — the property to bind to a busy flag. A finite
-    /// <see cref="Play"/> also raises it, and drops it again when its cycles run out.
+    /// <see cref="Play"/> also raises it, and drops it again when its cycles run out. Only a true set by
+    /// the app survives the view being unloaded and loaded again; a play the view started itself
+    /// (<see cref="Play"/>, <see cref="Loop"/>, Press, Hover, Appear) ends at rest on unload.
     /// </summary>
     public bool IsPlaying
     {
@@ -290,6 +298,7 @@ public class MotionIconView : GraphicsView
     {
         stopAtCycleEnd = false;
         pendingAutoPlay = false;
+        playRequested = false;
 
         // Restores the baselines captured when this play began, which is what puts every layer back
         // to the artwork as drawn.
@@ -330,12 +339,14 @@ public class MotionIconView : GraphicsView
         loaded = true;
         Rebuild();
 
+        // IsPlaying can only still be true here when the app set it: a play the view started itself
+        // ends at rest on Unloaded, so a bare IsPlaying is the busy flag and resumes looping.
         if (Trigger.HasFlag(MotionTrigger.Loop))
             Start(double.PositiveInfinity);
         else if (pendingAutoPlay)
-            Start(pendingIterations);
+            Start(pendingIterations, playRequested);
         else if (IsPlaying)
-            Start(double.PositiveInfinity);
+            Start(double.PositiveInfinity, requested: true);
         else if (Trigger.HasFlag(MotionTrigger.Appear))
             Start(RepeatCount);
 
@@ -349,8 +360,12 @@ public class MotionIconView : GraphicsView
     /// <summary>Cycles the current (or last) play was started for; infinite while looping. Test seam.</summary>
     internal double PlayIterations { get; private set; }
 
-    void Start(double iterations)
+    void Start(double iterations, bool requested = false)
     {
+        // Whoever starts a play owns it: a Play() on top of the app's loop hands it to the view, and
+        // the app setting IsPlaying takes it back.
+        playRequested = requested;
+
         // Nothing starts before the view is loaded. An unparented view is not rendering anyway, and
         // reaching for a dispatcher from inside a constructor — which an implicit Style setting
         // IsPlaying will do — is how a headless host ends up deadlocked.
@@ -511,12 +526,26 @@ public class MotionIconView : GraphicsView
             SyncVisibility();
     }
 
-    void Detach()
+    // Internal so tests can stand in for Unloaded, which only a real handler raises.
+    internal void OnUnloadedInternal()
     {
         loaded = false;
 
-        player?.Stop();
-        DetachPlayer();
+        if ((player is not null || native is not null) && !playRequested)
+        {
+            // A play the view started itself ends here, at rest and with IsPlaying dropped, as if its
+            // cycles had run out. Left raised, the next Loaded would read IsPlaying as the app's busy
+            // flag and loop forever; replayed, an icon that was mid-animation when its page went away
+            // would animate again when the user comes back. Whoever wants it played on the new
+            // parent plays it there.
+            Stop();
+        }
+        else
+        {
+            // The app's loop keeps IsPlaying true across the gap and resumes at the next Loaded.
+            player?.Stop();
+            DetachPlayer();
+        }
 
         // The ticker is shared with every other icon on the window, so it is not ours to dispose —
         // dropping the subscription is what releases it.
@@ -604,7 +633,7 @@ public class MotionIconView : GraphicsView
         if (wasPlaying)
             Start(Trigger.HasFlag(MotionTrigger.Loop) || double.IsPositiveInfinity(PlayIterations)
                 ? double.PositiveInfinity
-                : PlaybackIterations());
+                : PlaybackIterations(), playRequested);
         else
             Invalidate();
     }
@@ -724,9 +753,23 @@ public class MotionIconView : GraphicsView
         // Set from outside, IsPlaying is a busy flag: it loops until it is cleared, matching Blazor.
         // RepeatCount bounds a *triggered* play (Play, Press, Appear), never the flag.
         if ((bool)newValue)
-            view.Start(double.PositiveInfinity);
+            view.Start(double.PositiveInfinity, requested: true);
         else
             view.Stop();
+    }
+
+    static object OnIsPlayingWritten(BindableObject bindable, object value)
+    {
+        var view = (MotionIconView)bindable;
+
+        // The app writing true while the view's own play already holds IsPlaying true is no change as
+        // far as the property is concerned, so propertyChanged never runs — the play would still end
+        // after its cycles and drop the flag the app had just set, and an unload would not keep it.
+        // Coercion sees every write, equal or not, so the app's loop takes over here instead.
+        if (!view.suppressPlaybackFeedback && (bool)value && view.IsPlaying && !view.playRequested)
+            view.Start(double.PositiveInfinity, requested: true);
+
+        return value;
     }
 
     static void OnProgressChanged(BindableObject bindable, object oldValue, object newValue)
