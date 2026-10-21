@@ -58,6 +58,11 @@ whatever was declared in markup. On MAUI bind `ItemsSource` with a `HeaderTempla
 the accordion is usually nicer, since the models stay strongly typed, with an `Items` parameter there for
 when the shape is only known at runtime.
 
+On MAUI an `ItemsSource` that raises `CollectionChanged` (an `ObservableCollection`, say) is followed change
+by change: an add, remove, replace or move builds, drops or moves only the expanders it names, so the others
+keep their open state and their content, and `ExpandedIndex` follows the open item to its new place. Only a
+`Reset` — `Clear()`, for one — rebuilds them all.
+
 The accordion's motion and chrome properties are **defaults**: they reach every item that did not set the
 same property itself, so one odd expander in the list stays odd. `ItemStyle` (MAUI) takes a
 `TargetType="shiny:Expander"` style for anything the shortcuts do not cover.

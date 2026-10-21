@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using Microsoft.Maui.Controls;
 using Shouldly;
 using Xunit;
@@ -263,5 +264,145 @@ public class AccordionTests
 
         accordion.ExpandedIndexes.Count.ShouldBe(1);
         accordion.ExpandedIndex.ShouldBe(accordion.ExpandedIndexes[0]);
+    }
+
+
+    /// <summary>
+    /// Each add builds the one expander it adds. Rebuilding every generated item on every change
+    /// would build 1 + 2 + … + 50 = 1,275 of them for these fifty.
+    /// </summary>
+    [Fact]
+    public void AddingToTheSourceBuildsOnlyTheNewExpanders()
+    {
+        var built = 0;
+        var source = new ObservableCollection<string>();
+        var accordion = new Accordion
+        {
+            ItemsSource = source,
+            ItemTemplate = new DataTemplate(() =>
+            {
+                built++;
+                return new Expander();
+            })
+        };
+
+        for (var i = 0; i < 50; i++)
+            source.Add("Item " + i);
+
+        built.ShouldBe(50);
+        accordion.Items.Count.ShouldBe(50);
+        accordion.Items[49].BindingContext.ShouldBe("Item 49");
+    }
+
+
+    [Fact]
+    public void AnOpenItemStaysOpenWhenTheSourceGrows()
+    {
+        var source = new ObservableCollection<string> { "Alpha", "Beta", "Gamma" };
+        var accordion = new Accordion { ItemsSource = source };
+        var beta = accordion.Items[1];
+        beta.IsExpanded = true;
+
+        source.Insert(0, "First");
+        source.Add("Last");
+
+        accordion.Items.Select(x => x.HeaderText).ShouldBe(["First", "Alpha", "Beta", "Gamma", "Last"]);
+        accordion.Items[2].IsExpanded.ShouldBeTrue();
+        accordion.ExpandedIndex.ShouldBe(2);
+        accordion.Items[2].ShouldBeSameAs(beta);
+    }
+
+
+    [Fact]
+    public void RemovingFromTheSourceLeavesTheOtherExpandersAlone()
+    {
+        var source = new ObservableCollection<string> { "Alpha", "Beta", "Gamma" };
+        var accordion = new Accordion { ItemsSource = source };
+        var gamma = accordion.Items[2];
+        gamma.IsExpanded = true;
+
+        source.RemoveAt(0);
+
+        accordion.Items.Select(x => x.HeaderText).ShouldBe(["Beta", "Gamma"]);
+        accordion.Items[1].IsExpanded.ShouldBeTrue();
+        accordion.ExpandedIndex.ShouldBe(1);
+        accordion.Items[1].ShouldBeSameAs(gamma);
+    }
+
+
+    [Fact]
+    public void ReplacingAnItemRebuildsOnlyItsExpander()
+    {
+        var source = new ObservableCollection<string> { "Alpha", "Beta", "Gamma" };
+        var accordion = new Accordion { ItemsSource = source };
+        var alpha = accordion.Items[0];
+        var gamma = accordion.Items[2];
+        gamma.IsExpanded = true;
+
+        source[1] = "Delta";
+
+        accordion.Items.Select(x => x.HeaderText).ShouldBe(["Alpha", "Delta", "Gamma"]);
+        accordion.Items[2].IsExpanded.ShouldBeTrue();
+        accordion.Items[0].ShouldBeSameAs(alpha);
+        accordion.Items[2].ShouldBeSameAs(gamma);
+    }
+
+
+    /// <summary>
+    /// A moved item is taken out and put back rather than rebuilt. With AllowCollapseAll off that is
+    /// also the moment it could go wrong: half way through, the open item is not in the list at all.
+    /// </summary>
+    [Fact]
+    public void MovingAnItemTakesItsOpenExpanderAlong()
+    {
+        var source = new ObservableCollection<string> { "Alpha", "Beta", "Gamma" };
+        var accordion = new Accordion { ItemsSource = source, AllowCollapseAll = false };
+        var beta = accordion.Items[1];
+        beta.IsExpanded = true;
+
+        source.Move(1, 2);
+
+        accordion.Items.Select(x => x.HeaderText).ShouldBe(["Alpha", "Gamma", "Beta"]);
+        accordion.ExpandedIndexes.ShouldBe([2]);
+        accordion.ExpandedIndex.ShouldBe(2);
+        accordion.Items[2].ShouldBeSameAs(beta);
+    }
+
+
+    [Fact]
+    public void AMovedExpanderKeepsItsDataAndItsDefaults()
+    {
+        AccordionItemEventArgs? seen = null;
+        var source = new ObservableCollection<string> { "Alpha", "Beta", "Gamma" };
+        var accordion = new Accordion { ItemsSource = source, AnimationDuration = 400 };
+        accordion.ItemExpanded += (_, e) => seen = e;
+
+        source.Move(0, 2);
+        accordion.AnimationDuration = 600;
+        accordion.Items[2].IsExpanded = true;
+
+        // Still seeded by the accordion, so a later default reaches it ...
+        accordion.Items[2].AnimationDuration.ShouldBe(600u);
+
+        // ... and still known as the expander for "Alpha".
+        seen.ShouldNotBeNull();
+        seen.Index.ShouldBe(2);
+        seen.Data.ShouldBe("Alpha");
+    }
+
+
+    [Fact]
+    public void ItemsAddedLaterStillSitAfterTheOnesInMarkup()
+    {
+        var source = new ObservableCollection<string>();
+        var accordion = new Accordion();
+        accordion.Children.Add(new Expander { HeaderText = "Declared" });
+        accordion.ItemsSource = source;
+
+        source.Add("Alpha");
+        source.Insert(0, "First");
+        source.Add("Last");
+
+        accordion.Items.Select(x => x.HeaderText).ShouldBe(["Declared", "First", "Alpha", "Last"]);
     }
 }
