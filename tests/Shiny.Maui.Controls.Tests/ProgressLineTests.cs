@@ -1,4 +1,7 @@
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Maui;
 using Microsoft.Maui.Controls;
+using Microsoft.Maui.Handlers;
 using Shiny.Maui.Controls.Infrastructure;
 using Shouldly;
 using Xunit;
@@ -204,6 +207,39 @@ public class ProgressLineTests
     }
 
 
+    /// <summary>
+    /// The order a navigation produces: the page is built with the line in it, then handed its
+    /// handler - which renders its content - and only then does the deferred dock come round. The
+    /// overlay root has to be in place by then; creating it at that point moved content the page had
+    /// already rendered, which rebuilds every native view under it and re-applies its bindings.
+    /// </summary>
+    [Fact]
+    public void ADeferredDockDoesNotMoveContentThePageHasRendered()
+    {
+        var queue = new QueuedDispatcherProvider();
+        DispatcherProvider.SetCurrent(queue);
+        try
+        {
+            var line = new ProgressLine();
+            var page = PageWith(line);
+            var content = page.Content!;
+
+            page.Handler = new StubHandler();
+
+            var moves = 0;
+            content.ParentChanged += (_, _) => moves++;
+            queue.Dispatcher.RunAll();
+
+            moves.ShouldBe(0, "the content was moved into the overlay root after the page had its handler");
+            AssertDockedOn(line, page, content);
+        }
+        finally
+        {
+            TestDispatcherProvider.Install();
+        }
+    }
+
+
     [Fact]
     public void ADockedLineFollowsThePageWhenItsContentIsReplaced()
     {
@@ -267,6 +303,16 @@ public class ProgressLineTests
             while (this.queue.TryDequeue(out var action))
                 action();
         }
+    }
+
+
+    /// <summary>Renders nothing - just enough handler for a page to count as handed to the platform.</summary>
+    sealed class StubHandler : ViewHandler<IView, object>
+    {
+        public StubHandler() : base(new PropertyMapper<IView, StubHandler>())
+            => this.SetMauiContext(new MauiContext(new ServiceCollection().BuildServiceProvider()));
+
+        protected override object CreatePlatformView() => new();
     }
 
 

@@ -123,7 +123,16 @@ public partial class ProgressLine : ContentView, IDisposable
     internal void ScheduleDock()
     {
         // Mid-dock, the move itself re-parents the line; the dock already running finishes the job.
-        if (this.dockPending || this.docking)
+        if (this.docking)
+            return;
+
+        // The tick can come round after the page has been handed its handler - navigating to a page
+        // builds its native views straight away - and installing the overlay root then rebuilds every
+        // one of them. So the root is booked now, to go in as the handler arrives, and the deferred
+        // dock only has the line itself left to move.
+        this.PrepareRoot();
+
+        if (this.dockPending)
             return;
 
         this.dockPending = true;
@@ -135,11 +144,25 @@ public partial class ProgressLine : ContentView, IDisposable
     }
 
 
-    void TryDock()
+    /// <summary>
+    /// Books the overlay root on the page the line will dock on or, while the line is not on a page
+    /// yet, waits for one to appear above it.
+    /// </summary>
+    void PrepareRoot()
     {
         if (this.disposed || !this.Dock)
             return;
 
+        if (this.DockPage() is { } page)
+            PageOverlay.PrepareRoot(page);
+        else
+            this.WatchForPage();
+    }
+
+
+    /// <summary>The page the line docks on, or null while it is on none.</summary>
+    ContentPage? DockPage()
+    {
         var page = PageOverlay.FindPage(this);
 
         // Off every page, but only because the page's content was swapped out from under the line —
@@ -148,6 +171,16 @@ public partial class ProgressLine : ContentView, IDisposable
         if (page is null && (this.Parent is null || this.Parent is PageOverlay.ProgressLineLayer))
             page = this.homePage;
 
+        return page;
+    }
+
+
+    void TryDock()
+    {
+        if (this.disposed || !this.Dock)
+            return;
+
+        var page = this.DockPage();
         if (page is null)
         {
             this.WatchForPage();

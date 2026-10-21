@@ -238,6 +238,48 @@ static class PageOverlay
 
 
     /// <summary>
+    /// Has the page's overlay root installed as the page is given its handler, unless something
+    /// installs it sooner. For a control that knows its page will need a layer, but runs too early to
+    /// install the root itself.
+    /// </summary>
+    /// <remarks>
+    /// <para>Installing the root moves the page's content into it. Until the page has a handler, that
+    /// only rearranges a tree nothing has drawn; after it, every native view under the content is torn
+    /// down and built again. An early move is also less likely to find a binding context to lose: the
+    /// move clears the content's inherited bindings and re-applies them, which is how a two-way binding
+    /// ends up writing a default back into its source.</para>
+    /// <para>Not installed on the spot, because the callers are usually mid-inflation, inside the very
+    /// <c>Content</c> assignment that made the page reachable. The handler arriving is the last moment
+    /// the move is free, and a safe one: the page is built, and its content has not been handed to the
+    /// platform yet. A page that already has a handler is left alone - it is too late to save anything,
+    /// and the layer request that follows installs the root as it always has.</para>
+    /// </remarks>
+    public static void PrepareRoot(ContentPage page)
+    {
+        if (page.Content is ShinyOverlayRoot || page.Handler is not null)
+            return;
+
+        // Removed first, so a page prepared by two controls is still installed once.
+        page.HandlerChanging -= OnPreparedPageHandlerChanging;
+        page.HandlerChanging += OnPreparedPageHandlerChanging;
+    }
+
+
+    static void OnPreparedPageHandlerChanging(object? sender, HandlerChangingEventArgs e)
+    {
+        if (sender is not ContentPage page || e.NewHandler is null)
+            return;
+
+        page.HandlerChanging -= OnPreparedPageHandlerChanging;
+
+        // Only around content that exists: a root wrapped around nothing is replaced by the first
+        // Content the page is given, and the move it was meant to save happens anyway.
+        if (page.Content is View and not ShinyOverlayRoot)
+            GetOrCreateRoot(page);
+    }
+
+
+    /// <summary>
     /// Returns the page's layer of type <typeparamref name="T"/>, adding one at <paramref name="zIndex"/>
     /// on first use. The layer is input-transparent so it never eats a tap meant for the page; the
     /// children a control puts in it are not, so they still receive their own.

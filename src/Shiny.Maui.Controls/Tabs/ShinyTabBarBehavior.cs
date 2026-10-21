@@ -145,6 +145,7 @@ public class ShinyTabBarBehavior : Behavior<Shell>
 
         bindable.Navigated += this.OnNavigated;
         bindable.PropertyChanged += this.OnShellPropertyChanged;
+        bindable.DescendantAdded += this.OnShellDescendantAdded;
 
         // Explicitly, because Bar's default comes from a defaultValueCreator and those never raise
         // propertyChanged - so OnBarChanged has not run and never will for the stock bar.
@@ -159,6 +160,7 @@ public class ShinyTabBarBehavior : Behavior<Shell>
     {
         bindable.Navigated -= this.OnNavigated;
         bindable.PropertyChanged -= this.OnShellPropertyChanged;
+        bindable.DescendantAdded -= this.OnShellDescendantAdded;
         bindable.BindingContextChanged -= this.OnShellBindingContextChanged;
         bindable.ClearValue(Shell.TabBarIsVisibleProperty);
 
@@ -425,6 +427,31 @@ public class ShinyTabBarBehavior : Behavior<Shell>
             return section;
 
         return item is not null && this.sources.Contains(item) ? item : null;
+    }
+
+
+    /// <summary>
+    /// Books the overlay root on a page the bar will dock on, to go in as the page is handed its
+    /// handler.
+    /// </summary>
+    /// <remarks>
+    /// Docking follows the navigation events, and by the time those arrive the page has often been
+    /// rendered. Creating the root then moves the page's whole content into it, which rebuilds every
+    /// native view under it. A page joins the Shell - built from its <c>ContentTemplate</c>, or
+    /// pushed - before any of that, so this is where the bar's pages are known in time. A page that
+    /// hides the bar is left alone: it never needs the root at all.
+    /// </remarks>
+    void OnShellDescendantAdded(object? sender, ElementEventArgs e)
+    {
+        if (e.Element is not ContentPage page || !ShinyTabs.GetIsTabBarVisible(page))
+            return;
+
+        // A tab's own page sits directly under its ShellContent; any other page in the Shell was
+        // pushed, and HideOnPush keeps the bar off it.
+        if (this.HideOnPush && page.Parent is not ShellContent)
+            return;
+
+        PageOverlay.PrepareRoot(page);
     }
 
 

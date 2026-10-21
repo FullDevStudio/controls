@@ -1,5 +1,9 @@
 using System.Windows.Input;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Maui;
 using Microsoft.Maui.Controls;
+using Microsoft.Maui.Handlers;
+using Shiny.Maui.Controls.Infrastructure;
 using Shouldly;
 using Xunit;
 
@@ -316,5 +320,80 @@ public class ShinyTabBarBehaviorTests
 
         behavior.Bar.SelectedIndex = 1;
         shell.CurrentItem.ShouldBe(shell.Items[1]);
+    }
+
+
+    /// <summary>
+    /// The order a device produces when a tab's page is rendered before the navigation that refreshes
+    /// the behavior reaches it: Shell builds the page, the platform hands it a handler, and only then
+    /// does the bar dock. The overlay root has to be in place by then; creating it at that point moved
+    /// content the page had already rendered, which rebuilds every native view under it.
+    /// </summary>
+    [Fact]
+    public void DockingOnARenderedTabPageDoesNotMoveItsContent()
+    {
+        var shell = BuildShell(out var behavior);
+        var shellContent = ContentOf(shell, 1);
+        shellContent.ContentTemplate = new DataTemplate(() => new ContentPage { Content = new VerticalStackLayout() });
+
+        // What a platform renderer does with a tab's page: build it, then give it a handler.
+        var page = (ContentPage)((IShellContentController)shellContent).GetOrCreateContent();
+        var content = page.Content!;
+        page.Handler = new StubHandler();
+
+        var moves = 0;
+        content.ParentChanged += (_, _) => moves++;
+        behavior.Bar.SelectedIndex = 1;
+        RefreshAsADeviceWould(behavior);
+
+        var root = page.Content.ShouldBeOfType<PageOverlay.ShinyOverlayRoot>();
+        behavior.Bar.Parent.ShouldBeOfType<PageOverlay.TabBarLayer>().Parent.ShouldBeSameAs(root);
+        PageOverlay.ContentOf(root).ShouldBeSameAs(content);
+        moves.ShouldBe(0, "the content was moved into the overlay root after the page had its handler");
+    }
+
+
+    /// <summary>
+    /// The root is only booked for pages the bar docks on. A page that hides the bar never has its
+    /// content moved for an overlay it shows nothing in.
+    /// </summary>
+    [Fact]
+    public void APageThatHidesTheBarIsNeverWrapped()
+    {
+        var shell = BuildShell(out var behavior);
+        var shellContent = ContentOf(shell, 1);
+        shellContent.ContentTemplate = new DataTemplate(() =>
+        {
+            var hidden = new ContentPage { Content = new VerticalStackLayout() };
+            ShinyTabs.SetIsTabBarVisible(hidden, false);
+            return hidden;
+        });
+
+        var page = (ContentPage)((IShellContentController)shellContent).GetOrCreateContent();
+        page.Handler = new StubHandler();
+        behavior.Bar.SelectedIndex = 1;
+        RefreshAsADeviceWould(behavior);
+
+        page.Content.ShouldBeOfType<VerticalStackLayout>();
+        behavior.Bar.Parent.ShouldBeNull();
+    }
+
+
+    /// <summary>
+    /// A device follows a tab change with <c>Navigated</c>, which refreshes the behavior. A headless
+    /// Shell is not relied on for that, so the refresh is run through a property that triggers one -
+    /// <see cref="ShellTabSource.Sections"/> is what Auto resolves to for these shells anyway.
+    /// </summary>
+    static void RefreshAsADeviceWould(ShinyTabBarBehavior behavior)
+        => behavior.TabSource = ShellTabSource.Sections;
+
+
+    /// <summary>Renders nothing - just enough handler for a page to count as handed to the platform.</summary>
+    sealed class StubHandler : ViewHandler<IView, object>
+    {
+        public StubHandler() : base(new PropertyMapper<IView, StubHandler>())
+            => this.SetMauiContext(new MauiContext(new ServiceCollection().BuildServiceProvider()));
+
+        protected override object CreatePlatformView() => new();
     }
 }

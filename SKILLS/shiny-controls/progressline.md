@@ -40,6 +40,8 @@ The drawing is shared - `ProgressLine` composes a `ProgressBar` internally - so 
 
 **The line does not render where you declare it.** It removes itself from that layout and installs onto the page edge named by `Position`. That is the point of the control - it is chrome, not content. `Dock="False"` keeps it inline, which is what you want under a header you are drawing yourself.
 
+Declare the line in the page's markup (or create it with the page) rather than adding it once the page is on screen: the overlay it docks into is then installed before the page is rendered. Added later, to a page that has no overlay yet, docking moves the page's content into one, which rebuilds every native view under it and re-applies its bindings.
+
 ### Driven from code
 
 Registered by `UseShinyControls()`. No markup on the page at all:

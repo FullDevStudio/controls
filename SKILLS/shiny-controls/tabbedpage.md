@@ -513,6 +513,10 @@ Rules worth knowing:
   otherwise the Shell's top-level items — where MAUI's own bar takes them from), `Sections`, `Items`.
 - `HideOnPush` (default true) hides the bar on pages pushed onto a tab's stack, as Shell does with its
   own. `ShinyTabs.IsTabBarVisible="False"` on a page hides it for that page.
+- The bar docks into an overlay the behavior books on each page as the page joins the Shell and
+  installs as the page is handed its native view, so docking does not move content that is already on
+  screen. A page that hides the bar (`IsTabBarVisible="False"`, or pushed while `HideOnPush` is on) gets
+  no overlay from the behavior.
 - `Transition` runs on the **incoming** page only. Shell owns the page swap itself, so by the time
   `Navigated` reports the change there is no outgoing page left to animate.
 
