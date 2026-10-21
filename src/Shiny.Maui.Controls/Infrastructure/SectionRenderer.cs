@@ -9,10 +9,15 @@ namespace Shiny.Maui.Controls.Infrastructure;
 
 static class SectionRenderer
 {
-    public static View Render(TvTableSection section, TvTableView parentTableView)
+    /// <returns>
+    /// The section's view, the child index of its first row (after the header, if there is one) and the cells
+    /// it drew as rows, in order - what the table needs to put a row in or take one out later without drawing
+    /// the section again.
+    /// </returns>
+    public static (View View, int FirstRow, List<CellBase> Cells) Render(TvTableSection section, TvTableView parentTableView)
     {
         if (!section.IsVisible)
-            return new ContentView { IsVisible = false };
+            return (new ContentView { IsVisible = false }, 0, new List<CellBase>());
 
         var sectionLayout = new VerticalStackLayout();
 
@@ -25,24 +30,13 @@ static class SectionRenderer
 
         // Header
         RenderHeader(sectionLayout, section, parentTableView);
+        var firstRow = sectionLayout.Children.Count;
 
         // Cells with separators
-        var cells = section.GetVisibleCells();
+        var cells = new List<CellBase>(section.GetVisibleCells());
         for (var i = 0; i < cells.Count; i++)
         {
-            var cell = cells[i];
-            cell.ParentTableView = parentTableView;
-            cell.ParentSection = section;
-            cell.ApplyCascadedStyles();
-
-            if (section.UseDragSort)
-            {
-                sectionLayout.Children.Add(new DragSortRow(parentTableView, section, cell));
-            }
-            else
-            {
-                sectionLayout.Children.Add(cell);
-            }
+            sectionLayout.Children.Add(CreateRow(section, cells[i], parentTableView));
 
             // Separator between cells (not after last)
             if (i < cells.Count - 1)
@@ -54,7 +48,24 @@ static class SectionRenderer
         // Footer
         RenderFooter(sectionLayout, section, parentTableView);
 
-        return sectionLayout;
+        return (sectionLayout, firstRow, cells);
+    }
+
+    /// <summary>
+    /// The view <paramref name="cell"/> is drawn in as a row of <paramref name="section"/>: the cell itself, or a
+    /// <see cref="DragSortRow"/> around it when the section sorts by drag. A full render and a single inserted row
+    /// both come through here, so the two cannot drift apart.
+    /// </summary>
+    public static View CreateRow(TvTableSection section, CellBase cell, TvTableView tableView)
+    {
+        cell.ParentTableView = tableView;
+        cell.ParentSection = section;
+        cell.ApplyCascadedStyles();
+
+        if (section.UseDragSort)
+            return new DragSortRow(tableView, section, cell);
+
+        return cell;
     }
 
     static void RenderHeader(VerticalStackLayout layout, TvTableSection section, TvTableView tableView)
@@ -174,7 +185,7 @@ static class SectionRenderer
             element.SetDynamicResource(property, themeKey);
     }
 
-    static BoxView CreateSeparator(TvTableView tableView)
+    public static BoxView CreateSeparator(TvTableView tableView)
     {
         var separator = new BoxView
         {

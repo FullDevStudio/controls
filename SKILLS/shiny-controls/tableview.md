@@ -404,7 +404,10 @@ Generate cells from a data source:
 </shiny:TableSection>
 ```
 
-The `ItemsSource` supports `INotifyCollectionChanged` for live updates.
+The `ItemsSource` supports `INotifyCollectionChanged` for live updates. Each `Add`, `Remove`, `Replace` or
+`Move` creates, removes or moves only the cells it names (the same holds for the sections
+`TableView.ItemsSource` generates), so adding items one at a time is fine; a `Reset` (`Clear()`, or a new
+collection) builds every cell again.
 
 `TableView` also has `ItemsSource`/`ItemTemplate`, which generate whole **sections** (the template returns a
 `TableSection`). Each generated section, and every fixed cell, header and footer view declared inside its

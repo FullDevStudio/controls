@@ -42,9 +42,11 @@ public class TableRoot : BindableObject
         RaiseRootChanged();
     }
 
+    // Passed on as it came: the table tells a change to a section's generated rows, which it can follow row
+    // by row, from one that needs a full render by these args.
     void OnSectionChanged(object? sender, EventArgs e)
     {
-        RaiseRootChanged();
+        RootChanged?.Invoke(this, e);
     }
 
     void RaiseRootChanged()

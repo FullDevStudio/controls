@@ -86,6 +86,11 @@ Each generated section gets its item as its `BindingContext`, and so does everyt
 title, fixed cells declared in the template, and its `HeaderView`/`FooterView`. They keep the item when
 the TableView's own `BindingContext` changes.
 
+An `Add`, `Remove`, `Replace` or `Move` on the TableView's `ItemsSource`, or on a section's, creates, removes
+or moves only the sections or cells it names, so filling a collection one item at a time builds one row per
+item and leaves the rows already on screen alone. A `Reset` (`Clear()`, or a new collection) still builds
+every row again, and the table is not virtualized: every row stays a live view.
+
 **Drag to reorder** - `UseDragSort="True"` puts a drag handle on every row in a section. Dragging a
 handle lifts the row under the finger, draws an insertion line at the drop position, and auto-scrolls
 when the drag reaches the top or bottom edge; touches anywhere else still scroll the table. Rows

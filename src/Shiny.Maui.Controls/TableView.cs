@@ -29,13 +29,22 @@ public partial class TableView : ContentView
     TvTableRoot root = default!;
     bool isRendering;
     bool renderPending;
+    // What the pending update has to do: draw everything, or only follow the generated sections and the
+    // sections whose generated cells changed. See ScheduleRender.
+    bool fullRenderRequested;
+    bool generatedSectionsChanged;
+    readonly List<TvTableSection> sectionsWithChangedRows = new();
     IDisposable? viewItemsSourceSubscription;
     readonly List<TvTableSection> generatedSections = new();
+    // False while an item made no section: the generated sections no longer line up with the items by index,
+    // so a collection change cannot be applied to them row by row.
+    bool generatedSectionsMatchItems;
     DragSortController? dragSort;
     internal bool SuppressRender { get; set; }
 
-    // What the last render put on screen, so a change of the table's id can rename it without a re-render.
-    readonly List<(View View, IReadOnlyList<CellBase> Cells)> renderedSections = new();
+    // What the last render put on screen, so a change of the table's id can rename it without a re-render,
+    // and a change to the generated rows can put in or take out just those rows.
+    readonly List<RenderedSection> renderedSections = new();
     // The ids this table handed out. A cell whose id is one of these is ours to rename; any other id
     // was the consumer's and is left alone.
     readonly ConditionalWeakTable<CellBase, string> generatedCellIds = new();
@@ -252,7 +261,17 @@ public partial class TableView : ContentView
 
 
 
-    void OnRootChanged(object? sender, EventArgs e) => ScheduleRender();
+    void OnRootChanged(object? sender, EventArgs e) => OnSectionChanged(e);
+
+    // A change to a section's generated cells alone arrives with SectionRowsChangedEventArgs and is followed
+    // row by row; anything else re-renders.
+    void OnSectionChanged(EventArgs e)
+    {
+        if (e is Sections.SectionRowsChangedEventArgs rows)
+            ScheduleRowsUpdate(rows.Section);
+        else
+            ScheduleRender();
+    }
 
     /// <summary>
     /// Re-renders once the change that asked for it has finished, and once however many asked.
@@ -268,14 +287,45 @@ public partial class TableView : ContentView
     /// Run afterwards, the detach and re-attach settle before anything is written back.</para>
     /// <para>Coalesced as well: one write that shows or hides several sections is one re-render, not
     /// one each. With no dispatcher (a bare unit test), it renders inline as it always did.</para>
+    /// <para>A change to an <c>ItemsSource</c> - a section's, or the table's own - takes the same path
+    /// but puts in, takes out or moves only the rows it names (<see cref="ScheduleRowsUpdate"/>,
+    /// <see cref="ScheduleSectionsUpdate"/>). Anything else pending in the same pass still re-renders it
+    /// all.</para>
     /// </remarks>
     void ScheduleRender()
+    {
+        fullRenderRequested = true;
+        DispatchUpdate();
+    }
+
+    /// <summary>
+    /// Brings only <paramref name="section"/>'s rows up to date - the cells its <c>ItemsSource</c> added,
+    /// removed or moved - on the same schedule as <see cref="ScheduleRender"/>. Every other row stays where
+    /// it is, and so do the cells in it.
+    /// </summary>
+    void ScheduleRowsUpdate(TvTableSection section)
+    {
+        if (!sectionsWithChangedRows.Contains(section))
+            sectionsWithChangedRows.Add(section);
+        DispatchUpdate();
+    }
+
+    /// <summary>
+    /// Puts in, takes out or moves only the sections the table's own <c>ItemsSource</c> added, removed or
+    /// moved, on the same schedule as <see cref="ScheduleRender"/>.
+    /// </summary>
+    void ScheduleSectionsUpdate()
+    {
+        generatedSectionsChanged = true;
+        DispatchUpdate();
+    }
+
+    void DispatchUpdate()
     {
         var dispatcher = this.Dispatcher;
         if (dispatcher is null)
         {
-            RenderSections();
-            ModelChanged?.Invoke(this, EventArgs.Empty);
+            ApplyUpdate();
             return;
         }
 
@@ -286,9 +336,23 @@ public partial class TableView : ContentView
         dispatcher.Dispatch(() =>
         {
             renderPending = false;
-            RenderSections();
-            ModelChanged?.Invoke(this, EventArgs.Empty);
+            ApplyUpdate();
         });
+    }
+
+    void ApplyUpdate()
+    {
+        var renderAll = fullRenderRequested;
+        var sections = generatedSectionsChanged;
+        var rows = new List<TvTableSection>(sectionsWithChangedRows);
+        fullRenderRequested = false;
+        generatedSectionsChanged = false;
+        sectionsWithChangedRows.Clear();
+
+        if (renderAll || !TryUpdateInPlace(sections, rows))
+            RenderSections();
+
+        ModelChanged?.Invoke(this, EventArgs.Empty);
     }
 
     // ---------- Drag sort plumbing (see DragSortController) ----------
@@ -339,22 +403,7 @@ public partial class TableView : ContentView
             // cell is re-attached - a hidden row reads as visible to GetVisibleCells below, and a row
             // the render leaves out keeps no context at all until the next one.
             foreach (var section in GetAllSections())
-            {
-                foreach (var cell in section.GetAllCells())
-                {
-                    (cell.Parent as Layout)?.Remove(cell);
-                    SetInheritedBindingContext(cell, section.BindingContext);
-                }
-
-                // The same goes for a section's HeaderView and FooterView: SectionRenderer adds the
-                // consumer's instance to a brand-new section layout on every render, so left in the
-                // outgoing one it crashes the next render — Android's "The specified child already has
-                // a parent", and a COMException out of UIElementCollection.Add on Windows.
-                if (section.HeaderView is { Parent: Layout headerParent } header)
-                    headerParent.Remove(header);
-                if (section.FooterView is { Parent: Layout footerParent } footer)
-                    footerParent.Remove(footer);
-            }
+                DetachRenderedParts(section);
 
             rootLayout.Children.Clear();
             renderedSections.Clear();
@@ -368,27 +417,13 @@ public partial class TableView : ContentView
 
             for (var i = 0; i < sections.Count; i++)
             {
-                var sectionView = SectionRenderer.Render(sections[i], this);
+                var (sectionView, firstRow, cells) = SectionRenderer.Render(sections[i], this);
                 rootLayout.Children.Add(sectionView);
-                renderedSections.Add((sectionView, sections[i].GetVisibleCells()));
+                renderedSections.Add(new RenderedSection(sections[i], sectionView, firstRow, cells));
 
                 // Section separator
                 if (ShowSectionSeparator && i < sections.Count - 1)
-                {
-                    var gap = new BoxView { HeightRequest = SectionSeparatorHeight };
-
-                    // Bound, not assigned: a literal captured here is read once, at render time, so
-                    // it survives an appearance flip and leaves a near-black band sitting between the
-                    // sections of a light table.
-                    if (SectionSeparatorColor is { } explicitColor)
-                        gap.Color = explicitColor;
-                    else if (BackgroundColor is { } ownBackground && ownBackground != Colors.Transparent)
-                        gap.Color = ownBackground;
-                    else
-                        gap.SetDynamicResource(BoxView.ColorProperty, ShinyThemeKeys.Color.Background);
-
-                    rootLayout.Children.Add(gap);
-                }
+                    rootLayout.Children.Add(CreateSectionSeparator());
             }
         }
         finally
@@ -398,11 +433,172 @@ public partial class TableView : ContentView
         NameRenderedParts();
     }
 
+    // Takes a section's cells, HeaderView and FooterView out of whatever layout drew them - see RenderSections.
+    void DetachRenderedParts(TvTableSection section)
+    {
+        foreach (var cell in section.GetAllCells())
+        {
+            (cell.Parent as Layout)?.Remove(cell);
+            SetInheritedBindingContext(cell, section.BindingContext);
+        }
+
+        // The same goes for a section's HeaderView and FooterView: SectionRenderer adds the
+        // consumer's instance to a brand-new section layout on every render, so left in the
+        // outgoing one it crashes the next render — Android's "The specified child already has
+        // a parent", and a COMException out of UIElementCollection.Add on Windows.
+        if (section.HeaderView is { Parent: Layout headerParent } header)
+            headerParent.Remove(header);
+        if (section.FooterView is { Parent: Layout footerParent } footer)
+            footerParent.Remove(footer);
+    }
+
+    BoxView CreateSectionSeparator()
+    {
+        var gap = new BoxView { HeightRequest = SectionSeparatorHeight };
+
+        // Bound, not assigned: a literal captured here is read once, at render time, so
+        // it survives an appearance flip and leaves a near-black band sitting between the
+        // sections of a light table.
+        if (SectionSeparatorColor is { } explicitColor)
+            gap.Color = explicitColor;
+        else if (BackgroundColor is { } ownBackground && ownBackground != Colors.Transparent)
+            gap.Color = ownBackground;
+        else
+            gap.SetDynamicResource(BoxView.ColorProperty, ShinyThemeKeys.Color.Background);
+
+        return gap;
+    }
+
+    /// <summary>
+    /// Follows a change to the generated sections, or to the generated cells of <paramref name="rowsChanged"/>,
+    /// by putting in, taking out or moving only those rows. The rest of the table - its other sections, the
+    /// cells already drawn and the separators between them - stays as it is.
+    /// </summary>
+    /// <returns>False when the screen is not what the last render left, so the caller renders it all.</returns>
+    bool TryUpdateInPlace(bool sectionsChanged, IReadOnlyList<TvTableSection> rowsChanged)
+    {
+        // Skipped as RenderSections skips them: mid-render, or while a drag reorders cells (it renders
+        // itself once it is done).
+        if (isRendering || SuppressRender)
+            return true;
+
+        isRendering = true;
+        bool updated;
+        try
+        {
+            updated = !sectionsChanged || UpdateRenderedSections();
+            for (var i = 0; updated && i < rowsChanged.Count; i++)
+                updated = UpdateRenderedCells(rowsChanged[i]);
+        }
+        finally
+        {
+            isRendering = false;
+        }
+
+        // Renumbered, since an insert or a move shifts every row after it.
+        if (updated)
+            NameRenderedParts();
+        return updated;
+    }
+
+    bool UpdateRenderedSections()
+    {
+        var shown = new List<TvTableSection>(renderedSections.Count);
+        foreach (var rendered in renderedSections)
+            shown.Add(rendered.Section);
+
+        Func<View>? separator = ShowSectionSeparator ? CreateSectionSeparator : null;
+
+        // A section that only moves keeps the view it was drawn into. The ones still here at the end left.
+        var taken = new Dictionary<TvTableSection, RenderedSection>();
+        var updated = TableRows.Reconcile(shown, GetVisibleSections(),
+            remove: index =>
+            {
+                var rendered = renderedSections[index];
+                if (!TableRows.RemoveAt(rootLayout, 0, index, renderedSections.Count, rendered.View, separator != null))
+                    return false;
+
+                dragSort?.Abort();
+                renderedSections.RemoveAt(index);
+                taken[rendered.Section] = rendered;
+                return true;
+            },
+            insert: (index, section) =>
+            {
+                if (!taken.Remove(section, out var rendered))
+                {
+                    // Nothing of it may still sit in an old layout: Android and WinUI both end the app over a
+                    // view added to a second parent.
+                    DetachRenderedParts(section);
+                    var (view, firstRow, cells) = SectionRenderer.Render(section, this);
+                    rendered = new RenderedSection(section, view, firstRow, cells);
+                }
+
+                if (!TableRows.Insert(rootLayout, 0, index, renderedSections.Count, rendered.View, separator))
+                    return false;
+
+                dragSort?.Abort();
+                renderedSections.Insert(index, rendered);
+                return true;
+            });
+
+        // Their cells and HeaderView/FooterView are freed, as a full render frees them, so nothing is left
+        // inside a layout that is no longer on screen.
+        foreach (var section in taken.Keys)
+            DetachRenderedParts(section);
+
+        return updated;
+    }
+
+    bool UpdateRenderedCells(TvTableSection section)
+    {
+        var index = renderedSections.FindIndex(x => ReferenceEquals(x.Section, section));
+        if (index < 0)
+        {
+            // A hidden section draws no rows, and one that left the table has none here. A visible
+            // section of this table that the last render did not draw means the screen is out of step.
+            return !section.IsVisible || !GetAllSections().Contains(section);
+        }
+
+        var (_, view, firstRow, cells) = renderedSections[index];
+        if (!section.IsVisible || view is not Layout layout)
+            return false;
+
+        return TableRows.Reconcile(cells, section.GetVisibleCells(),
+            remove: row =>
+            {
+                var cell = cells[row];
+                if (!TableRows.RemoveAt(layout, firstRow, row, cells.Count, RowView(cell), separated: true))
+                    return false;
+
+                dragSort?.Abort();
+
+                // Out of its DragSortRow too, and with the section's context to read while it is detached,
+                // as RenderSections leaves it.
+                (cell.Parent as Layout)?.Remove(cell);
+                SetInheritedBindingContext(cell, section.BindingContext);
+                return true;
+            },
+            insert: (row, cell) =>
+            {
+                dragSort?.Abort();
+
+                // Never into a second parent: Android and WinUI both end the app over a view that is
+                // still a child of another one.
+                (cell.Parent as Layout)?.Remove(cell);
+                var rowView = SectionRenderer.CreateRow(section, cell, this);
+                return TableRows.Insert(layout, firstRow, row, cells.Count, rowView, () => SectionRenderer.CreateSeparator(this));
+            });
+    }
+
+    // The view a drawn cell takes up in its section's layout.
+    static View RowView(CellBase cell) => cell.Parent is DragSortRow row ? row : cell;
+
     void NameRenderedParts()
     {
         for (var s = 0; s < renderedSections.Count; s++)
         {
-            var (view, cells) = renderedSections[s];
+            var (_, view, _, cells) = renderedSections[s];
             AutomationIds.Set(view, AutomationIds.For(this, SectionAutomationIdSuffix, s));
 
             var cellBase = AutomationIds.For(this, CellAutomationIdSuffix, s);
@@ -477,44 +673,65 @@ public partial class TableView : ContentView
 
     void OnViewItemsSourceCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        RegenerateTemplatedSections();
+        // Sections for the items that came in, and out of the way for the ones that left - not a new section
+        // for every item on every change. A Reset, or a change that does not line up with the sections, still
+        // builds them all again.
+        if (ItemTemplate is { } template && generatedSectionsMatchItems
+            && TableRows.TryApply(generatedSections, e, item => CreateSection(template, item), ReleaseSection)
+            && (ItemsSource is not ICollection source || source.Count == generatedSections.Count))
+            ScheduleSectionsUpdate();
+        else
+            RegenerateTemplatedSections();
     }
 
     void RegenerateTemplatedSections()
     {
         foreach (var section in generatedSections)
-        {
-            section.SectionChanged -= OnGeneratedSectionChanged;
-            section.ParentTableView = null;
-        }
+            ReleaseSection(section);
 
         generatedSections.Clear();
+        generatedSectionsMatchItems = false;
 
-        if (ItemsSource == null || ItemTemplate == null)
+        var template = ItemTemplate;
+        if (ItemsSource == null || template == null)
         {
             RenderSections();
             return;
         }
 
+        generatedSectionsMatchItems = true;
         foreach (var item in ItemsSource)
         {
-            var template = ItemTemplate;
-            if (template is DataTemplateSelector selector)
-                template = selector.SelectTemplate(item, null);
-
-            if (template.CreateContent() is TvTableSection section)
-            {
-                section.BindingContext = item;
-                section.ParentTableView = this;
-                section.SectionChanged += OnGeneratedSectionChanged;
+            if (CreateSection(template, item) is { } section)
                 generatedSections.Add(section);
-            }
+            else
+                generatedSectionsMatchItems = false;
         }
 
         RenderSections();
     }
 
-    void OnGeneratedSectionChanged(object? sender, EventArgs e) => ScheduleRender();
+    TvTableSection? CreateSection(DataTemplate template, object? item)
+    {
+        if (template is DataTemplateSelector selector)
+            template = selector.SelectTemplate(item, null);
+
+        if (template.CreateContent() is not TvTableSection section)
+            return null;
+
+        section.BindingContext = item;
+        section.ParentTableView = this;
+        section.SectionChanged += OnGeneratedSectionChanged;
+        return section;
+    }
+
+    void ReleaseSection(TvTableSection section)
+    {
+        section.SectionChanged -= OnGeneratedSectionChanged;
+        section.ParentTableView = null;
+    }
+
+    void OnGeneratedSectionChanged(object? sender, EventArgs e) => OnSectionChanged(e);
 
 
 
@@ -558,6 +775,9 @@ public partial class TableView : ContentView
     public double VisibleContentHeight => scrollView.ContentSize.Height;
 
 
+    // One section on screen: the view it was drawn into, the child index its first row sits at, and the
+    // cells it shows as rows, in order.
+    sealed record RenderedSection(TvTableSection Section, View View, int FirstRow, List<CellBase> Cells);
 }
 
 public class ItemDroppedEventArgs : EventArgs

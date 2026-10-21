@@ -15,6 +15,9 @@ public class TableSection : BindableObject
     readonly ObservableCollection<CellBase> cells = new();
     IDisposable? itemsSourceSubscription;
     readonly List<CellBase> generatedCells = new();
+    // False while an item made no cell: the generated cells no longer line up with the items by index, so a
+    // collection change cannot be applied to them row by row.
+    bool cellsMatchItems;
 
     public TableSection()
     {
@@ -318,33 +321,51 @@ public class TableSection : BindableObject
 
     void OnItemsSourceCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        RegenerateTemplatedCells();
+        // Cells for the items that came in, and out of the way for the ones that left - not a new cell for every
+        // item on every change, which made filling a collection one item at a time cost n²/2 cells. A Reset, or
+        // a change that does not line up with the cells, still builds them all again.
+        if (ItemTemplate is { } template && cellsMatchItems
+            && TableRows.TryApply(generatedCells, e, item => CreateCell(template, item), static _ => { })
+            && (ItemsSource is not ICollection source || source.Count == generatedCells.Count))
+            RaiseRowsChanged();
+        else
+            RegenerateTemplatedCells();
     }
 
     internal void RegenerateTemplatedCells()
     {
         generatedCells.Clear();
+        cellsMatchItems = false;
 
-        if (ItemsSource == null || ItemTemplate == null)
+        var template = ItemTemplate;
+        if (ItemsSource == null || template == null)
         {
             RaiseSectionChanged();
             return;
         }
 
+        cellsMatchItems = true;
         foreach (var item in ItemsSource)
         {
-            var template = ItemTemplate;
-            if (template is DataTemplateSelector selector)
-                template = selector.SelectTemplate(item, null);
-
-            if (template.CreateContent() is CellBase cell)
-            {
-                cell.BindingContext = item;
+            if (CreateCell(template, item) is { } cell)
                 generatedCells.Add(cell);
-            }
+            else
+                cellsMatchItems = false;
         }
 
         RaiseSectionChanged();
+    }
+
+    static CellBase? CreateCell(DataTemplate template, object? item)
+    {
+        if (template is DataTemplateSelector selector)
+            template = selector.SelectTemplate(item, null);
+
+        if (template.CreateContent() is not CellBase cell)
+            return null;
+
+        cell.BindingContext = item;
+        return cell;
     }
 
 
@@ -367,4 +388,23 @@ public class TableSection : BindableObject
         SectionChanged?.Invoke(this, EventArgs.Empty);
     }
 
+    /// <summary>
+    /// For a change to the generated cells alone, so the table puts in, takes out or moves just those rows.
+    /// Still raised as <see cref="SectionChanged"/>, so anyone else listening hears about it as before.
+    /// </summary>
+    void RaiseRowsChanged()
+    {
+        SectionChanged?.Invoke(this, new SectionRowsChangedEventArgs(this));
+    }
+
+}
+
+/// <summary>
+/// What <see cref="TableSection.SectionChanged"/> carries when only the section's generated cells changed.
+/// </summary>
+sealed class SectionRowsChangedEventArgs : EventArgs
+{
+    public SectionRowsChangedEventArgs(TableSection section) => Section = section;
+
+    public TableSection Section { get; }
 }

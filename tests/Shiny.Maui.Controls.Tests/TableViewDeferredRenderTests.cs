@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using Microsoft.Maui.Controls;
@@ -70,6 +71,48 @@ public class TableViewDeferredRenderTests
             TestDispatcherProvider.Install();
         }
     }
+
+    /// <summary>
+    /// Items added to a section's ItemsSource only put their own rows in, but on the same schedule as any
+    /// other section change: after the change, and once for everything added in one go.
+    /// </summary>
+    [Fact]
+    public void ItemsAddedTogetherAreDrawnOnceAfterTheChange()
+    {
+        var dispatcher = new QueueingDispatcher();
+        DispatcherProvider.SetCurrent(new QueueingProvider(dispatcher));
+        try
+        {
+            new Application();
+            var items = new ObservableCollection<string>();
+            var table = new TableView();
+            table.Root.Sections.Add(new TvTableSection("Items")
+            {
+                ItemTemplate = new DataTemplate(() => new LabelCell()),
+                ItemsSource = items
+            });
+            dispatcher.RunAll();
+            var renders = 0;
+            table.ModelChanged += (_, _) => renders++;
+
+            items.Add("a");
+            items.Add("b");
+            items.Add("c");
+
+            DrawnCells(table).ShouldBe(0, "nothing is drawn from inside the change");
+            dispatcher.RunAll();
+
+            renders.ShouldBe(1);
+            DrawnCells(table).ShouldBe(3);
+        }
+        finally
+        {
+            TestDispatcherProvider.Install();
+        }
+    }
+
+    static int DrawnCells(TableView table) =>
+        table.ScrollContent.GetVisualTreeDescendants().OfType<LabelCell>().Count();
 
     /// <summary>
     /// A cell hidden by a binding stays hidden, and out of the new section, through a re-render.
