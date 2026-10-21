@@ -109,6 +109,9 @@ public class MotionIconView : GraphicsView
     public static readonly BindableProperty CommandParameterProperty =
         BindableProperty.Create(nameof(CommandParameter), typeof(object), typeof(MotionIconView));
 
+    // Everything above the icon up to its page, watched while a play runs. See WatchAncestors.
+    readonly List<Element> ancestors = [];
+
     MotionIconDefinition? icon;
     MotionSpec? spec;
     KeyframeScene? scene;
@@ -418,8 +421,9 @@ public class MotionIconView : GraphicsView
 
         player.Play();
 
-        // A hidden icon starts paused: IsPlaying still says it is playing, and it picks up from
-        // the first frame once it is shown.
+        // A hidden icon, or one inside something hidden, starts paused: IsPlaying still says it is
+        // playing, and it picks up from the first frame once it is shown.
+        WatchAncestors();
         SyncVisibility();
 
         SetPlaybackFlag(true);
@@ -474,6 +478,7 @@ public class MotionIconView : GraphicsView
         }
 
         StopTicking();
+        UnwatchAncestors();
     }
 
     /// <summary>
@@ -483,8 +488,9 @@ public class MotionIconView : GraphicsView
     /// MAUI raises no <c>Unloaded</c> for <c>IsVisible = false</c>, so without this a looping icon
     /// that is merely hidden keeps redrawing and writing <see cref="Progress"/> every frame — and
     /// keeps the shared ticker awake for nobody. Pausing rather than stopping keeps the position,
-    /// so showing the icon again carries on mid-cycle instead of restarting. Only the view's own
-    /// <see cref="VisualElement.IsVisible"/> is watched; a hidden ancestor does not change it.
+    /// so showing the icon again carries on mid-cycle instead of restarting. Hidden means the view's
+    /// own <see cref="VisualElement.IsVisible"/> or that of anything above it up to its page — see
+    /// <see cref="WatchAncestors"/>.
     /// </remarks>
     void SyncVisibility()
     {
@@ -500,7 +506,7 @@ public class MotionIconView : GraphicsView
         if (player is null)
             return;
 
-        if (IsVisible)
+        if (IsShown())
         {
             if (player.State is PlaybackState.Paused)
                 player.Resume();
@@ -527,6 +533,87 @@ public class MotionIconView : GraphicsView
             ticker.Tick -= OnTick;
 
         ticking = false;
+    }
+
+    // Hiding a parent leaves the child's own IsVisible true, yet nothing inside it is on screen.
+    bool IsShown()
+    {
+        if (!IsVisible)
+            return false;
+
+        foreach (var ancestor in ancestors)
+        {
+            if (ancestor is VisualElement { IsVisible: false })
+                return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Watches everything above the icon, up to its page, for as long as a play runs.
+    /// </summary>
+    /// <remarks>
+    /// <para>A hidden parent raises nothing on the icon — no <c>IsVisible</c> change, no
+    /// <c>Unloaded</c> — so the parents are watched directly. Hiding a whole section (a collapsed
+    /// <c>Expander</c>, a group switched off, the status area of a list row) is how most looping
+    /// icons end up off screen, and each of them would otherwise keep the shared ticker running.</para>
+    /// <para>The chain is walked when a play starts and again only when one of its links moves; a
+    /// visibility change is one pass over this list, and nothing is read per frame. Links that
+    /// cannot be hidden themselves (a <c>ViewCell</c> between a row and its list) are kept for their
+    /// <see cref="Element.ParentChanged"/>. The walk stops at the page, which is as far as layouts
+    /// nest; whole pages come and go through navigation, which unloads them.</para>
+    /// </remarks>
+    void WatchAncestors()
+    {
+        UnwatchAncestors();
+
+        for (var element = Parent; element is not null; element = element.Parent)
+        {
+            element.PropertyChanged += OnAncestorPropertyChanged;
+            element.ParentChanged += OnAncestorParentChanged;
+            ancestors.Add(element);
+
+            if (element is Page)
+                break;
+        }
+    }
+
+    void UnwatchAncestors()
+    {
+        foreach (var element in ancestors)
+        {
+            element.PropertyChanged -= OnAncestorPropertyChanged;
+            element.ParentChanged -= OnAncestorParentChanged;
+        }
+
+        ancestors.Clear();
+    }
+
+    void OnAncestorPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == IsVisibleProperty.PropertyName)
+            SyncVisibility();
+    }
+
+    // A layout moved into (or out of) a hidden container changes what the icon sits inside.
+    void OnAncestorParentChanged(object? sender, EventArgs e)
+    {
+        WatchAncestors();
+        SyncVisibility();
+    }
+
+    /// <inheritdoc />
+    protected override void OnParentSet()
+    {
+        base.OnParentSet();
+
+        // Moved while playing: the chain above it is a different one now.
+        if (player is not null)
+        {
+            WatchAncestors();
+            SyncVisibility();
+        }
     }
 
     /// <inheritdoc />

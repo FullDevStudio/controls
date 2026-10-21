@@ -162,6 +162,123 @@ public class MotionIconPlaybackTests
         MotionTicker.For(view)!.IsRunning.ShouldBeFalse();
     }
 
+    // A hidden parent leaves the icon's own IsVisible true and raises no Unloaded, so an icon inside a
+    // collapsed section used to keep looping, and keep the shared ticker awake, for nobody. Each test
+    // stops its icon in a finally: a failed assertion must not leave the ticker running into the next.
+
+    [Fact]
+    public void HidingAParentPausesALoopingIconAndShowingItResumes()
+    {
+        _ = new Application();
+
+        var view = new MotionIconView { Icon = "refresh", Trigger = MotionTrigger.Loop };
+        var section = new VerticalStackLayout { Children = { new HorizontalStackLayout { Children = { view } } } };
+        _ = new ContentPage { Content = section };
+
+        try
+        {
+            view.OnLoadedInternal();
+
+            var ticker = MotionTicker.For(view)!;
+            ticker.IsRunning.ShouldBeTrue();
+
+            // The grandparent rather than the parent: the whole chain counts, not just the nearest layout.
+            section.IsVisible = false;
+            ticker.IsRunning.ShouldBeFalse();
+            view.IsPlaying.ShouldBeTrue();
+
+            section.IsVisible = true;
+            ticker.IsRunning.ShouldBeTrue();
+        }
+        finally
+        {
+            view.Stop();
+        }
+
+        MotionTicker.For(view)!.IsRunning.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void ALoopingIconInsideAHiddenParentDoesNotConsumeFrames()
+    {
+        _ = new Application();
+
+        var view = new MotionIconView { Icon = "refresh", Trigger = MotionTrigger.Loop };
+        _ = new ContentPage { Content = new VerticalStackLayout { IsVisible = false, Children = { view } } };
+
+        try
+        {
+            view.OnLoadedInternal();
+
+            view.IsPlaying.ShouldBeTrue();
+            MotionTicker.For(view)!.IsRunning.ShouldBeFalse();
+        }
+        finally
+        {
+            view.Stop();
+        }
+    }
+
+    [Fact]
+    public void ShowingAnIconInsideAHiddenParentKeepsItPaused()
+    {
+        _ = new Application();
+
+        var view = new MotionIconView { Icon = "refresh", Trigger = MotionTrigger.Loop };
+        var section = new VerticalStackLayout { Children = { view } };
+
+        try
+        {
+            view.OnLoadedInternal();
+            var ticker = MotionTicker.For(view)!;
+
+            section.IsVisible = false;
+            view.IsVisible = false;
+
+            // Its own IsVisible is back, but the section around it is still hidden.
+            view.IsVisible = true;
+            ticker.IsRunning.ShouldBeFalse();
+
+            section.IsVisible = true;
+            ticker.IsRunning.ShouldBeTrue();
+        }
+        finally
+        {
+            view.Stop();
+        }
+    }
+
+    [Fact]
+    public void MovingAPlayingIconIntoAHiddenSectionPausesIt()
+    {
+        _ = new Application();
+
+        var view = new MotionIconView { Icon = "refresh", Trigger = MotionTrigger.Loop };
+        var row = new HorizontalStackLayout { Children = { view } };
+        var open = new VerticalStackLayout { Children = { row } };
+        var collapsed = new VerticalStackLayout { IsVisible = false };
+        _ = new ContentPage { Content = new VerticalStackLayout { Children = { open, collapsed } } };
+
+        try
+        {
+            view.OnLoadedInternal();
+            var ticker = MotionTicker.For(view)!;
+            ticker.IsRunning.ShouldBeTrue();
+
+            // The row moves, not the icon: what sits above the icon changes while its own parent stays.
+            open.Children.Remove(row);
+            collapsed.Children.Add(row);
+            ticker.IsRunning.ShouldBeFalse();
+
+            collapsed.IsVisible = true;
+            ticker.IsRunning.ShouldBeTrue();
+        }
+        finally
+        {
+            view.Stop();
+        }
+    }
+
     // Color: the theme ink is a fallback, never a value that outranks the app's own. A dynamic
     // resource on Color itself beat every Style setter, Binding and AppThemeBinding (#25).
 
