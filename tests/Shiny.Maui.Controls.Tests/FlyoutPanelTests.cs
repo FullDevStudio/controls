@@ -1,5 +1,7 @@
+using Microsoft.Maui;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
+using Microsoft.Maui.Handlers;
 using Shiny.Maui.Controls.Flyout;
 using Shouldly;
 using Xunit;
@@ -289,5 +291,159 @@ public class ShinyFlyoutInstallTests
         var template = new DataTemplate(() => new Label());
 
         Should.Throw<InvalidOperationException>(() => ShinyFlyout.SetStartTemplate(page, template));
+    }
+
+
+    // --- Shell: installed before the page is built --------------------------------------------------
+
+    /// <summary>
+    /// A Shell with the flyout declared on it and one tab per page, none of them built yet: Shell
+    /// creates a templated page only when it is about to show it. A headless Shell never raises
+    /// <c>Navigated</c> (it waits for a window), so whatever these tests see installed was installed
+    /// before the navigation.
+    /// </summary>
+    static (Shell Shell, ShellItem Item) ShellWithTabs(params Func<ContentPage>[] pages)
+    {
+        var shell = new Shell();
+        ShinyFlyout.SetStartTemplate(shell, PanelTemplate());
+
+        var item = new ShellItem();
+        foreach (var page in pages)
+            item.Items.Add(new ShellSection { Items = { new ShellContent { ContentTemplate = new DataTemplate(page) } } });
+
+        shell.Items.Add(item);
+        shell.CurrentItem = item;
+        return (shell, item);
+    }
+
+
+    /// <summary>
+    /// What a Shell renderer does with a tab: has its ShellContent create the page, then gives the
+    /// page a handler, which is where a platform builds the native views.
+    /// </summary>
+    static (ContentPage Page, RecordingPageHandler Handler) BuildPage(ShellItem item, int tab)
+    {
+        var page = (ContentPage)((IShellContentController)item.Items[tab].Items[0]).GetOrCreateContent();
+        var handler = new RecordingPageHandler();
+        page.Handler = handler;
+        return (page, handler);
+    }
+
+
+    /// <summary>
+    /// Stands in for the platform: records what the page's content was when the handler mapped
+    /// <c>Content</c>, which is where a platform builds the content's native views.
+    /// </summary>
+    sealed class RecordingPageHandler() : ViewHandler<IView, object>(mapper)
+    {
+        static readonly PropertyMapper<IView, RecordingPageHandler> mapper = new()
+        {
+            [nameof(IContentView.Content)] = (handler, view) => handler.ContentWhenBuilt = ((ContentPage)view).Content
+        };
+
+        public View? ContentWhenBuilt { get; private set; }
+
+        protected override object CreatePlatformView() => new();
+    }
+
+
+    /// <summary>
+    /// <c>Navigated</c> can come after the page is built (a push; <c>GoToAsync</c> on Windows), and then
+    /// the content had been built for the bare page and was taken out of the native tree again by the
+    /// move into the flyout. Installed before the handler, the content is built once, already inside
+    /// the flyout.
+    /// </summary>
+    [Fact]
+    public void AShellPageIsWrappedBeforeItIsBuilt()
+    {
+        var body = new Label { Text = "body" };
+        var (_, item) = ShellWithTabs(() => new ContentPage { Content = body });
+
+        var (page, handler) = BuildPage(item, 0);
+
+        var view = ShinyFlyout.GetFlyoutView(page);
+        view.ShouldNotBeNull();
+        handler.ContentWhenBuilt.ShouldBe(view);
+        view.Content.ShouldBe(body);
+    }
+
+
+    /// <summary>The state carries from tab to tab as it did when the navigation installed the flyout.</summary>
+    [Fact]
+    public void AShellPageWrappedEarlyCarriesTheStateFromThePageBefore()
+    {
+        var (_, item) = ShellWithTabs(
+            () => new ContentPage { Content = new Label() },
+            () => new ContentPage { Content = new Label() });
+
+        var (first, _) = BuildPage(item, 0);
+        ShinyFlyout.GetFlyoutView(first)!.GetPanel(FlyoutSide.Start)!.State = FlyoutPanelState.Expanded;
+
+        item.CurrentItem = item.Items[1];
+        var (second, _) = BuildPage(item, 1);
+
+        ShinyFlyout.GetFlyoutView(second)!.GetPanel(FlyoutSide.Start)!.State.ShouldBe(FlyoutPanelState.Expanded);
+    }
+
+
+    /// <summary>
+    /// A page Shell builds before it is shown — the next tab, on a platform that builds ahead — is left
+    /// to its navigation, so it opens in the state the flyout is in by then rather than the one it was
+    /// in when the page was built.
+    /// </summary>
+    [Fact]
+    public void AShellPageBuiltAheadOfItsTabWaitsForItsNavigation()
+    {
+        var (shell, item) = ShellWithTabs(
+            () => new ContentPage { Content = new Label() },
+            () => new ContentPage { Content = new Label() });
+
+        var (shown, _) = BuildPage(item, 0);
+        var (ahead, _) = BuildPage(item, 1);
+        ShinyFlyout.GetFlyoutView(ahead).ShouldBeNull();
+
+        ShinyFlyout.GetFlyoutView(shown)!.GetPanel(FlyoutSide.Start)!.State = FlyoutPanelState.Expanded;
+        item.CurrentItem = item.Items[1];
+        ShinyFlyout.InstallOn(shell, ahead);
+
+        ShinyFlyout.GetFlyoutView(ahead)!.GetPanel(FlyoutSide.Start)!.State.ShouldBe(FlyoutPanelState.Expanded);
+    }
+
+
+    [Fact]
+    public void AShellPageThatBringsItsOwnFlyoutIsStillLeftAlone()
+    {
+        var (_, item) = ShellWithTabs(() => new ShinyFlyoutPage { Detail = new Label() });
+
+        var (page, _) = BuildPage(item, 0);
+
+        ShinyFlyout.GetFlyoutView(page).ShouldBeNull();
+    }
+
+
+    /// <summary>
+    /// Shell reports a new page's elements to <c>DescendantAdded</c> right after the page itself. A
+    /// wrap inside that report would have the flyout and the content reported twice, and a listener
+    /// that subscribes per element (as the control feedback does) would subscribe twice.
+    /// </summary>
+    [Fact]
+    public void WrappingAShellPageEarlyReportsEachElementOnce()
+    {
+        var (shell, item) = ShellWithTabs(
+            () => new ContentPage { Content = new VerticalStackLayout { Children = { new Button { Text = "tap" } } } });
+
+        var present = new HashSet<Element>();
+        var reportedTwice = new List<Element>();
+        shell.DescendantAdded += (_, e) =>
+        {
+            if (!present.Add(e.Element))
+                reportedTwice.Add(e.Element);
+        };
+        shell.DescendantRemoved += (_, e) => present.Remove(e.Element);
+
+        var (page, _) = BuildPage(item, 0);
+
+        ShinyFlyout.GetFlyoutView(page).ShouldNotBeNull();
+        reportedTwice.ShouldBeEmpty();
     }
 }

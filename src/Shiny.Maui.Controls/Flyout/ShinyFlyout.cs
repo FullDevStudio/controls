@@ -201,6 +201,10 @@ public static class ShinyFlyout
         switch (host)
         {
             case Shell shell:
+                // A page is installed on just before the platform builds it (InstallBeforeBuild).
+                // Navigated still covers the rest: a page that already had its native view when it
+                // reached the Shell, or one that was built before it was shown.
+                shell.DescendantAdded += (_, e) => InstallBeforeBuild(shell, e.Element);
                 shell.Navigated += (_, _) => Install(shell, shell.CurrentPage);
                 break;
 
@@ -210,6 +214,50 @@ public static class ShinyFlyout
                 navigation.PoppedToRoot += (_, _) => Install(navigation, navigation.CurrentPage);
                 break;
         }
+    }
+
+
+    /// <summary>
+    /// Installs on the page a Shell is about to show, just before the platform builds it.
+    /// <c>Navigated</c> can come after that: a push raises it once the platform has pushed the page,
+    /// and <c>GoToAsync</c> holds it back to the end of its navigation, by which time a platform that
+    /// builds the page as the navigation runs (Windows) has done so. Moving the content into the
+    /// flyout then takes its native view out of the native tree again, and the page is built and laid
+    /// out a second time, flyout included.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Shell adds a page to its tree first — a ShellContent creating it from its template, or a push —
+    /// and the platform gives it a handler after that. The install waits for that handler instead of
+    /// wrapping as the page is added, because Shell reports the page's elements to
+    /// <c>DescendantAdded</c> right after the page itself: a wrap inside that report would have the
+    /// flyout and the content reported twice, and anything that subscribes per element on that event
+    /// would subscribe twice.
+    /// </para>
+    /// <para>
+    /// Only the page the Shell is presenting. One built ahead of its tab, or inserted under the top of
+    /// a stack, is left to its navigation as before, so it opens in the state the flyout is in when
+    /// it is shown rather than when it was built.
+    /// </para>
+    /// </remarks>
+    static void InstallBeforeBuild(Shell shell, Element element)
+    {
+        if (element is not Page { Handler: null } page || !ReferenceEquals(page, shell.CurrentPage))
+            return;
+
+        EventHandler<HandlerChangingEventArgs> handler = null!;
+        handler = (_, e) =>
+        {
+            if (e.NewHandler is null)
+                return;
+
+            page.HandlerChanging -= handler;
+
+            // Still the page being shown, not one navigated past before it was built.
+            if (ReferenceEquals(page, shell.CurrentPage))
+                Install(shell, page);
+        };
+        page.HandlerChanging += handler;
     }
 
 
