@@ -62,10 +62,14 @@ public partial class NotchView : Grid
         this.HorizontalOptions = LayoutOptions.Center;
         this.VerticalOptions = LayoutOptions.Start;
 
+        // Top, not centred: the surface grows and shrinks from its top edge, so content pinned to
+        // the top stays put while the bottom is revealed or clipped. Centred, anything along the top
+        // (a tab strip) slid out of view and back on every resize, which read as the notch
+        // collapsing and re-expanding.
         this.contentHost = new ContentView
         {
             HorizontalOptions = LayoutOptions.Center,
-            VerticalOptions = LayoutOptions.Center
+            VerticalOptions = LayoutOptions.Start
         };
 
         this.outline = new RoundRectangle();

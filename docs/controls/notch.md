@@ -4,7 +4,7 @@
 
 A Dynamic Island / camera-notch style surface that holds **anything** and morphs its width, height and corner radius to fit it. Available on both MAUI and Blazor, in the core packages.
 
-There are no compact/expanded states to manage. Put a view inside it and the notch sizes itself to that view. Swap the content, or let the content change its own size (text grows, a row appears), and the notch springs to the new size. During the morph the content stays laid out at its final size and the surface clips it, so text never re-wraps frame by frame. Content with a `WidthRequest` or `MaximumWidthRequest` is measured at that width, so text inside it wraps to the same number of lines it is laid out with and the notch is tall enough for all of them.
+There are no compact/expanded states to manage. Put a view inside it and the notch sizes itself to that view. Swap the content, or let the content change its own size (text grows, a row appears), and the notch springs to the new size. During the morph the content stays laid out at its final size and the surface clips it, so text never re-wraps frame by frame. The content is pinned to the top of the surface, which grows and shrinks from its top edge, so anything along the top of the content (a tab strip, a header) stays still while the bottom is revealed or clipped. Content with a `WidthRequest` or `MaximumWidthRequest` is measured at that width, so text inside it wraps to the same number of lines it is laid out with and the notch is tall enough for all of them.
 
 ```xml
 <Grid>

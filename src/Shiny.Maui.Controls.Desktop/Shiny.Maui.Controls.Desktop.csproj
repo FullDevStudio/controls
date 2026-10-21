@@ -71,6 +71,12 @@
         <Compile Include="Platforms/MacOS/**/*.cs" />
     </ItemGroup>
 
+    <!-- The Core Animation motion icon player core compiles for iOS. Core has no macOS or Catalyst
+         target, so the same file is linked in here and MotionIconRegistration plugs it in. -->
+    <ItemGroup Condition="'$(TargetPlatformIdentifier)' == 'macos' Or '$(TargetPlatformIdentifier)' == 'maccatalyst'">
+        <Compile Include="../Shiny.Maui.Controls/MotionIcons/CoreAnimationMotionPlayer.cs" Link="MotionIcons/CoreAnimationMotionPlayer.cs" />
+    </ItemGroup>
+
     <ItemGroup Condition="'$(TargetPlatformIdentifier)' == ''">
         <Compile Include="Platforms/Linux/**/*.cs" />
     </ItemGroup>

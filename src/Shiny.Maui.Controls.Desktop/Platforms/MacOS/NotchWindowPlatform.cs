@@ -134,6 +134,13 @@ static class NotchWindowPlatform
         NSNotificationCenter.DefaultCenter.RemoveObserver(entry.CloseObserver);
     }
 
+    /// <summary>
+    /// NotchView's own gentle "back" ease (overshoots ~3% and settles), as a cubic Bézier. That ease
+    /// is a cubic in t, and a Bézier whose x control points sit at 1/3 and 2/3 is too, so these
+    /// points reproduce it exactly: f(0)=0, f'(0)=3.9, f(1)=1, f'(1)=0.
+    /// </summary>
+    static readonly CAMediaTimingFunction MorphTiming = CAMediaTimingFunction.FromControlPoints(1f / 3f, 1.3f, 2f / 3f, 1f);
+
     public static void Place(object platformWindow, double width, double height, bool hugNotch, double topMargin, double durationMs)
     {
         if (platformWindow is not NSWindow window)
@@ -155,7 +162,7 @@ static class NotchWindowPlatform
             NSAnimationContext.RunAnimation(ctx =>
             {
                 ctx.Duration = durationMs / 1000d;
-                ctx.TimingFunction = CAMediaTimingFunction.FromName(CAMediaTimingFunction.EaseOut);
+                ctx.TimingFunction = MorphTiming;
                 ((NSWindow)window.Animator).SetFrame(frame, true);
             }, () => { });
         });

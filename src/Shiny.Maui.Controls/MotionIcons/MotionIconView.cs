@@ -114,6 +114,7 @@ public class MotionIconView : GraphicsView
     KeyframeScene? scene;
     Timeline? timeline;
     Player? player;
+    INativeMotionPlayer? native;
     MotionTicker? ticker;
     TaskCompletionSource? completion;
 
@@ -137,6 +138,7 @@ public class MotionIconView : GraphicsView
 
         Loaded += (_, _) => OnLoadedInternal();
         Unloaded += (_, _) => Detach();
+        SizeChanged += (_, _) => native?.Relayout();
 
         ApplyTriggerGestures();
     }
@@ -310,6 +312,8 @@ public class MotionIconView : GraphicsView
     {
         if (player is not null)
             stopAtCycleEnd = true;
+        else
+            native?.FinishCycle();
     }
 
     /// <summary>Returns to the resting pose without changing whether it is playing.</summary>
@@ -365,6 +369,9 @@ public class MotionIconView : GraphicsView
         player?.Stop();
         DetachPlayer();
 
+        if (TryStartNative(iterations))
+            return;
+
         ticker ??= MotionTicker.For(this);
 
         if (ticker is null)
@@ -392,6 +399,36 @@ public class MotionIconView : GraphicsView
         Invalidate();
     }
 
+    /// <summary>
+    /// Hands the play to the platform compositor when there is one, so a looping icon costs the app
+    /// nothing per frame. See <see cref="INativeMotionPlayer"/>.
+    /// </summary>
+    bool TryStartNative(double iterations)
+    {
+        // A negative rate runs the timeline backwards, which only the managed player does.
+        if (NativeMotion.Factory is not { } factory || Speed <= 0d)
+            return false;
+
+        var request = new NativeMotionRequest(
+            icon!, spec!, ResolveColor(), AccentColor, (float)StrokeWidth, iterations, Speed);
+
+        if (factory(this, request) is not { } created)
+            return false;
+
+        native = created;
+        native.Finished += OnNativeFinished;
+        stopAtCycleEnd = false;
+        PlayIterations = iterations;
+
+        // The compositor draws the moving icon; the scene would draw the resting one underneath it.
+        Drawable = NothingToDraw.Instance;
+
+        SyncVisibility();
+        SetPlaybackFlag(true);
+        Invalidate();
+        return true;
+    }
+
     void DetachPlayer()
     {
         if (player is not null)
@@ -399,6 +436,14 @@ public class MotionIconView : GraphicsView
             player.Finished -= OnPlayerFinished;
             player.Dispose();
             player = null;
+        }
+
+        if (native is not null)
+        {
+            native.Finished -= OnNativeFinished;
+            native.Dispose();
+            native = null;
+            Drawable = scene;
         }
 
         StopTicking();
@@ -416,6 +461,15 @@ public class MotionIconView : GraphicsView
     /// </remarks>
     void SyncVisibility()
     {
+        if (native is not null)
+        {
+            if (IsVisible)
+                native.Resume();
+            else
+                native.Pause();
+            return;
+        }
+
         if (player is null)
             return;
 
@@ -496,6 +550,12 @@ public class MotionIconView : GraphicsView
         Completed?.Invoke(this, EventArgs.Empty);
     }
 
+    void OnNativeFinished(object? sender, EventArgs e)
+    {
+        Stop();
+        Completed?.Invoke(this, EventArgs.Empty);
+    }
+
     void Rebuild()
     {
         icon = MotionResolver.ResolveIcon(Source, Icon, PathData);
@@ -532,7 +592,7 @@ public class MotionIconView : GraphicsView
         if (!loaded)
             return;
 
-        var wasPlaying = player is not null;
+        var wasPlaying = player is not null || native is not null;
 
         player?.Stop();
         DetachPlayer();
@@ -648,6 +708,10 @@ public class MotionIconView : GraphicsView
     {
         if (bindable is MotionIconView { player: not null } view)
             view.player.Rate = (double)newValue;
+        // A compositor play is built for one rate: start it again at the new one, or on the managed
+        // player for a rate only it can run.
+        else if (bindable is MotionIconView { native: not null } nativeView)
+            nativeView.Start(nativeView.PlayIterations);
     }
 
     static void OnIsPlayingChanged(BindableObject bindable, object oldValue, object newValue)
@@ -671,7 +735,7 @@ public class MotionIconView : GraphicsView
 
         // Ignore the write we made ourselves while reporting position, or a two-way bound slider
         // would fight the animation for control.
-        if (view.suppressProgressFeedback || view.timeline is null || view.spec is null || view.player is not null)
+        if (view.suppressProgressFeedback || view.timeline is null || view.spec is null || view.player is not null || view.native is not null)
             return;
 
         // Held just short of the end: with FillMode.None — which matches the Blazor side — landing
@@ -681,5 +745,15 @@ public class MotionIconView : GraphicsView
 
         view.timeline.Evaluate(view.spec.Duration * progress);
         view.Invalidate();
+    }
+
+    /// <summary>Stands in for the scene while the compositor draws the icon.</summary>
+    sealed class NothingToDraw : IDrawable
+    {
+        public static readonly NothingToDraw Instance = new();
+
+        public void Draw(ICanvas canvas, RectF dirtyRect)
+        {
+        }
     }
 }

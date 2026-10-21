@@ -13,7 +13,7 @@ Both hosts compile the **same** `MotionSpec`, but into different machinery:
 | | MAUI | Blazor |
 |---|---|---|
 | Runs the animation | a `KeyframeScene` driven by the Keyframe engine's `Player`, on one shared timer per window | the browser, from generated `@keyframes` |
-| Cost per frame | evaluate the spec + redraw | nothing — no C# runs at all |
+| Cost per frame | iOS, Mac Catalyst, macOS: nothing — Core Animation runs it. Android, Windows, Linux: evaluate the spec + redraw | nothing — no C# runs at all |
 | Stopping | `Player.Stop()` restores the captured baselines | drop a CSS class |
 
 Generate code against the properties, not the machinery. The parameter names are deliberately identical on both sides.
@@ -62,7 +62,7 @@ Identical on both hosts unless noted.
 | `StrokeWidth` | `double` | In the icon's own 24-unit space. The set is drawn for `2`. |
 | `IsPlaying` | `bool` | Two-way. **This is the one to bind to a busy flag.** Setting it `true` loops until it is set `false`, whatever `RepeatCount` says (both hosts). |
 | `Size` | `double` | Blazor only. MAUI uses `WidthRequest`/`HeightRequest` (both default 24). |
-| `Progress` | `double` | MAUI only. Two-way — bind a `Slider` to scrub. |
+| `Progress` | `double` | MAUI only. Two-way — bind a `Slider` to scrub. Not reported during a Core Animation play (iOS, Mac Catalyst, macOS); don't bind UI to it as a live position there. |
 | `Command` | `ICommand` | MAUI only. Blazor has `OnClick`. |
 | `Title` | `string` | Blazor only. Without it the icon is `aria-hidden`. |
 
