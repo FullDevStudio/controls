@@ -146,6 +146,11 @@ public class MotionIconView : GraphicsView
         Unloaded += (_, _) => OnUnloadedInternal();
         SizeChanged += (_, _) => native?.Relayout();
 
+        // A compositor play lives on one platform view. Some heads replace the platform view after
+        // Loaded (AppKit does when a page is rebuilt around the view), which would leave the play
+        // animating a detached view; start it again on the new one.
+        HandlerChanged += (_, _) => OnHandlerChangedInternal();
+
         ApplyTriggerGestures();
     }
 
@@ -331,6 +336,13 @@ public class MotionIconView : GraphicsView
         timeline?.RestoreBaselines();
         WriteProgress(0d);
         Invalidate();
+    }
+
+    // Internal so tests can stand in for HandlerChanged, which needs a real handler to raise.
+    internal void OnHandlerChangedInternal()
+    {
+        if (native is not null)
+            Start(PlayIterations);
     }
 
     // Internal so tests can stand in for Loaded, which only a real handler raises.

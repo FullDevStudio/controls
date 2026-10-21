@@ -170,6 +170,25 @@ public class MotionIconNativePlaybackTests : IDisposable
         view.Stop();
     }
 
+    [Fact]
+    public void ANewHandlerMovesTheNativePlayToTheNewPlatformView()
+    {
+        _ = new Application();
+
+        var view = new MotionIconView { Icon = "refresh", Trigger = MotionTrigger.Loop };
+        view.OnLoadedInternal();
+
+        // AppKit replaces a view's platform view when a page is rebuilt around it; a play left on
+        // the old one animates a view nobody can see.
+        view.OnHandlerChangedInternal();
+
+        this.created.Count.ShouldBe(2);
+        this.created[0].Disposed.ShouldBeTrue();
+        view.IsPlaying.ShouldBeTrue();
+
+        view.Stop();
+    }
+
     sealed class FakePlayer : INativeMotionPlayer
     {
         public bool Disposed { get; private set; }
