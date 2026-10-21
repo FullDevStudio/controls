@@ -22,6 +22,12 @@ namespace Shiny.Maui.Controls;
 /// a scope whose parent is inactive is inactive. It also makes the view's shortcuts outrank the
 /// page's, which is the precedence anyone would expect.
 /// </para>
+/// <para>
+/// The engine is static and its scopes hold the bindings, whose handlers reach the element and its
+/// whole page. So the scope is only registered while the element is in a window: it is created when
+/// the element gets one and removed from the engine when it loses it, otherwise every page that ever
+/// carried a shortcut — a Shell swapped out, a popped page, a closed dialog — would stay alive.
+/// </para>
 /// </remarks>
 sealed class KeyboardShortcutHost
 {
@@ -34,14 +40,13 @@ sealed class KeyboardShortcutHost
 
     readonly VisualElement element;
     KeyboardShortcutCollection? collection;
+    KeyboardShortcutScope? scope;
     bool appeared;
     bool sawLifecycle;
 
     KeyboardShortcutHost(VisualElement element)
     {
         this.element = element;
-        this.Scope = KeyboardShortcutManager.Engine.CreateScope(element.GetType().Name);
-        this.Scope.IsModal = KeyboardShortcuts.GetIsModal(element);
 
         element.PropertyChanged += this.OnElementPropertyChanged;
         element.BindingContextChanged += this.OnBindingContextChanged;
@@ -59,7 +64,24 @@ sealed class KeyboardShortcutHost
         this.Evaluate();
     }
 
-    public KeyboardShortcutScope Scope { get; }
+    /// <summary>
+    /// The element's scope in the engine, created on first use. Only asked for while the element is
+    /// in a window — by its own activation, or by a view on it looking for its parent scope.
+    /// </summary>
+    public KeyboardShortcutScope Scope
+    {
+        get
+        {
+            if (this.scope == null)
+            {
+                this.scope = KeyboardShortcutManager.Engine.CreateScope(this.element.GetType().Name);
+                this.scope.IsModal = KeyboardShortcuts.GetIsModal(this.element);
+                this.Sync();
+            }
+
+            return this.scope;
+        }
+    }
 
     public static KeyboardShortcutHost Ensure(VisualElement element)
     {
@@ -73,7 +95,11 @@ sealed class KeyboardShortcutHost
 
     internal static KeyboardShortcutHost? Get(BindableObject element) => element.GetValue(HostProperty) as KeyboardShortcutHost;
 
-    public void SetModal(bool modal) => this.Scope.IsModal = modal;
+    public void SetModal(bool modal)
+    {
+        if (this.scope != null)
+            this.scope.IsModal = modal;
+    }
 
     public void SetCollection(KeyboardShortcutCollection? value)
     {
@@ -93,20 +119,24 @@ sealed class KeyboardShortcutHost
     void Sync()
     {
         var wanted = this.collection?.ToList() ?? [];
-        var current = this.Scope.Bindings;
+        foreach (var shortcut in wanted)
+            BindableObject.SetInheritedBindingContext(shortcut, this.element.BindingContext);
 
-        foreach (var binding in current)
+        // Without a scope there is nothing to keep in step; the collection is read again when one is created.
+        if (this.scope is not { } scope)
+            return;
+
+        foreach (var binding in scope.Bindings)
         {
             if (binding.Tag is not KeyboardShortcut shortcut || !wanted.Contains(shortcut))
-                this.Scope.Remove(binding);
+                scope.Remove(binding);
         }
 
         // Re-added in collection order, which is the order the engine tries them in.
         foreach (var shortcut in wanted)
         {
-            this.Scope.Remove(shortcut.Binding);
-            this.Scope.Add(shortcut.Binding);
-            BindableObject.SetInheritedBindingContext(shortcut, this.element.BindingContext);
+            scope.Remove(shortcut.Binding);
+            scope.Add(shortcut.Binding);
         }
     }
 
@@ -153,13 +183,28 @@ sealed class KeyboardShortcutHost
     void Evaluate()
     {
         var window = this.element.Window;
+        if (window == null)
+        {
+            // Out of the window: the engine lets go of the scope, and with it of the element. Back
+            // in a window — a Shell switched back to, a page pushed again, content the overlay root
+            // has just re-parented — Scope builds a fresh one from the collection. A Shell tab that
+            // is switched away never gets here: Shell keeps it in the window, so it is only switched
+            // off by Disappearing, and goes when its Shell does.
+            if (this.scope is { } released)
+            {
+                this.scope = null;
+                KeyboardShortcutManager.Engine.RemoveScope(released);
+            }
+            return;
+        }
+
         var active = this.element is Page
-            ? this.appeared && window != null
-            : window != null && this.element.IsVisible;
+            ? this.appeared
+            : this.element.IsVisible;
 
         if (!active)
         {
-            this.Scope.Deactivate();
+            this.scope?.Deactivate();
             return;
         }
 

@@ -84,6 +84,7 @@ Bindings resolve against the element's `BindingContext`, the same as anything el
 - **On any other element:** while it is in a window, `IsVisible`, and its page is showing.
 - **Precedence:** a view beats its page, and between unrelated elements the most recently shown wins.
 - **`KeyboardShortcuts.IsModal="True"`** on an element blocks every shortcut outside it while it is live, including app-wide ones. Shiny's own in-app dialogs do this automatically, and Escape cancels them.
+- **Lifetime:** an element's shortcuts are registered with the engine only while it is in a window. A page that leaves it (a Shell swapped out, a popped page, a closed dialog) is let go and can be collected; when the same element comes back, its shortcuts work again without any extra code. A tab switched away inside one Shell stays in the window (Shell keeps the page), so its shortcuts are only switched off until it shows again, and are let go together with the Shell.
 
 ```xml
 <Grid IsVisible="{Binding IsEditing}" shiny:KeyboardShortcuts.IsModal="True">
