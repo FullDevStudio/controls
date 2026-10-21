@@ -42,6 +42,7 @@ sealed class CoreAnimationMotionPlayer : INativeMotionPlayer
     double iterations;
     CALayer? stage;
     Clock? clock;
+    IDisposable? boundsObserver;
     bool paused;
     bool disposed;
 
@@ -58,6 +59,10 @@ sealed class CoreAnimationMotionPlayer : INativeMotionPlayer
         this.Build();
         this.beginTime = this.LocalTime();
         this.Animate();
+
+        // A view usually starts playing before its platform view has been given a frame, and MAUI's
+        // SizeChanged has already fired by then, so the size it settles at has to be watched here.
+        this.boundsObserver = host.Layer!.AddObserver("bounds", NSKeyValueObservingOptions.New, _ => this.Relayout());
     }
 
     /// <summary>Creates a player for a loaded view, or null to leave the play on the managed ticker.</summary>
@@ -117,7 +122,8 @@ sealed class CoreAnimationMotionPlayer : INativeMotionPlayer
 
     public void Relayout()
     {
-        if (this.disposed)
+        // Layout passes report the same bounds over and over; only a real change is worth a rebuild.
+        if (this.disposed || this.stage is not { } current || current.Bounds.Size == this.host.Bounds.Size)
             return;
 
         this.Build();
@@ -130,6 +136,8 @@ sealed class CoreAnimationMotionPlayer : INativeMotionPlayer
             return;
 
         this.disposed = true;
+        this.boundsObserver?.Dispose();
+        this.boundsObserver = null;
         this.clock = null;
         this.stage?.RemoveFromSuperLayer();
         this.stage = null;
