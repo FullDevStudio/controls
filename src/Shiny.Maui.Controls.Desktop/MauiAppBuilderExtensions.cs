@@ -104,10 +104,8 @@ public static class DesktopMauiAppBuilderExtensions
         builder.Services.AddSingleton<IQuickEntryPresenter>(sp => new DesktopQuickEntryPresenter(sp.GetService<ILogger<DesktopQuickEntryPresenter>>()));
         builder.Services.AddSingleton<IMauiInitializeService, DesktopQuickEntryInitializer>();
 
-        // BorderlessEntry's chrome-stripping runs through handler mappers that the AppKit and GTK4
-        // heads never execute — they ship their own handler types. Core exposes a hook for exactly
-        // this rather than taking a dependency on a package that only exists on desktop.
-        PromptEntryPolish.Handler = QuickEntryPlatform.PolishEntry;
+        // The prompt's text field is a BorderlessEntry, polished by BorderlessEntryRegistration -
+        // which this package's module initializer installs whether or not this is called.
         return builder;
     }
 

@@ -335,7 +335,6 @@ public class PromptView : ContentView, IQuickEntryKeyHandler, IQuickEntryPresent
         };
         this.entry.TextChanged += this.OnEntryTextChanged;
         this.entry.Completed += (_, _) => this.Submit();
-        this.entry.HandlerChanged += (_, _) => PromptEntryPolish.Apply(this.entry.Handler?.PlatformView);
 
         this.micGlyph = new Label { Text = "🎙", HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center }
             .WithFontSize(ShinyThemeKeys.Type.BodyLargeSize);

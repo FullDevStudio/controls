@@ -159,7 +159,7 @@ static class QuickEntryPlatform
         });
     }
 
-    /// <summary>Strips the focus ring, border and opaque fill AppKit gives an <c>NSTextField</c>, so the prompt sits flush on the card.</summary>
+    /// <summary>Strips the focus ring, border and opaque fill AppKit gives an <c>NSTextField</c>, so a BorderlessEntry sits flush on its card or table row.</summary>
     public static void PolishEntry(object? platformView)
     {
         if (platformView is not NSTextField field)
@@ -172,6 +172,16 @@ static class QuickEntryPlatform
             field.DrawsBackground = false;
             field.BackgroundColor = NSColor.Clear;
             field.FocusRingType = NSFocusRingType.None;
+
+            // Without its bezel an NSTextField lays out like a label and wraps - a placeholder wider
+            // than the field broke onto a second line inside a table row. One line that scrolls
+            // sideways under the caret is what an entry is.
+            field.UsesSingleLineMode = true;
+            if (field.Cell is { } cell)
+            {
+                cell.Wraps = false;
+                cell.Scrollable = true;
+            }
         });
     }
 

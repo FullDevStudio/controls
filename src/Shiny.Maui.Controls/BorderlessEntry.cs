@@ -21,4 +21,10 @@ class BorderlessEntry : Entry
     }
 
     internal const string AutoCompleteMapperKey = "ShinyAutoComplete";
+
+    protected override void OnHandlerChanged()
+    {
+        base.OnHandlerChanged();
+        BorderlessEntryPolish.Apply(this.Handler?.PlatformView);
+    }
 }

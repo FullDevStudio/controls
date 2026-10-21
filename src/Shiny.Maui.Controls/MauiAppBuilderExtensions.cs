@@ -131,6 +131,12 @@ public static class ControlsMauiAppBuilderExtensions
             handler.PlatformView.Background = null;
 #elif IOS || MACCATALYST
             handler.PlatformView.BorderStyle = UIKit.UITextBorderStyle.None;
+#elif WINDOWS
+            // The Editor below always had this; the Entry did not, so every EntryCell on Windows drew
+            // a full TextBox - border, fill and padding - inside its row.
+            handler.PlatformView.BorderThickness = new Microsoft.UI.Xaml.Thickness(0);
+            handler.PlatformView.Background = null;
+            handler.PlatformView.Padding = new Microsoft.UI.Xaml.Thickness(0);
 #endif
         });
 

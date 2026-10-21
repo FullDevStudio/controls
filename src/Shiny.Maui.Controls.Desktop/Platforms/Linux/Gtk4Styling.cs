@@ -3,7 +3,8 @@ namespace Shiny.Maui.Controls.Desktop.QuickEntry;
 /// <summary>
 /// Installs the one stylesheet every Linux overlay window needs. GTK paints a window's own background
 /// before any content, so a MAUI page with a transparent background is not enough on its own — the
-/// toplevel has to be told to paint nothing.
+/// toplevel has to be told to paint nothing. It also carries the rule that takes the frame off a
+/// <c>BorderlessEntry</c>, installed by the first one to get a handler.
 /// </summary>
 static class Gtk4Styling
 {
@@ -23,16 +24,28 @@ static class Gtk4Styling
             box-shadow: none;
             outline: none;
         }
+
+        entry.shiny-borderless,
+        entry.shiny-borderless text {
+            background-color: transparent;
+            background-image: none;
+            border: none;
+            box-shadow: none;
+            outline: none;
+        }
         """;
+
+    /// <summary>The class <c>QuickEntryPlatform.PolishEntry</c> puts on every BorderlessEntry's widget.</summary>
+    public const string BorderlessEntryClass = "shiny-borderless";
 
     static bool applied;
 
-    public static void EnsureCss(IntPtr window)
+    public static void EnsureCss(IntPtr widget)
     {
         if (applied)
             return;
 
-        var display = Gtk4Interop.WidgetGetDisplay(window);
+        var display = Gtk4Interop.WidgetGetDisplay(widget);
         if (display == IntPtr.Zero)
             return;
 

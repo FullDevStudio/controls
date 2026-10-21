@@ -135,7 +135,19 @@ static unsafe class QuickEntryPlatform
     }
 
     /// <summary>The prompt's flat look comes from the stylesheet installed in <see cref="EnsureCss"/>, so there is nothing per-entry to do here.</summary>
-    public static void PolishEntry(object? platformView) { }
+    /// <summary>
+    /// Takes the frame and fill off a <c>BorderlessEntry</c>'s GTK entry - by a CSS class rather than
+    /// <c>gtk_entry_set_has_frame</c>, because the theme's background survives the frame going.
+    /// </summary>
+    public static void PolishEntry(object? platformView)
+    {
+        var widget = GetNativeHandle(platformView);
+        if (widget == IntPtr.Zero)
+            return;
+
+        Gtk4Interop.WidgetAddCssClass(widget, Gtk4Styling.BorderlessEntryClass);
+        Gtk4Styling.EnsureCss(widget);
+    }
 
     // -------------------------------------------------------------------------------------
 
