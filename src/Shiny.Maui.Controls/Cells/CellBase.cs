@@ -29,6 +29,7 @@ public abstract class CellBase : ContentView
     Label descriptionLabel = default!;
     Label hintLabel = default!;
     View? accessoryView;
+    readonly TapGestureRecognizer tapGesture = new();
 
     public CellBase()
     {
@@ -36,9 +37,8 @@ public abstract class CellBase : ContentView
         AutomationIds.Link(this, titleLabel, TitleAutomationIdSuffix);
         AutomationIds.Link(this, descriptionLabel, DescriptionAutomationIdSuffix);
         AutomationIds.Link(this, hintLabel, HintAutomationIdSuffix);
-        var tapGesture = new TapGestureRecognizer();
         tapGesture.Tapped += OnCellTapped;
-        GestureRecognizers.Add(tapGesture);
+        UpdateTapGesture();
 
         // Every field this level's callbacks touch is built by BuildLayout above, so the cell
         // base is ready here - concrete cells mark their own level when their constructor ends.
@@ -181,7 +181,11 @@ public abstract class CellBase : ContentView
         nameof(SelectedColor), typeof(Color), typeof(CellBase), null);
 
     public static readonly BindableProperty IsSelectableProperty = BindableProperty.Create(
-        nameof(IsSelectable), typeof(bool), typeof(CellBase), true);
+        nameof(IsSelectable), typeof(bool), typeof(CellBase), true,
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(CellBase), () =>
+            {
+                ((CellBase)b).UpdateTapGesture();
+            }));
 
     public static readonly BindableProperty CellHeightProperty = BindableProperty.Create(
         nameof(CellHeight), typeof(double), typeof(CellBase), -1d,
@@ -702,6 +706,21 @@ public abstract class CellBase : ContentView
     }
 
 
+
+    /// <summary>
+    /// A cell that can't be selected carries no tap recognizer at all. It would ignore the tap anyway, and on
+    /// the AppKit head the recognizer is an NSClickGestureRecognizer that takes the mouse-down from the
+    /// controls inside the cell - a SwitchCell's switch, a CustomCell's slider or button - so clicking them
+    /// did nothing.
+    /// </summary>
+    void UpdateTapGesture()
+    {
+        var attached = GestureRecognizers.Contains(tapGesture);
+        if (IsSelectable && !attached)
+            GestureRecognizers.Add(tapGesture);
+        else if (!IsSelectable && attached)
+            GestureRecognizers.Remove(tapGesture);
+    }
 
     protected virtual void OnCellTapped(object? sender, TappedEventArgs e)
     {

@@ -98,11 +98,34 @@ public abstract class UITest
     /// </summary>
     protected bool HasRealTouch => App.Host is AndroidAppHost;
 
-    /// <summary>A real tap at a fraction of the element's bounds (Android only, see <see cref="HasRealTouch"/>).</summary>
+    /// <summary>
+    /// A real tap - <see cref="TouchTap"/> - is possible: on Android, and on macOS as a mouse click posted
+    /// to the window server when the test runner has the Accessibility permission (see <see cref="MacMouse"/>).
+    /// </summary>
+    protected bool HasRealClick => HasRealTouch || (App.Host is MacOSAppHost && MacMouse.CanPost);
+
+    /// <summary>A real tap (a click, on macOS) at a fraction of the element's bounds - see <see cref="HasRealClick"/>.</summary>
     protected async Task TouchTap(string automationId, double fractionX = 0.5, double fractionY = 0.5)
     {
         var bounds = await OnScreenBounds(automationId);
-        await ((AndroidAppHost)App.Host).TouchTap(bounds.X + bounds.Width * fractionX, bounds.Y + bounds.Height * fractionY);
+        var x = bounds.X + bounds.Width * fractionX;
+        var y = bounds.Y + bounds.Height * fractionY;
+        if (App.Host is MacOSAppHost mac)
+        {
+            // The tree's root is the window itself, which has no bounds; its content is the tallest
+            // element just under it.
+            var content = (await Driver.Tree(depth: 2))
+                .SelectMany(root => (root.Children ?? []).Prepend(root))
+                .Select(e => e.WindowBounds)
+                .Where(b => b != null)
+                .MaxBy(b => b!.Height)
+                ?? throw new InvalidOperationException("The window's content has no bounds.");
+            await mac.Click(x, y, content.Height);
+        }
+        else
+        {
+            await ((AndroidAppHost)App.Host).TouchTap(x, y);
+        }
     }
 
     /// <summary>A real horizontal drag across the element's vertical middle (Android only).</summary>
@@ -119,8 +142,8 @@ public abstract class UITest
 
     async Task<(double X, double Y, double Width, double Height)> OnScreenBounds(string automationId)
     {
-        if (!HasRealTouch)
-            throw new InvalidOperationException("Real touch input is only available on Android.");
+        if (!HasRealClick)
+            throw new InvalidOperationException("Real input is only available on Android, and on macOS with the Accessibility permission.");
 
         await Driver.Scroll(automationId);
         await Task.Delay(500); // let the scroll settle before reading where the element landed

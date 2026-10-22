@@ -65,6 +65,27 @@ public class TableViewTests : UITest
 
 
     [Test]
+    public async Task Real_Click_Toggles_The_Switch_In_A_Cell_That_Cant_Be_Selected()
+    {
+        // The regression: every cell carried a tap recognizer, and on macOS (AppKit) it took the click
+        // from the switch inside and then ignored it, the cell not being selectable - while DevFlow's
+        // tap, which sets the switch directly, passed.
+        if (!HasRealClick)
+            Skip.Test("needs real input (Android, or macOS with the Accessibility permission)");
+
+        await Open("basic", "BasicSettingsPage");
+        await Driver.WaitForProperty("LocationCell", "On", "True");
+
+        await TouchTap("LocationCell_Switch");
+        await Driver.WaitForProperty("LocationCell", "On", "False", timeoutSeconds: 5);
+
+        await TouchTap("LocationCell_Switch");
+        await Driver.WaitForProperty("LocationCell", "On", "True", timeoutSeconds: 5);
+        await AssertNoAppErrors();
+    }
+
+
+    [Test]
     public async Task Radio_Cells_In_A_Section_Are_One_Group()
     {
         await Open("basic", "BasicSettingsPage");

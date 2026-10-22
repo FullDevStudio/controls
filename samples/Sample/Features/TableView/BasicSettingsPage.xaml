@@ -18,6 +18,12 @@
                 <tv:SwitchCell Title="Bluetooth"
                                AutomationId="BluetoothCell"
                                On="{Binding BluetoothEnabled, Mode=TwoWay}" />
+                <!-- Only the switch toggles it: a row that can't be selected has no tap recognizer
+                     to take the click from the switch (it did on macOS). -->
+                <tv:SwitchCell Title="Location Services"
+                               AutomationId="LocationCell"
+                               IsSelectable="False"
+                               On="True" />
                 <tv:CheckboxCell Title="Accept Terms"
                                   Description="You must accept the terms to continue"
                                   Checked="{Binding TermsAccepted, Mode=TwoWay}" />

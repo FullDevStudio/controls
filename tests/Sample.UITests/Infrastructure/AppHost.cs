@@ -504,6 +504,9 @@ public abstract class DesktopAppHost : AppHost
 
     public bool HasExited => process?.HasExited ?? false;
 
+    /// <summary>The app's process: the one launched here, else (attached) the running one by name.</summary>
+    protected int? ProcessId => process?.Id ?? Process.GetProcessesByName(ProcessName).FirstOrDefault()?.Id;
+
     /// <summary>Kills the app the watchdog found wedged, so pending driver calls fail now rather than time out.</summary>
     public void Kill()
     {
@@ -576,6 +579,25 @@ public sealed class MacOSAppHost : DesktopAppHost
     // navigation failures there, and on AppKit those are otherwise invisible.
     protected override string ExecutablePath()
         => Path.Combine(FindOutput("Sample.MacOS.app", directory: true), "Contents", "MacOS", "Sample.MacOS");
+
+    /// <summary>
+    /// A real mouse click at a point in window points (an element's DevFlow WindowBounds), through the
+    /// window server - see <see cref="MacMouse"/>. <paramref name="contentHeight"/> is the height DevFlow
+    /// measures the window's content at, which puts the title bar (if any) above it.
+    /// </summary>
+    public async Task Click(double x, double y, double contentHeight)
+    {
+        var pid = ProcessId ?? throw new InvalidOperationException("Sample.MacOS is not running.");
+
+        // A click on a window in the background only brings it forward; the control never sees it.
+        // `open` on a running app's bundle activates it rather than starting another.
+        (await ProcessRunner.Run("open", [FindOutput("Sample.MacOS.app", directory: true)])).EnsureSuccess("open Sample.MacOS");
+        await Task.Delay(500);
+
+        var frame = MacMouse.MainWindowFrame(pid) ?? throw new InvalidOperationException("Sample.MacOS has no window on screen.");
+        var titleBar = frame.Height - contentHeight;
+        await MacMouse.Click(frame.X + x, frame.Y + titleBar + y);
+    }
 }
 
 
