@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using Microsoft.Maui.Controls;
 using Shouldly;
 using Xunit;
@@ -404,5 +405,95 @@ public class AccordionTests
         source.Add("Last");
 
         accordion.Items.Select(x => x.HeaderText).ShouldBe(["Declared", "First", "Alpha", "Last"]);
+    }
+
+
+    /// <summary>
+    /// A range collection swaps its contents and raises one Reset, which says nothing about where
+    /// anything went. The open item still stays open. (A plain Clear() raises its Reset while the
+    /// collection is empty, so the expanders are gone before the items come back.)
+    /// </summary>
+    [Fact]
+    public void AnOpenItemStaysOpenAcrossAReset()
+    {
+        var models = new[] { new Model("Alpha"), new Model("Beta"), new Model("Gamma") };
+        var source = new ResettingCollection<Model>(models);
+        var accordion = new Accordion { ItemsSource = source };
+        var beta = accordion.Items[1];
+        beta.IsExpanded = true;
+
+        source.ReplaceAll([models[2], models[1]]);
+
+        accordion.Items.Count.ShouldBe(2);
+        accordion.Items[1].ShouldBeSameAs(beta);
+        accordion.ExpandedIndex.ShouldBe(1);
+    }
+
+
+    [Fact]
+    public void ANewSourceWithTheSameItemsKeepsTheirExpanders()
+    {
+        var models = new[] { new Model("Alpha"), new Model("Beta") };
+        var accordion = new Accordion { ItemsSource = models.ToList() };
+        var beta = accordion.Items[1];
+        beta.IsExpanded = true;
+
+        accordion.ItemsSource = new List<Model> { models[1], new Model("Gamma") };
+
+        accordion.Items[0].ShouldBeSameAs(beta);
+        accordion.ExpandedIndex.ShouldBe(0);
+    }
+
+
+    [Fact]
+    public void DuplicateItemsEachKeepTheirOwnExpander()
+    {
+        var source = new ObservableCollection<string> { "Same", "Same" };
+        var accordion = new Accordion { ItemsSource = source };
+        var first = accordion.Items[0];
+        var second = accordion.Items[1];
+
+        source.Add("Other");
+
+        accordion.Items[0].ShouldBeSameAs(first);
+        accordion.Items[1].ShouldBeSameAs(second);
+        accordion.Items.Count.ShouldBe(3);
+    }
+
+
+    [Fact]
+    public void ChangingTheTemplateRebuildsEveryExpander()
+    {
+        var source = new ObservableCollection<string> { "Alpha", "Beta" };
+        var accordion = new Accordion { ItemsSource = source };
+        var alpha = accordion.Items[0];
+
+        accordion.ContentTemplate = new DataTemplate(() => new Label());
+
+        accordion.Items[0].ShouldNotBeSameAs(alpha);
+        accordion.Items.Count.ShouldBe(2);
+    }
+
+
+    sealed class ResettingCollection<T>(IEnumerable<T> items) : Collection<T>(items.ToList()), INotifyCollectionChanged
+    {
+        public event NotifyCollectionChangedEventHandler? CollectionChanged;
+
+        public void ReplaceAll(IEnumerable<T> items)
+        {
+            this.Items.Clear();
+            foreach (var item in items)
+                this.Items.Add(item);
+
+            this.CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+        }
+    }
+
+
+    sealed class Model(string name)
+    {
+        public string Name { get; } = name;
+
+        public override string ToString() => this.Name;
     }
 }

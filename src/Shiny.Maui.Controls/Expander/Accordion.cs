@@ -36,12 +36,15 @@ public class Accordion : VerticalStackLayout
     IDisposable? itemsSubscription;
     bool syncing;
 
-    // Set while a change of the items source is applied: the rules then run once, on the result,
-    // rather than once per expander on the way there.
+    // Set while the generated items are synced: the rules then run once, on the result, rather than
+    // once per expander on the way there.
     bool applyingChange;
 
     // The generated expander that is being taken out and put back to move it.
     Expander? moving;
+
+    // Stands in for a null data item, which a dictionary cannot key.
+    static readonly object NullData = new();
 
     public Accordion()
     {
@@ -89,7 +92,7 @@ public class Accordion : VerticalStackLayout
 
     public static readonly BindableProperty ItemTemplateProperty = BindableProperty.Create(
         nameof(ItemTemplate), typeof(DataTemplate), typeof(Accordion), null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(Accordion), () => ((Accordion)b).RegenerateItems()));
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(Accordion), () => ((Accordion)b).SyncItems(rebuild: true)));
     /// <summary>
     /// Builds a whole <see cref="Expander"/> per item. Use it when an item needs to set expander
     /// properties of its own; otherwise <see cref="HeaderTemplate"/> and <see cref="ContentTemplate"/>
@@ -99,13 +102,13 @@ public class Accordion : VerticalStackLayout
 
     public static readonly BindableProperty HeaderTemplateProperty = BindableProperty.Create(
         nameof(HeaderTemplate), typeof(DataTemplate), typeof(Accordion), null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(Accordion), () => ((Accordion)b).RegenerateItems()));
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(Accordion), () => ((Accordion)b).SyncItems(rebuild: true)));
     /// <summary>Header for each generated expander.</summary>
     public DataTemplate? HeaderTemplate { get => (DataTemplate?)GetValue(HeaderTemplateProperty); set => SetValue(HeaderTemplateProperty, value); }
 
     public static readonly BindableProperty ContentTemplateProperty = BindableProperty.Create(
         nameof(ContentTemplate), typeof(DataTemplate), typeof(Accordion), null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(Accordion), () => ((Accordion)b).RegenerateItems()));
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(Accordion), () => ((Accordion)b).SyncItems(rebuild: true)));
     /// <summary>Content for each generated expander.</summary>
     public DataTemplate? ContentTemplate { get => (DataTemplate?)GetValue(ContentTemplateProperty); set => SetValue(ContentTemplateProperty, value); }
 
@@ -379,189 +382,122 @@ public class Accordion : VerticalStackLayout
         this.itemsSubscription?.Dispose();
         this.itemsSubscription = WeakEventSubscription.CollectionChanged(newValue, this.OnItemsCollectionChanged);
 
-        this.RegenerateItems();
+        this.SyncItems();
     }
 
 
-    void OnItemsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    // Every kind of change goes through the same sync - the event's indices are never read, so a source
+    // that only raises Reset is followed as well as an ObservableCollection.
+    void OnItemsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) => this.SyncItems();
+
+
+    /// <summary>
+    /// Lines the generated expanders up with <see cref="ItemsSource"/>, reusing the expander of every
+    /// data item that is still there and building only the new ones.
+    /// </summary>
+    /// <remarks>
+    /// A rebuilt expander starts over, so rebuilding the lot on every change shut whatever the user had
+    /// open whenever anything was added anywhere - and cost n²/2 expanders for n single adds. Items are
+    /// matched by <see cref="object.Equals(object)"/>, duplicates in order. A changed template is the
+    /// one case that has to <paramref name="rebuild"/>: every existing expander was built from the old one.
+    /// </remarks>
+    void SyncItems(bool rebuild = false)
     {
-        // Only the expanders the change names are built, dropped or moved. Rebuilding the lot would
-        // cost n²/2 expanders for n single adds, and a rebuilt expander starts over: an item the user
-        // had open would shut whenever anything was added anywhere. A Reset - or a change that cannot
-        // be placed - still rebuilds.
-        if (!this.CanApplyInPlace(e))
+        // What can be reused, by data item. Anything taken out of Children by hand has already been
+        // dropped from generatedData and is not ours to put back.
+        var pool = new Dictionary<object, Queue<Expander>>();
+        if (!rebuild)
         {
-            this.RegenerateItems();
-            return;
+            foreach (var item in this.generated)
+            {
+                if (!this.generatedData.TryGetValue(item, out var data))
+                    continue;
+
+                var key = data ?? NullData;
+                if (!pool.TryGetValue(key, out var queue))
+                    pool[key] = queue = new Queue<Expander>();
+                queue.Enqueue(item);
+            }
         }
 
-        // The rules wait for the result: half way through a move the moved item is out of the list,
-        // and with AllowCollapseAll off they would open another one in its place.
         this.applyingChange = true;
         try
         {
-            switch (e.Action)
+            var next = new List<Expander>();
+            if (this.ItemsSource is { } source)
             {
-                case NotifyCollectionChangedAction.Add:
-                    this.InsertGenerated(e.NewStartingIndex, e.NewItems!);
-                    break;
+                foreach (var data in source)
+                {
+                    if (pool.TryGetValue(data ?? NullData, out var queue) && queue.Count > 0)
+                    {
+                        var reused = queue.Dequeue();
 
-                case NotifyCollectionChangedAction.Remove:
-                    this.RemoveGenerated(e.OldStartingIndex, e.OldItems!.Count);
-                    break;
+                        // Equal is enough to keep the expander; the bindings still follow the new instance.
+                        if (!ReferenceEquals(this.generatedData[reused], data))
+                        {
+                            this.generatedData[reused] = data;
+                            reused.BindingContext = data;
+                        }
 
-                case NotifyCollectionChangedAction.Replace:
-                    this.RemoveGenerated(e.OldStartingIndex, e.OldItems!.Count);
-                    this.InsertGenerated(e.NewStartingIndex, e.NewItems!);
-                    break;
-
-                case NotifyCollectionChangedAction.Move:
-                    this.MoveGenerated(e.OldStartingIndex, e.NewStartingIndex);
-                    break;
+                        next.Add(reused);
+                    }
+                    else
+                    {
+                        var built = this.BuildItem(data);
+                        this.generatedData[built] = data;
+                        next.Add(built);
+                    }
+                }
             }
+
+            var keep = next.ToHashSet();
+            var start = this.generated.Count == 0 ? -1 : this.Children.IndexOf(this.generated[0]);
+
+            foreach (var stale in this.generated)
+            {
+                if (!keep.Contains(stale))
+                    this.Children.Remove(stale);
+            }
+
+            // Generated items go where the first one sat, or - with none yet - at the end, after
+            // whatever was declared in markup.
+            if (start < 0 || start > this.Children.Count)
+                start = this.Children.Count;
+
+            for (var i = 0; i < next.Count; i++)
+            {
+                var expander = next[i];
+                var at = start + i;
+
+                if (at < this.Children.Count && ReferenceEquals(this.Children[at], expander))
+                    continue;
+
+                if (this.Children.Contains(expander))
+                {
+                    // Taken out and put back, never rebuilt, so it keeps its open state and its content.
+                    this.moving = expander;
+                    try
+                    {
+                        this.Children.Remove(expander);
+                        this.Children.Insert(Math.Min(at, this.Children.Count), expander);
+                    }
+                    finally
+                    {
+                        this.moving = null;
+                    }
+                }
+                else
+                {
+                    this.Children.Insert(Math.Min(at, this.Children.Count), expander);
+                }
+            }
+
+            this.generated.Clear();
+            this.generated.AddRange(next);
         }
         finally
         {
             this.applyingChange = false;
-        }
-
-        this.EnforceRules(null);
-        this.PublishIndex();
-    }
-
-
-    /// <summary>
-    /// Whether <paramref name="e"/> can be applied expander by expander: it has to say where, and the
-    /// generated expanders still have to line up with the source.
-    /// </summary>
-    bool CanApplyInPlace(NotifyCollectionChangedEventArgs e)
-    {
-        var count = this.generated.Count;
-        var removed = e.OldItems?.Count ?? 0;
-        var added = e.NewItems?.Count ?? 0;
-
-        var placed = e.Action switch
-        {
-            NotifyCollectionChangedAction.Add =>
-                added > 0 && e.NewStartingIndex >= 0 && e.NewStartingIndex <= count,
-
-            NotifyCollectionChangedAction.Remove =>
-                removed > 0 && e.OldStartingIndex >= 0 && e.OldStartingIndex + removed <= count,
-
-            NotifyCollectionChangedAction.Replace =>
-                removed > 0 && added > 0
-                && e.OldStartingIndex >= 0 && e.OldStartingIndex + removed <= count
-                && e.NewStartingIndex >= 0 && e.NewStartingIndex <= count - removed,
-
-            // ObservableCollection only ever moves one item; a range move is rare enough to rebuild.
-            NotifyCollectionChangedAction.Move =>
-                removed == 1
-                && e.OldStartingIndex >= 0 && e.OldStartingIndex < count
-                && e.NewStartingIndex >= 0 && e.NewStartingIndex < count,
-
-            _ => false
-        };
-
-        if (!placed)
-            return false;
-
-        // A collection whose events do not add up, or a generated expander someone took out of
-        // Children by hand, leaves nothing to place the change against - a rebuild puts both right.
-        if (this.ItemsSource is ICollection source && source.Count != count - removed + added)
-            return false;
-
-        foreach (var item in this.generated)
-        {
-            if (!ReferenceEquals(item.Owner, this))
-                return false;
-        }
-
-        return true;
-    }
-
-
-    void InsertGenerated(int index, IList items)
-    {
-        var childIndex = this.ChildIndexFor(index);
-
-        foreach (var data in items)
-        {
-            var expander = this.BuildItem(data);
-            this.generatedData[expander] = data;
-            this.generated.Insert(index++, expander);
-            this.Children.Insert(childIndex++, expander);
-        }
-    }
-
-
-    void RemoveGenerated(int index, int count)
-    {
-        var stale = this.generated.GetRange(index, count);
-        this.generated.RemoveRange(index, count);
-
-        foreach (var item in stale)
-            this.Children.Remove(item);
-    }
-
-
-    void MoveGenerated(int from, int to)
-    {
-        var expander = this.generated[from];
-        this.generated.RemoveAt(from);
-
-        // Taken out and put back, never rebuilt, so it keeps its open state and its content.
-        this.moving = expander;
-        try
-        {
-            this.Children.Remove(expander);
-            this.Children.Insert(this.ChildIndexFor(to), expander);
-        }
-        finally
-        {
-            this.moving = null;
-        }
-
-        this.generated.Insert(to, expander);
-    }
-
-
-    /// <summary>
-    /// Where among all the children the generated item at <paramref name="index"/> goes: in front of
-    /// the one that holds that place now, or after the last generated one - or, with none generated
-    /// yet, at the end, after whatever was declared in markup, which is where a rebuild puts them too.
-    /// </summary>
-    int ChildIndexFor(int index)
-    {
-        if (index < this.generated.Count)
-            return this.Children.IndexOf(this.generated[index]);
-
-        return this.generated.Count == 0
-            ? this.Children.Count
-            : this.Children.IndexOf(this.generated[^1]) + 1;
-    }
-
-
-    void RegenerateItems()
-    {
-        foreach (var item in this.generated)
-            this.Children.Remove(item);
-
-        this.generated.Clear();
-
-        var source = this.ItemsSource;
-        if (source == null)
-        {
-            this.EnforceRules(null);
-            this.PublishIndex();
-            return;
-        }
-
-        foreach (var data in source)
-        {
-            var expander = this.BuildItem(data);
-            this.generatedData[expander] = data;
-            this.generated.Add(expander);
-            this.Children.Add(expander);
         }
 
         this.EnforceRules(null);
