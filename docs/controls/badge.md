@@ -54,6 +54,8 @@ Wraps a single content view and overlays a small notification badge at any of th
 - Configurable show/hide scale animation and optional continuous pulse for attention-grabbing badges
 - Blazor honors `prefers-reduced-motion` and disables both animations when set
 
+The badge overhangs the corner by `OffsetX`/`OffsetY`, outside the `BadgeView`'s own bounds; it does not change how the wrapped view is measured. Whatever holds the `BadgeView` needs room for that overhang. On Android the badge stops its parent clipping it to its bounds, so it draws whole inside a `Border` or any other container, but a container that clips to a rounded shape still cuts off the part that falls outside the shape.
+
 ## Automation ids (MAUI)
 
 Set `AutomationId` on the `BadgeView` and its badge is named after it, for UI tests:

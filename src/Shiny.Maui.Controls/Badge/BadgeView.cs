@@ -64,6 +64,7 @@ public partial class BadgeView : Grid, IDisposable
         // scale animation forever, rooted by the animation ticker, keeping the page alive.
         this.Loaded += (_, _) =>
         {
+            this.ReleaseParentClip();
             if (this.IsPulsing && this.currentlyVisible && !this.isPulseRunning)
                 this.StartPulse();
         };
@@ -72,6 +73,29 @@ public partial class BadgeView : Grid, IDisposable
         // Last line: replays any styled property that was applied before the
         // children existed. See StyleGuard.
         StyleGuard.MarkReady(this, typeof(BadgeView));
+    }
+
+    /// <summary>
+    /// The badge overhangs the corner by its offset, outside this view's own bounds. Android lets a
+    /// ViewGroup clip each child to the child's bounds (clipChildren is on by default), so any parent
+    /// that is not a MAUI layout - a Border, for one - cut the bubble off at the content's edge.
+    /// </summary>
+    /// <remarks>
+    /// Runs on Loaded rather than HandlerChanged: only an attached view has a native parent, and a
+    /// re-parented badge loads again. Reserving the overhang inside this view's bounds instead would
+    /// grow it, and move every host that centres one (the tab bar's icon over its pill). A parent that
+    /// clips to a shape still clips - that is the parent's own choice, and its padding has to leave room.
+    /// </remarks>
+    void ReleaseParentClip()
+    {
+#if ANDROID
+        // A view with a shadow or clip is wrapped, and the wrapper is what sits in the parent.
+        var native = this.Handler?.ContainerView as Android.Views.View
+            ?? this.Handler?.PlatformView as Android.Views.View;
+
+        if (native?.Parent is Android.Views.ViewGroup parent)
+            parent.SetClipChildren(false);
+#endif
     }
 
     void OnContentChanged() => this.contentHost.Content = this.Content;

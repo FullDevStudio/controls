@@ -78,8 +78,6 @@ of anything in `RightItems`. Adopting this page never means rewriting a toolbar.
   `NavBarItem` too, where its own `Badge` wins while it is non-null.
 - A badged item that overflows keeps its badge on its menu row, and the overflow button draws a
   **dot** while anything behind it is badged. Nothing to configure.
-- The badge overhangs the icon's top-right corner inside the item's tap target, which does not clip
-  it, so it is drawn whole on Android too. Don't shrink `IconSize` to make room.
 
 ```xml
 <ContentPage.ToolbarItems>

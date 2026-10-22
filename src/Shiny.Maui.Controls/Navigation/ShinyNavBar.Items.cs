@@ -317,8 +317,8 @@ public partial class ShinyNavBar
 
 
     /// <summary>
-    /// The tap target every bar affordance shares — a rounded, transparent <see cref="Border"/> big
-    /// enough to hit.
+    /// The tap target every bar affordance shares — a transparent <see cref="Border"/> big enough to
+    /// hit.
     /// </summary>
     /// <remarks>
     /// A <see cref="Border"/> rather than a <see cref="Button"/> on purpose: a Button ignores gesture
@@ -342,22 +342,12 @@ public partial class ShinyNavBar
             MinimumWidthRequest = 40,
             MinimumHeightRequest = 40,
             VerticalOptions = LayoutOptions.Center,
+            // A Border clips its content to its shape, and a 40pt pill is a circle that cut off the
+            // corner a badge overhangs. The host paints nothing, so a plain rectangle loses nothing.
             StrokeShape = new Rectangle(),
             Opacity = enabled ? 1 : 0.4,
             Content = content
         };
-
-#if ANDROID
-        // Android lets a ViewGroup clip each child to the child's own bounds (clipChildren is on by
-        // default), so a badge overhanging the icon was cut off at the icon's edge even though the
-        // padding around it leaves room. The host paints nothing, so its shape is a plain rectangle:
-        // a round one clipped the badge's corner as well.
-        host.HandlerChanged += static (sender, _) =>
-        {
-            if (((Border)sender!).Handler?.PlatformView is Android.Views.ViewGroup group)
-                group.SetClipChildren(false);
-        };
-#endif
 
         AutomationIds.Set(host, automationId);
 

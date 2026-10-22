@@ -234,7 +234,8 @@ public class ShinyNavBarTests
     /// <summary>
     /// The badge overhangs the icon's top-right corner, so the button around it has to keep that
     /// overhang inside its padding and must not clip to a round shape - a 40pt pill is a circle
-    /// there. On Android the button also stops clipping its child to the child's bounds.
+    /// there. (On Android the BadgeView also stops its parent clipping it to its bounds; that part
+    /// only shows on a device.)
     /// </summary>
     [Theory]
     [InlineData(false)]
