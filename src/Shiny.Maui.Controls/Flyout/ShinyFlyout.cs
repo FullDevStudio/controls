@@ -279,7 +279,12 @@ public static class ShinyFlyout
     }
 
 
-    static View? ContentOf(ContentPage page) => page is ShinyContentPage shiny ? shiny.PageContent : page.Content;
+    static View? ContentOf(ContentPage page) => page switch
+    {
+        ShinyContentPage shiny => shiny.PageContent,
+        { Content: PageOverlay.ShinyOverlayRoot root } => PageOverlay.ContentOf(root),
+        _ => page.Content
+    };
 
 
     static void DeferUntilContent(BindableObject host, ContentPage page)
@@ -319,6 +324,16 @@ public static class ShinyFlyout
             shiny.PageContent = null;
             view.Content = existing;
             shiny.PageContent = view;
+        }
+        else if (page.Content is PageOverlay.ShinyOverlayRoot root && PageOverlay.ContentOf(root) is { } content)
+        {
+            // The tab bar or a docked ProgressLine got here first. The flyout goes inside the root, in
+            // the content's place: wrapped around it, their layers would sit in the flyout's content,
+            // and the next layer request would wrap the page in a second root.
+            var index = root.Children.IndexOf(content);
+            root.Children.RemoveAt(index);
+            view.Content = content;
+            root.Children.Insert(index, view);
         }
         else
         {

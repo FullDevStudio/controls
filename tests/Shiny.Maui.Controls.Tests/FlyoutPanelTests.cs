@@ -1,6 +1,7 @@
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
 using Shiny.Maui.Controls.Flyout;
+using Shiny.Maui.Controls.Infrastructure;
 using Shouldly;
 using Xunit;
 
@@ -169,6 +170,33 @@ public class ShinyFlyoutInstallTests
         view.ShouldNotBeNull();
         page.Content.ShouldBe(view);
         view.Content.ShouldBe(body);
+    }
+
+
+    /// <summary>
+    /// A page the tab bar (or a docked ProgressLine) has already given an overlay root. The flyout
+    /// has to go inside that root, next to the layers: wrapped around it, the tab bar would sit in the
+    /// flyout's content, and the next layer request would wrap the page in a second root.
+    /// </summary>
+    [Fact]
+    public void InstallingOnAPageWithAnOverlayRootWrapsTheContentInsideIt()
+    {
+        var body = new Label { Text = "body" };
+        var page = new ContentPage { Content = body };
+        var root = PageOverlay.GetOrCreateRoot(page);
+        var layer = PageOverlay.GetOrCreateLayer<PageOverlay.TabBarLayer>(root, PageOverlay.Layers.TabBar);
+
+        var host = new NavigationPage();
+        ShinyFlyout.SetStartTemplate(host, PanelTemplate());
+        ShinyFlyout.InstallOn(host, page);
+
+        var view = ShinyFlyout.GetFlyoutView(page);
+        view.ShouldNotBeNull();
+        page.Content.ShouldBeSameAs(root);
+        layer.Parent.ShouldBeSameAs(root);
+        view.Parent.ShouldBeSameAs(root);
+        view.Content.ShouldBeSameAs(body);
+        PageOverlay.GetOrCreateRoot(page).ShouldBeSameAs(root);
     }
 
 
