@@ -86,6 +86,10 @@ Each generated section gets its item as its `BindingContext`, and so does everyt
 title, fixed cells declared in the template, and its `HeaderView`/`FooterView`. They keep the item when
 the TableView's own `BindingContext` changes.
 
+Changes to a bound collection, on the table or on a section's `ItemsSource`, are applied once at the end
+of the current dispatcher step. Filling a collection one item at a time rebuilds the rows once, not once per
+item.
+
 **Drag to reorder** - `UseDragSort="True"` puts a drag handle on every row in a section. Dragging a
 handle lifts the row under the finger, draws an insertion line at the drop position, and auto-scrolls
 when the drag reaches the top or bottom edge; touches anywhere else still scroll the table. Rows

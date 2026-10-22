@@ -110,6 +110,81 @@ public class TableViewDeferredRenderTests
         }
     }
 
+    /// <summary>
+    /// Filling a section's collection one item at a time builds each cell once - it used to rebuild every
+    /// cell per add, n(n+1)/2 cells for n items.
+    /// </summary>
+    [Fact]
+    public void FillingASectionItemsSourceBuildsEachCellOnce()
+    {
+        var dispatcher = new QueueingDispatcher();
+        DispatcherProvider.SetCurrent(new QueueingProvider(dispatcher));
+        try
+        {
+            new Application();
+            var created = 0;
+            var items = new System.Collections.ObjectModel.ObservableCollection<string>();
+            var section = new TvTableSection("Items")
+            {
+                ItemTemplate = new DataTemplate(() =>
+                {
+                    created++;
+                    return new LabelCell();
+                }),
+                ItemsSource = items
+            };
+            var table = new TableView();
+            table.Root.Sections.Add(section);
+            dispatcher.RunAll();
+
+            for (var i = 0; i < 50; i++)
+                items.Add($"Item {i}");
+            dispatcher.RunAll();
+
+            created.ShouldBe(50);
+            section.GetAllCells().Count().ShouldBe(50);
+        }
+        finally
+        {
+            TestDispatcherProvider.Install();
+        }
+    }
+
+    /// <summary>The same for whole sections generated from the table's own collection.</summary>
+    [Fact]
+    public void FillingATableItemsSourceBuildsEachSectionOnce()
+    {
+        var dispatcher = new QueueingDispatcher();
+        DispatcherProvider.SetCurrent(new QueueingProvider(dispatcher));
+        try
+        {
+            new Application();
+            var created = 0;
+            var items = new System.Collections.ObjectModel.ObservableCollection<string>();
+            var table = new TableView
+            {
+                ItemTemplate = new DataTemplate(() =>
+                {
+                    created++;
+                    return new TvTableSection();
+                }),
+                ItemsSource = items
+            };
+            dispatcher.RunAll();
+
+            for (var i = 0; i < 20; i++)
+                items.Add($"Group {i}");
+            dispatcher.RunAll();
+
+            created.ShouldBe(20);
+            ((VerticalStackLayout)table.ScrollContent).Children.Count(x => x is not BoxView).ShouldBe(20);
+        }
+        finally
+        {
+            TestDispatcherProvider.Install();
+        }
+    }
+
     static TableView BuildTable(Model model, int dependentSections = 1)
     {
         var table = new TableView();

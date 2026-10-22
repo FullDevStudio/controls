@@ -29,6 +29,7 @@ public partial class TableView : ContentView
     TvTableRoot root = default!;
     bool isRendering;
     bool renderPending;
+    bool regenerateSectionsPending;
     IDisposable? viewItemsSourceSubscription;
     readonly List<TvTableSection> generatedSections = new();
     DragSortController? dragSort;
@@ -475,13 +476,29 @@ public partial class TableView : ContentView
         tv.RegenerateTemplatedSections();
     }
 
+    // Coalesced like TableSection's rows: one rebuild per dispatcher step, not one per item added.
     void OnViewItemsSourceCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        RegenerateTemplatedSections();
+        if (this.Dispatcher is not { } dispatcher)
+        {
+            RegenerateTemplatedSections();
+            return;
+        }
+
+        if (regenerateSectionsPending)
+            return;
+
+        regenerateSectionsPending = true;
+        dispatcher.Dispatch(() =>
+        {
+            if (regenerateSectionsPending)
+                RegenerateTemplatedSections();
+        });
     }
 
     void RegenerateTemplatedSections()
     {
+        regenerateSectionsPending = false;
         foreach (var section in generatedSections)
         {
             section.SectionChanged -= OnGeneratedSectionChanged;

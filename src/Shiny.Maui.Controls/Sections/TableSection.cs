@@ -15,6 +15,7 @@ public class TableSection : BindableObject
     readonly ObservableCollection<CellBase> cells = new();
     IDisposable? itemsSourceSubscription;
     readonly List<CellBase> generatedCells = new();
+    bool regeneratePending;
 
     public TableSection()
     {
@@ -316,13 +317,30 @@ public class TableSection : BindableObject
         section.RegenerateTemplatedCells();
     }
 
+    // Coalesced: filling a collection one item at a time used to rebuild every cell per add - n(n+1)/2
+    // cells for n items. With no dispatcher (a bare unit test), it regenerates inline.
     void OnItemsSourceCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        RegenerateTemplatedCells();
+        if (this.Dispatcher is not { } dispatcher)
+        {
+            RegenerateTemplatedCells();
+            return;
+        }
+
+        if (regeneratePending)
+            return;
+
+        regeneratePending = true;
+        dispatcher.Dispatch(() =>
+        {
+            if (regeneratePending)
+                RegenerateTemplatedCells();
+        });
     }
 
     internal void RegenerateTemplatedCells()
     {
+        regeneratePending = false;
         generatedCells.Clear();
 
         if (ItemsSource == null || ItemTemplate == null)
