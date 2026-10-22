@@ -52,7 +52,7 @@ Item properties are live: a change to any item property the bar draws (`Text`, i
 </ContentPage.ToolbarItems>
 ```
 
-An empty string draws a dot, `null` draws nothing, and `ShinyNav.BadgeColor` (or `NavBarItem.BadgeColor`) overrides the theme's error colour. On a `NavBarItem` its own `Badge` wins while it is non-null, so the attached one can be set on either kind of item.
+An empty string draws a dot, `null` draws nothing, and `ShinyNav.BadgeColor` (or `NavBarItem.BadgeColor`) overrides the theme's error colour. On a `NavBarItem` its own `Badge` wins while it is non-null, so the attached one can be set on either kind of item. The badge overhangs the icon's top-right corner inside the item's tap target, which leaves room for it and does not clip it, so the bubble is drawn whole on every platform, Android included.
 
 A badged item that folds into the overflow menu keeps its badge on its menu row, and the overflow button itself draws a dot while anything behind it is badged — so a count never disappears just because the bar ran out of room.
 

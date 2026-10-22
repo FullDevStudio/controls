@@ -231,6 +231,35 @@ public class ShinyNavBarTests
     }
 
 
+    /// <summary>
+    /// The badge overhangs the icon's top-right corner, so the button around it has to keep that
+    /// overhang inside its padding and must not clip to a round shape - a 40pt pill is a circle
+    /// there. On Android the button also stops clipping its child to the child's bounds.
+    /// </summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void TheButtonAroundABadgeDoesNotClipTheBubble(bool overflowed)
+    {
+        var bar = Build();
+        if (overflowed)
+        {
+            bar.MaxVisibleItems = 1;
+            bar.RightItems.Add(new NavBarItem { Icon = "info" });
+        }
+        bar.RightItems.Add(new NavBarItem { Icon = "bell", Badge = "3" });
+
+        var button = bar.TrailingHost.Children
+            .OfType<Border>()
+            .Single(b => Descendants(b).OfType<BadgeView>().Any());
+        var badge = Descendants(button).OfType<BadgeView>().Single();
+
+        button.StrokeShape.ShouldBeOfType<Microsoft.Maui.Controls.Shapes.Rectangle>();
+        badge.OffsetX.ShouldBeLessThanOrEqualTo(button.Padding.Right);
+        (-badge.OffsetY).ShouldBeLessThanOrEqualTo(button.Padding.Top);
+    }
+
+
     [Fact]
     public void AnEmptyBadgeIsADot()
     {
