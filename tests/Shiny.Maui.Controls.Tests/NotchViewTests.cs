@@ -222,6 +222,31 @@ public class NotchViewTests
     }
 
 
+    [Fact]
+    public void FirstContentIsShownAtOnceByDefault()
+    {
+        var content = new BoxView { WidthRequest = 300, HeightRequest = 80 };
+        var notch = new NotchView { FillsHost = true, FollowsOfferedWidth = false, Content = content };
+        notch.Refresh();
+
+        ((VisualElement)content.Parent!).Opacity.ShouldBe(1);
+    }
+
+
+    [Fact]
+    public void FirstContentStartsHiddenToFadeInWhenAskedTo()
+    {
+        // The desktop notch window builds a fresh notch for every swap, so the content it swaps in is
+        // always the notch's first - and still has to fade in as the window morphs to it.
+        var content = new BoxView { WidthRequest = 300, HeightRequest = 80 };
+        var notch = new NotchView { FillsHost = true, FollowsOfferedWidth = false, FadeInFirstContent = true, Content = content };
+        notch.Refresh();
+
+        // No native view yet: the fade waits for one rather than snapping to visible.
+        ((VisualElement)content.Parent!).Opacity.ShouldBe(0);
+    }
+
+
     [Theory]
     [InlineData(double.PositiveInfinity)]
     [InlineData(520d)]

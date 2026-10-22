@@ -204,6 +204,13 @@ public partial class NotchView : Grid
     }
     bool fillsHost;
 
+    /// <summary>
+    /// The first content fades in as well, not only a swapped-in one. The desktop notch window builds a
+    /// fresh notch for every content swap, so to it every content is the first; it sets this when there
+    /// was something on screen before.
+    /// </summary>
+    internal bool FadeInFirstContent { get; set; }
+
     protected override Size MeasureOverride(double widthConstraint, double heightConstraint)
     {
         // The width the parent offers is the cap for content that would otherwise run off the edge.
@@ -302,14 +309,17 @@ public partial class NotchView : Grid
     {
         if (this.fillsHost)
         {
+            // The host morphs, and starts the content's fade as its morph starts (FadeInContent): that
+            // can be a while after this, once the new content has been laid out.
             var previous = this.NotchSize;
             this.ApplyCorners(target.Width, target.Height);
+            if (!animate)
+                this.FadeInContentIfPending(0);
             if (Math.Abs(previous.Width - target.Width) <= 0.5 && Math.Abs(previous.Height - target.Height) <= 0.5)
                 return;
 
             this.NotchSize = target;
             this.NotchSizeChanged?.Invoke(this, new NotchSizeChangedEventArgs(previous, target));
-            this.FadeInContentIfPending(0);
             this.MorphCompleted?.Invoke(this, EventArgs.Empty);
             return;
         }
@@ -387,13 +397,19 @@ public partial class NotchView : Grid
     {
         // Fade the new content in as the surface reshapes around it. Not on the very first content:
         // a notch that is there when the page opens should just be there.
-        this.fadeInNext = oldContent != null && newContent != null && this.Handler != null;
+        this.fadeInNext = newContent != null && (this.FadeInFirstContent || (oldContent != null && this.Handler != null));
         if (this.fadeInNext)
             this.contentHost.Opacity = 0;
 
         this.contentHost.Content = newContent;
         this.ScheduleRefresh();
     }
+
+    /// <summary>
+    /// Fades in content that is waiting to (see <see cref="FadeInFirstContent"/>), over
+    /// <paramref name="duration"/> ms. For a host that fills with the notch and morphs on its own clock.
+    /// </summary>
+    internal void FadeInContent(uint duration) => this.FadeInContentIfPending(duration);
 
     void FadeInContentIfPending(uint duration)
     {

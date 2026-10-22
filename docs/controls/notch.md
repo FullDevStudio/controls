@@ -92,6 +92,7 @@ await notchWindow.SetContentAsync(new NowPlayingView());
 - macOS (AppKit), Windows and Linux (GTK4) only. The API doesn't exist on Android, iOS or Mac Catalyst, so guard it with `#if !ANDROID && !IOS && !MACCATALYST`.
 - Only macOS has a camera notch to find. Windows and Linux always get the floating island.
 - On the AppKit head the window, not the surface, animates the resize (a native frame animation). Windows and GTK have no animated window resize, so the window is resized once per frame instead.
+- Every `SetContentAsync` animates as an open or close: the new content fades in while the window morphs to its size. On macOS the old content goes with the notch too, frozen into an image that is clipped as the window collapses (or rides along as it grows) and fades out, so closing to a smaller content (or none) collapses into it rather than leaving an empty black shape to shrink. Windows and Linux get the fade-in. The morph starts once the new content has been laid out, so heavy content doesn't eat into it. `MorphDuration = 0` swaps instantly.
 - On Windows the window is clipped to the notch outline with a window region, because a WinUI window can't be transparent. The edges are not antialiased and a `Stroke` is clipped off.
 - Under a Linux Wayland session the compositor decides where the window goes and it is not kept above other windows. X11 behaves like Windows and macOS.
 - The window never takes keyboard focus. It is for glancing and clicking, not typing.

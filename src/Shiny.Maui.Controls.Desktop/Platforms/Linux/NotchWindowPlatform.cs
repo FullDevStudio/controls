@@ -119,6 +119,12 @@ static unsafe class NotchWindowPlatform
             }
         });
 
+    /// <summary>
+    /// Nothing to freeze here: the window is resized once per frame and lays out each time, so the new
+    /// content simply fades in as the notch morphs. (On macOS the old content collapses with it.)
+    /// </summary>
+    public static void FreezeContent(object platformWindow) { }
+
     public static void Hide(object platformWindow)
         => QuickEntryPlatform.BeginInvokeOnMainThread(() =>
         {

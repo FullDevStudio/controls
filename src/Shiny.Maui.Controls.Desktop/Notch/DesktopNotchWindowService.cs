@@ -24,6 +24,11 @@ namespace Shiny.Maui.Controls.Desktop.Notch;
 /// never creates a platform view for a child added to an already-realized layout, so swapped-in content
 /// would be blank. A new page is realized whole.
 /// </para>
+/// <para>
+/// Opening and closing are content swaps like any other, and animate as one: the new content fades in
+/// as the notch morphs to its size, and on macOS the old content, frozen into an image, collapses (or
+/// grows) with the notch and fades out, instead of vanishing the moment the new content arrives.
+/// </para>
 /// </remarks>
 sealed class DesktopNotchWindowService : INotchWindowService, IDisposable
 {
@@ -32,11 +37,18 @@ sealed class DesktopNotchWindowService : INotchWindowService, IDisposable
     readonly SemaphoreSlim gate = new(1, 1);
     readonly NotchFrameAnimator frames;
 
+    /// <summary>One display frame: the new content's first layout pass happens in it.</summary>
+    static readonly TimeSpan LayoutFrame = TimeSpan.FromMilliseconds(16);
+    /// <summary>Waiting longer than this for new content to load, the morph goes ahead regardless.</summary>
+    static readonly TimeSpan LoadTimeout = TimeSpan.FromMilliseconds(500);
+
     Window? window;
     object? platformWindow;
     NotchView? notch;
     NotchGeometry geometry = NotchGeometry.None;
     IDisposable? pointerTracking;
+    /// <summary>A swap is waiting for its new content to be laid out before the window morphs.</summary>
+    bool settling;
 
     public DesktopNotchWindowService(NotchWindowOptions options, ILogger<DesktopNotchWindowService>? logger = null)
     {
@@ -87,6 +99,12 @@ sealed class DesktopNotchWindowService : INotchWindowService, IDisposable
         await this.gate.WaitAsync().ConfigureAwait(true);
         try
         {
+            // A swap on screen: what's showing now is frozen (see NotchWindowPlatform.FreezeContent) to
+            // collapse or grow with the notch while the new content fades in.
+            var swapping = this.IsVisible && this.notch != null && this.platformWindow != null && this.options.MorphDuration > 0;
+            if (swapping)
+                NotchWindowPlatform.FreezeContent(this.platformWindow!);
+
             // Detach first: the view may be moving from the notch we are about to discard, and MAUI
             // refuses to parent a view that still has one.
             if (this.notch != null)
@@ -98,7 +116,7 @@ sealed class DesktopNotchWindowService : INotchWindowService, IDisposable
 
             this.Content = content;
             this.geometry = this.options.UseHardwareNotch ? NotchWindowPlatform.GetGeometry() : NotchGeometry.None;
-            this.notch = this.CreateNotch(content, configure);
+            this.notch = this.CreateNotch(content, configure, fadeIn: swapping);
 
             var page = new ContentPage
             {
@@ -122,9 +140,19 @@ sealed class DesktopNotchWindowService : INotchWindowService, IDisposable
                 previous?.DisconnectHandlers();
             }
 
+            // The morph waits for the new content to be built and laid out. Started straight away, it ran
+            // while the main thread was busy realizing the new page, and for anything heavier than a
+            // line of text that took the whole morph: the window jumped to its new size at the end.
+            // Until it starts, the frozen old content is what shows.
+            this.settling = this.IsVisible;
             this.notch.Refresh();
             if (this.IsVisible)
+            {
+                await SettleAsync(this.notch).ConfigureAwait(true);
+                this.settling = false;
                 this.Place(this.notch.NotchSize, animate: true);
+                this.notch.FadeInContent((uint)Math.Max(0, this.options.MorphDuration));
+            }
         }
         finally
         {
@@ -153,7 +181,7 @@ sealed class DesktopNotchWindowService : INotchWindowService, IDisposable
         (over ? this.PointerEntered : this.PointerExited)?.Invoke(this, EventArgs.Empty);
     }
 
-    NotchView CreateNotch(View? content, Action<NotchView>? configure)
+    NotchView CreateNotch(View? content, Action<NotchView>? configure, bool fadeIn)
     {
         var view = new NotchView
         {
@@ -161,7 +189,10 @@ sealed class DesktopNotchWindowService : INotchWindowService, IDisposable
             FollowsOfferedWidth = false,
             MaxNotchWidth = this.options.MaxWidth,
             MaxNotchHeight = this.options.MaxHeight,
-            HasShadow = false
+            HasShadow = false,
+            // The content fades in over the window's morph, so in step with it.
+            MorphDuration = (uint)Math.Max(0, this.options.MorphDuration),
+            FadeInFirstContent = fadeIn
         };
 
         if (this.geometry.HasNotch)
@@ -234,8 +265,33 @@ sealed class DesktopNotchWindowService : INotchWindowService, IDisposable
 
     void OnNotchSizeChanged(object? sender, NotchSizeChangedEventArgs e)
     {
-        if (this.IsVisible)
+        // A swap places the window itself once the new content is laid out.
+        if (this.IsVisible && !this.settling)
             this.Place(e.NewSize, animate: true);
+    }
+
+    /// <summary>Until the view is loaded (its native view is in the window), then one frame for its layout.</summary>
+    static async Task SettleAsync(View view)
+    {
+        if (!view.IsLoaded)
+        {
+            var loaded = new TaskCompletionSource();
+            void OnLoaded(object? sender, EventArgs e) => loaded.TrySetResult();
+            view.Loaded += OnLoaded;
+            try
+            {
+                if (!view.IsLoaded)
+                    await loaded.Task.WaitAsync(LoadTimeout).ConfigureAwait(true);
+            }
+            catch (TimeoutException)
+            {
+            }
+            finally
+            {
+                view.Loaded -= OnLoaded;
+            }
+        }
+        await Task.Delay(LayoutFrame).ConfigureAwait(true);
     }
 
     void OnNotchTapped(object? sender, EventArgs e) => this.Tapped?.Invoke(this, EventArgs.Empty);

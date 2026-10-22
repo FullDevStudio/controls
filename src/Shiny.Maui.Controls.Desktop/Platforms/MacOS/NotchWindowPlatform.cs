@@ -145,6 +145,9 @@ static class NotchWindowPlatform
     /// is a cubic in t, and a Bézier whose x control points sit at 1/3 and 2/3 is too, so these
     /// points reproduce it exactly: f(0)=0, f'(0)=3.9, f(1)=1, f'(1)=0.
     /// </summary>
+    /// <summary>Holds near opaque for most of the morph, then drops away: the frozen old content's fade.</summary>
+    static readonly CAMediaTimingFunction FadeOutTiming = CAMediaTimingFunction.FromControlPoints(0.7f, 0f, 0.9f, 0.6f);
+
     static readonly CAMediaTimingFunction MorphTiming = CAMediaTimingFunction.FromControlPoints(1f / 3f, 1.3f, 2f / 3f, 1f);
 
     public static void Place(object platformWindow, double width, double height, CornerRadius corners, bool hugNotch, double topMargin, double durationMs)
@@ -155,11 +158,18 @@ static class NotchWindowPlatform
         MacMainThread.Invoke(() =>
         {
             var frame = FrameFor(width, height, hugNotch, topMargin);
+            Frozen.TryGetValue(window.Handle, out var frozen);
             if (durationMs <= 0 || !window.IsVisible)
             {
                 window.SetFrame(frame, true);
+                Thaw(window.Handle);
                 return;
             }
+
+            // This morph owns the overlay now; one that started earlier mustn't remove it when it ends.
+            var generation = 0;
+            if (frozen.Overlay != null)
+                Frozen[window.Handle] = (frozen.Overlay, generation = ++frozenGeneration);
 
             // Animated through the window's animator rather than SetFrame(…, animate: true): that one's
             // duration is fixed by animationResizeTime, which only a subclass can change, and MAUI owns
@@ -170,8 +180,97 @@ static class NotchWindowPlatform
                 ctx.Duration = durationMs / 1000d;
                 ctx.TimingFunction = MorphTiming;
                 ((NSWindow)window.Animator).SetFrame(frame, true);
-            }, () => { });
+
+                // The frozen old content morphs with the notch - clipped as it collapses - and fades out
+                // as the new content fades in.
+                if (frozen.Overlay is { } overlay)
+                {
+                    ((NSWindow)overlay.Animator).SetFrame(frame, true);
+
+                    // Late, though: the new content may draw no surface of its own (a notch that is just
+                    // the camera), and an image fading as fast as it shrinks reads as a ghost, not a
+                    // collapse. So it stays solid most of the way and goes at the end.
+                    NSAnimationContext.RunAnimation(fade =>
+                    {
+                        fade.Duration = durationMs / 1000d;
+                        fade.TimingFunction = FadeOutTiming;
+                        ((NSWindow)overlay.Animator).AlphaValue = 0;
+                    }, () => { });
+                }
+            }, () =>
+            {
+                // A later morph may have taken over this overlay, or a later swap replaced it.
+                if (frozen.Overlay != null && Frozen.TryGetValue(window.Handle, out var now) && now.Generation == generation)
+                    Thaw(window.Handle);
+            });
         });
+    }
+
+    static readonly Dictionary<IntPtr, (NSWindow? Overlay, int Generation)> Frozen = new();
+    static int frozenGeneration;
+
+    /// <summary>
+    /// Freezes what the notch shows now into an image, in a click-through window over it, before its
+    /// content is swapped. The next <see cref="Place"/> morphs that window with the notch and fades it
+    /// out, so the old content collapses (or grows) with the notch rather than vanishing the moment the
+    /// new content arrives.
+    /// </summary>
+    /// <remarks>
+    /// The image is pinned to the top centre and never scaled, so as the overlay shrinks it is clipped
+    /// exactly as the notch is. It is a window of its own, a child of the notch's, rather than a view in
+    /// it: the swap replaces the notch's whole content view tree.
+    /// </remarks>
+    public static void FreezeContent(object platformWindow)
+    {
+        if (platformWindow is not NSWindow window)
+            return;
+
+        MacMainThread.Invoke(() =>
+        {
+            Thaw(window.Handle);
+            if (!window.IsVisible || window.ContentView is not { } view || view.Bounds.Width <= 0 || view.Bounds.Height <= 0)
+                return;
+
+            var bounds = view.Bounds;
+            if (view.BitmapImageRepForCachingDisplayInRect(bounds) is not { } bitmap)
+                return;
+            view.CacheDisplay(bounds, bitmap);
+            var image = new NSImage(bounds.Size);
+            image.AddRepresentation(bitmap);
+
+            var overlay = new NSWindow(window.Frame, NSWindowStyle.Borderless, NSBackingStore.Buffered, false)
+            {
+                IsOpaque = false,
+                BackgroundColor = NSColor.Clear,
+                HasShadow = false,
+                IgnoresMouseEvents = true,
+                Level = window.Level,
+                CollectionBehavior = window.CollectionBehavior,
+                ContentView = new NSImageView(new CGRect(CGPoint.Empty, bounds.Size))
+                {
+                    Image = image,
+                    ImageScaling = NSImageScale.None,
+                    ImageAlignment = NSImageAlignment.Top,
+                    AutoresizingMask = NSViewResizingMask.WidthSizable | NSViewResizingMask.HeightSizable
+                }
+            };
+            // .NET holds the reference; AppKit releasing it as well on Close would free it twice.
+            overlay.ReleaseWhenClosed(false);
+            overlay.SetExcludedFromWindowsMenu(true);
+            window.AddChildWindow(overlay, NSWindowOrderingMode.Above);
+            Frozen[window.Handle] = (overlay, ++frozenGeneration);
+        });
+    }
+
+    // Main thread only, like every caller.
+    static void Thaw(IntPtr handle)
+    {
+        if (!Frozen.Remove(handle, out var frozen) || frozen.Overlay is not { } overlay)
+            return;
+
+        overlay.ParentWindow?.RemoveChildWindow(overlay);
+        overlay.OrderOut(null);
+        overlay.Close();
     }
 
     public static void Show(object platformWindow)
@@ -183,7 +282,13 @@ static class NotchWindowPlatform
     public static void Hide(object platformWindow)
     {
         if (platformWindow is NSWindow window)
-            MacMainThread.Invoke(() => window.OrderOut(null));
+        {
+            MacMainThread.Invoke(() =>
+            {
+                Thaw(window.Handle);
+                window.OrderOut(null);
+            });
+        }
     }
 
     public static void Teardown(object platformWindow)
