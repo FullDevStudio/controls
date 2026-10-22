@@ -74,7 +74,7 @@ Methods on both: `Play()`, `Stop()`, `StopAtCycleEnd()`. MAUI adds `PlayAsync()`
 [Flags] enum MotionTrigger { Manual = 0, Loop = 1, Hover = 2, Press = 4, Appear = 8 }
 ```
 
-- **`Loop`** — runs continuously, resting for `Interval` between cycles. On MAUI, `IsVisible="False"` on the icon itself pauses it (and showing it resumes), so swapping one icon per state by visibility is fine. Hiding a *parent* does not pause it — put `IsVisible` on the icons, or bind `IsPlaying`.
+- **`Loop`** — runs continuously, resting for `Interval` between cycles. On MAUI, `IsVisible="False"` on the icon itself pauses it (and showing it resumes), so swapping one icon per state by visibility is fine. A closed `Expander` pauses the icons in its content and resumes them when it opens. Hiding any other *parent* does not pause it — put `IsVisible` on the icons, or bind `IsPlaying`.
 - **`Hover`** — runs while the pointer is over it, then **finishes the cycle in progress** so it never snaps back mid-pose. Mouse only; pair it with `Press` for touch.
 - **`Press`** — one play per tap or click. **Only presses that land on the icon itself count** — an
   icon sitting inside a larger tap target (a button, a row) should be `Manual` and played by its

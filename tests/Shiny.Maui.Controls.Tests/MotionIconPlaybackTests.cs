@@ -162,6 +162,143 @@ public class MotionIconPlaybackTests
         MotionTicker.For(view)!.IsRunning.ShouldBeFalse();
     }
 
+    // A closed Expander hides its content without touching the icons' own IsVisible, so it pauses
+    // them itself when it closes and resumes them when it opens. Each test stops its icons in a
+    // finally: a failed assertion must not leave the ticker running into the next.
+
+    [Fact]
+    public void ClosingAnExpanderPausesALoopingIconInItsContentAndOpeningResumesIt()
+    {
+        _ = new Application();
+
+        var view = new MotionIconView { Icon = "refresh", Trigger = MotionTrigger.Loop };
+        var expander = new Expander { IsExpanded = true, Content = new VerticalStackLayout { Children = { view } } };
+
+        try
+        {
+            view.OnLoadedInternal();
+            var ticker = MotionTicker.For(view)!;
+            ticker.IsRunning.ShouldBeTrue();
+
+            expander.Collapse();
+            ticker.IsRunning.ShouldBeFalse();
+            view.IsPlaying.ShouldBeTrue();
+
+            expander.Expand();
+            ticker.IsRunning.ShouldBeTrue();
+        }
+        finally
+        {
+            view.Stop();
+        }
+
+        MotionTicker.For(view)!.IsRunning.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void ALoopingIconLoadedInAClosedExpanderDoesNotConsumeFrames()
+    {
+        _ = new Application();
+
+        var view = new MotionIconView { Icon = "refresh", Trigger = MotionTrigger.Loop };
+        _ = new Expander { Content = view };
+
+        try
+        {
+            view.OnLoadedInternal();
+
+            view.IsPlaying.ShouldBeTrue();
+            MotionTicker.For(view)!.IsRunning.ShouldBeFalse();
+        }
+        finally
+        {
+            view.Stop();
+        }
+    }
+
+    [Fact]
+    public void AnIconInTheHeaderKeepsPlayingWhileTheExpanderIsClosed()
+    {
+        _ = new Application();
+
+        var view = new MotionIconView { Icon = "refresh", Trigger = MotionTrigger.Loop };
+        var expander = new Expander { IsExpanded = true, Header = view, Content = new Label() };
+
+        try
+        {
+            view.OnLoadedInternal();
+
+            expander.Collapse();
+            MotionTicker.For(view)!.IsRunning.ShouldBeTrue();
+        }
+        finally
+        {
+            view.Stop();
+        }
+    }
+
+    [Fact]
+    public void OpeningAnOuterExpanderLeavesAnIconInAClosedInnerOnePaused()
+    {
+        _ = new Application();
+
+        var view = new MotionIconView { Icon = "refresh", Trigger = MotionTrigger.Loop };
+        var inner = new Expander { Content = view };
+        var outer = new Expander { Content = inner };
+
+        try
+        {
+            view.OnLoadedInternal();
+            var ticker = MotionTicker.For(view)!;
+
+            outer.Expand();
+            ticker.IsRunning.ShouldBeFalse();
+
+            inner.Expand();
+            ticker.IsRunning.ShouldBeTrue();
+
+            // The outer one closing hides the inner one's content too.
+            outer.Collapse();
+            ticker.IsRunning.ShouldBeFalse();
+        }
+        finally
+        {
+            view.Stop();
+        }
+    }
+
+    [Fact]
+    public void AnIconMovedIntoAClosedExpanderPausesAndMovedOutResumes()
+    {
+        _ = new Application();
+
+        var view = new MotionIconView { Icon = "refresh", Trigger = MotionTrigger.Loop };
+        var row = new HorizontalStackLayout { Children = { view } };
+        var open = new VerticalStackLayout { Children = { row } };
+        var content = new VerticalStackLayout();
+        _ = new ContentPage { Content = new VerticalStackLayout { Children = { open, new Expander { Content = content } } } };
+
+        try
+        {
+            view.OnLoadedInternal();
+            var ticker = MotionTicker.For(view)!;
+            ticker.IsRunning.ShouldBeTrue();
+
+            // The row moves, not the icon: the icon has to be found below whatever was added.
+            open.Children.Remove(row);
+            content.Children.Add(row);
+            ticker.IsRunning.ShouldBeFalse();
+
+            content.Children.Remove(row);
+            open.Children.Add(row);
+            ticker.IsRunning.ShouldBeTrue();
+        }
+        finally
+        {
+            view.Stop();
+        }
+    }
+
     // Color: the theme ink is a fallback, never a value that outranks the app's own. A dynamic
     // resource on Color itself beat every Style setter, Binding and AppThemeBinding (#25).
 

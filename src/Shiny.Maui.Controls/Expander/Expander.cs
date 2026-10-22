@@ -49,7 +49,7 @@ public partial class Expander : Grid
     readonly ContentView indicatorHost;
     readonly Label indicatorLabel;
     readonly BoxView separator;
-    readonly Grid contentClip;
+    readonly ContentPanel contentClip;
     readonly ContentView contentHost;
 
     bool contentRealized;
@@ -117,7 +117,7 @@ public partial class Expander : Grid
         this.separator = new BoxView { HeightRequest = 1, IsVisible = false };
 
         this.contentHost = new ContentView();
-        this.contentClip = new Grid
+        this.contentClip = new ContentPanel
         {
             // Everything the height animation does depends on this: the panel is shorter than what is
             // inside it for the whole of the reveal, and without the clip that overflow paints anyway.
@@ -125,6 +125,11 @@ public partial class Expander : Grid
             IsVisible = false,
             Children = { this.contentHost }
         };
+
+        // An icon put into the content (or taken out of it) while the panel is closed picks up the
+        // panel's state right away, rather than at the next open or close.
+        this.contentClip.DescendantAdded += OnContentDescendantChanged;
+        this.contentClip.DescendantRemoved += OnContentDescendantChanged;
 
         this.layout = new Grid
         {
@@ -500,7 +505,7 @@ public partial class Expander : Grid
         var measured = animation.HasFlag(ExpanderAnimation.Height) ? this.MeasureContentHeight() : -1d;
         var useHeight = measured > 0;
 
-        this.contentClip.IsVisible = true;
+        this.ShowContentPanel(true);
         this.separator.IsVisible = this.ShowSeparator;
 
         var tasks = new List<Task>();
@@ -558,7 +563,7 @@ public partial class Expander : Grid
     /// <summary>Put the panel in its resting state for <paramref name="expanded"/>, with no animation.</summary>
     void Settle(bool expanded)
     {
-        this.contentClip.IsVisible = expanded;
+        this.ShowContentPanel(expanded);
         // Back to auto: the panel has to track its content again once the reveal is over, or anything
         // that grows inside it later is clipped for good.
         this.contentClip.HeightRequest = -1;
@@ -566,6 +571,56 @@ public partial class Expander : Grid
         this.contentHost.TranslationX = 0;
         this.contentHost.TranslationY = 0;
         this.separator.IsVisible = expanded && this.ShowSeparator;
+    }
+
+
+    /// <summary>
+    /// Show or hide the content panel, and tell the motion icons inside it.
+    /// </summary>
+    /// <remarks>
+    /// Hiding the panel leaves each icon's own <see cref="VisualElement.IsVisible"/> alone and raises no
+    /// <c>Unloaded</c>, so a looping icon in a closed expander would keep redrawing for nobody. The icons
+    /// pause here instead, once per open or close - they watch nothing themselves. Closing pauses them
+    /// once the close has finished; opening resumes them before the reveal, so they are moving as they
+    /// come into view.
+    /// </remarks>
+    void ShowContentPanel(bool shown)
+    {
+        if (this.contentClip.IsVisible == shown)
+            return;
+
+        this.contentClip.IsVisible = shown;
+
+        foreach (var icon in this.contentHost.GetVisualTreeDescendants().OfType<MotionIconView>())
+            icon.SyncExpanderState();
+    }
+
+
+    static void OnContentDescendantChanged(object? sender, ElementEventArgs e)
+    {
+        if (e.Element is MotionIconView icon)
+            icon.SyncExpanderState();
+    }
+
+
+    /// <summary>
+    /// Whether <paramref name="element"/> sits in the content of an expander that is closed - its own
+    /// or one further out. Header content is never hidden by its expander.
+    /// </summary>
+    internal static bool HidesContent(Element element)
+    {
+        for (var parent = element.Parent; parent != null; parent = parent.Parent)
+        {
+            if (parent is ContentPanel { IsVisible: false })
+                return true;
+        }
+        return false;
+    }
+
+
+    /// <summary>The clipping panel around the content; its own type so <see cref="HidesContent"/> can tell it apart.</summary>
+    sealed class ContentPanel : Grid
+    {
     }
 
 

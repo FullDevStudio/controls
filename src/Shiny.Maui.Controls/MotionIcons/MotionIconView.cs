@@ -122,6 +122,10 @@ public class MotionIconView : GraphicsView
     bool ticking;
     bool pendingAutoPlay;
 
+    // True while the icon sits in the content of a closed Expander, which hides it without touching
+    // its own IsVisible. The Expander says so when it opens or closes; Loaded asks once for itself.
+    bool inClosedExpander;
+
     // True while the current (or pending) play is the app's: IsPlaying set from outside — a local
     // value, a Binding, a Style. False when the view started it itself (Play, Loop, Press, Hover,
     // Appear, the Loop trigger). IsPlaying alone cannot tell the two apart, and only the app's loop
@@ -349,6 +353,7 @@ public class MotionIconView : GraphicsView
     internal void OnLoadedInternal()
     {
         loaded = true;
+        inClosedExpander = Expander.HidesContent(this);
         Rebuild();
 
         // IsPlaying can only still be true here when the app set it: a play the view started itself
@@ -483,14 +488,18 @@ public class MotionIconView : GraphicsView
     /// MAUI raises no <c>Unloaded</c> for <c>IsVisible = false</c>, so without this a looping icon
     /// that is merely hidden keeps redrawing and writing <see cref="Progress"/> every frame — and
     /// keeps the shared ticker awake for nobody. Pausing rather than stopping keeps the position,
-    /// so showing the icon again carries on mid-cycle instead of restarting. Only the view's own
-    /// <see cref="VisualElement.IsVisible"/> is watched; a hidden ancestor does not change it.
+    /// so showing the icon again carries on mid-cycle instead of restarting. The view's own
+    /// <see cref="VisualElement.IsVisible"/> counts, and so does a closed <see cref="Expander"/> it
+    /// sits in, which reports itself through <see cref="SyncExpanderState"/>. Any other hidden
+    /// ancestor does not change it.
     /// </remarks>
     void SyncVisibility()
     {
+        var shown = IsVisible && !inClosedExpander;
+
         if (native is not null)
         {
-            if (IsVisible)
+            if (shown)
                 native.Resume();
             else
                 native.Pause();
@@ -500,7 +509,7 @@ public class MotionIconView : GraphicsView
         if (player is null)
             return;
 
-        if (IsVisible)
+        if (shown)
         {
             if (player.State is PlaybackState.Paused)
                 player.Resume();
@@ -519,6 +528,13 @@ public class MotionIconView : GraphicsView
             player.Pause();
             StopTicking();
         }
+    }
+
+    /// <summary>Called by an <see cref="Expander"/> when it opens or closes around this icon.</summary>
+    internal void SyncExpanderState()
+    {
+        inClosedExpander = Expander.HidesContent(this);
+        SyncVisibility();
     }
 
     void StopTicking()
