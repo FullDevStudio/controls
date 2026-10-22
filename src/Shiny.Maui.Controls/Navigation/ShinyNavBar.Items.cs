@@ -17,6 +17,42 @@ public partial class ShinyNavBar
 
 
     /// <summary>
+    /// Holds every item rebuild back until the returned scope is disposed, then rebuilds once if
+    /// anything asked for one.
+    /// </summary>
+    /// <remarks>
+    /// For <see cref="ShinyNavigationPage"/>, which swaps a page's items in with a clear and one add
+    /// apiece and then hands them the page's binding context. Drawn as they happen, the swap alone
+    /// would rebuild the bar n + 1 times, and every binding that resolves would redraw its item - or,
+    /// for a bound <see cref="NavBarItem.IsVisible"/>, the whole bar - on top of that.
+    /// </remarks>
+    internal IDisposable DeferItemRebuild()
+    {
+        this.itemRebuildDeferrals++;
+        return new ItemRebuildDeferral(this);
+    }
+
+
+    sealed class ItemRebuildDeferral(ShinyNavBar bar) : IDisposable
+    {
+        bool disposed;
+
+        public void Dispose()
+        {
+            if (this.disposed)
+                return;
+
+            this.disposed = true;
+            if (--bar.itemRebuildDeferrals == 0 && bar.itemRebuildPending)
+            {
+                bar.itemRebuildPending = false;
+                bar.RebuildItems();
+            }
+        }
+    }
+
+
+    /// <summary>
     /// Re-subscribes to every item currently in either collection. An item's own properties are
     /// bindable, so a command that flips <c>IsEnabled</c> or a count that drives <c>Badge</c> has to
     /// reach the bar without the collection itself changing.
@@ -37,16 +73,122 @@ public partial class ShinyNavBar
 
 
     void OnItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
-        => StyleGuard.WhenReady<ShinyNavBar>(this, bar => bar.RebuildItems());
+    {
+        if (sender is not ToolbarItem item || DrawsNothing(e.PropertyName))
+            return;
+
+        StyleGuard.WhenReady<ShinyNavBar>(this, bar =>
+        {
+            if (ChangesOnlyTheItem(e.PropertyName))
+                bar.RedrawItem(item);
+            else
+                bar.RebuildItems();
+        });
+    }
+
+
+    /// <summary>
+    /// What an item raises that changes nothing the bar draws. A new binding context above all: the
+    /// properties bound to it raise changes of their own, so redrawing for the context as well would
+    /// only build every view on the bar once more per item.
+    /// </summary>
+    /// <remarks>
+    /// The command is read when the item is tapped, and a command that changes whether it can run
+    /// arrives as <see cref="MenuItem.IsEnabled"/>.
+    /// </remarks>
+    static bool DrawsNothing(string? propertyName) => propertyName
+        is nameof(BindableObject.BindingContext) or nameof(Element.Parent)
+        or nameof(MenuItem.Command) or nameof(MenuItem.CommandParameter) or nameof(NavBarItem.Tag);
+
+
+    /// <summary>
+    /// What changes how one item looks but not where it sits, so only that item's views are built
+    /// again. Anything else - <see cref="NavBarItem.IsVisible"/>, <see cref="ToolbarItem.Order"/>,
+    /// <see cref="ToolbarItem.Priority"/>, <see cref="NavBarItem.IsSeparator"/>, or a property this
+    /// does not know - can move items between the bar and the overflow menu, and rebuilds the bar.
+    /// </summary>
+    /// <remarks>
+    /// <c>Badge</c> and <c>BadgeColor</c> are also what the attached <see cref="ShinyNav.BadgeProperty"/>
+    /// and <see cref="ShinyNav.BadgeColorProperty"/> raise on a plain <see cref="ToolbarItem"/>.
+    /// </remarks>
+    static bool ChangesOnlyTheItem(string? propertyName) => propertyName
+        is nameof(MenuItem.Text) or nameof(MenuItem.IconImageSource) or nameof(MenuItem.IsEnabled)
+        or nameof(MenuItem.IsDestructive) or nameof(Element.AutomationId)
+        or nameof(NavBarItem.Icon) or nameof(NavBarItem.IconSource) or nameof(NavBarItem.IconPathData)
+        or nameof(NavBarItem.Motion) or nameof(NavBarItem.IconColor) or nameof(NavBarItem.Display)
+        or nameof(NavBarItem.Badge) or nameof(NavBarItem.BadgeColor);
+
+
+    /// <summary>
+    /// Replaces the views drawn for one item: its button on the bar, or - when it folded into the
+    /// overflow menu - the overflow button, whose dot follows the badges behind it, and the open menu.
+    /// </summary>
+    /// <remarks>
+    /// A binding that ticks a badge count is the common case. Rebuilding the bar for it would build
+    /// every item, the back button and an open menu again on each tick.
+    /// </remarks>
+    void RedrawItem(ToolbarItem item)
+    {
+        // The deferred rebuild draws every item anyway.
+        if (this.itemRebuildDeferrals > 0)
+        {
+            this.itemRebuildPending = true;
+            return;
+        }
+
+        var inMenu = false;
+        for (var i = 0; i < this.drawnViews.Count; i++)
+        {
+            var drawn = this.drawnViews[i];
+            var overflow = drawn.Side == NavBarSide.Left ? this.leftOverflow : this.rightOverflow;
+            View view;
+
+            if (ReferenceEquals(drawn.Item, item))
+            {
+                view = this.BuildItemView(item, item.AutomationId ?? drawn.IndexedId);
+            }
+            else if (drawn.Item is null && overflow.Contains(item))
+            {
+                view = this.BuildOverflowButton(drawn.Side, overflow);
+                inMenu = true;
+            }
+            else
+            {
+                continue;
+            }
+
+            var index = drawn.Host.Children.IndexOf(drawn.View);
+            if (index < 0)
+            {
+                // Nothing but RebuildItems takes a view out of a host, so this is a guard rather
+                // than a path - but one rebuild too many beats a button that stops updating.
+                this.RebuildItems();
+                return;
+            }
+
+            drawn.Host.Children[index] = view;
+            this.drawnViews[i] = drawn with { View = view };
+        }
+
+        if (inMenu)
+            this.RefreshMenuContent();
+    }
 
 
     void RebuildItems()
     {
+        if (this.itemRebuildDeferrals > 0)
+        {
+            this.itemRebuildPending = true;
+            return;
+        }
+
         this.ResubscribeItems();
         this.ApplyItemMetrics();
 
         this.leadingHost.Children.Clear();
         this.trailingHost.Children.Clear();
+        this.drawnViews.Clear();
         this.backButton = null;
 
         this.ApplyBackButton();
@@ -88,12 +230,28 @@ public partial class ShinyNavBar
 
             // The item's own id wins: it is the one the app chose, and it follows the item into the
             // overflow menu. The indexed one is for items nobody named.
-            host.Children.Add(this.BuildItemView(item, item.AutomationId ?? AutomationIds.For(this, itemSuffix, i)));
+            var indexedId = AutomationIds.For(this, itemSuffix, i);
+            var view = this.BuildItemView(item, item.AutomationId ?? indexedId);
+            host.Children.Add(view);
+            this.drawnViews.Add(new DrawnView(item, side, host, view, indexedId));
         }
 
         if (overflow.Count > 0)
-            host.Children.Add(this.BuildOverflowButton(side, overflow));
+        {
+            var button = this.BuildOverflowButton(side, overflow);
+            host.Children.Add(button);
+            this.drawnViews.Add(new DrawnView(null, side, host, button, null));
+        }
     }
+
+
+    /// <summary>
+    /// A view <see cref="Fill"/> put in a host, kept so that <see cref="RedrawItem"/> can replace it
+    /// in place. <c>Item</c> is null for the side's overflow button, and <c>IndexedId</c> is the id
+    /// the item gets while it has none of its own - its index on the bar, which only a rebuild can
+    /// change.
+    /// </summary>
+    readonly record struct DrawnView(ToolbarItem? Item, NavBarSide Side, Layout Host, View View, string? IndexedId);
 
 
     static bool IsItemVisible(ToolbarItem item) => item is not NavBarItem nav || nav.IsVisible;

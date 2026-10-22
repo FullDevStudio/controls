@@ -176,6 +176,84 @@ public class ShinyNavigationPageTests
 
 
     [Fact]
+    public void SwappingThePagesItemsDrawsEachItemOnce()
+    {
+        // A new toolbar item swaps the bar's whole right-hand list: a clear and one add per item.
+        // Drawn as they happen, that is 0 + 1 + ... + 6 = 21 buttons for a bar of six.
+        var root = Page();
+        for (var i = 0; i < 5; i++)
+            ShinyNav.GetRightItems(root).Add(new NavBarItem { Text = $"Item {i}" });
+        _ = new ShinyNavigationPage(root) { MaxVisibleItems = 0 };
+
+        var built = 0;
+        BarOf(root).TrailingHost.ChildAdded += (_, _) => built++;
+
+        root.ToolbarItems.Add(new ToolbarItem { Text = "Refresh" });
+
+        built.ShouldBe(6);
+        BarOf(root).RightItems.Count.ShouldBe(6);
+    }
+
+
+    [Fact]
+    public void ThePagesBindingContextReachesItsItemsInOneDraw()
+    {
+        // Each declared item is handed the context in turn, and its bound text changes. A rebuild of
+        // the bar for each of those is 5 x 5 = 25 buttons for five items.
+        var root = Page();
+        for (var i = 0; i < 5; i++)
+        {
+            var item = new NavBarItem();
+            item.SetBinding(MenuItem.TextProperty, new Binding(nameof(InboxModel.Name)));
+            ShinyNav.GetRightItems(root).Add(item);
+        }
+        _ = new ShinyNavigationPage(root) { MaxVisibleItems = 0 };
+
+        var built = 0;
+        BarOf(root).TrailingHost.ChildAdded += (_, _) => built++;
+
+        root.BindingContext = new InboxModel();
+
+        built.ShouldBe(5);
+        BarOf(root).RightItems.Select(i => i.Text).ShouldAllBe(text => text == "Inbox");
+    }
+
+
+    [Fact]
+    public void ItemsHiddenByThePagesContextLayTheBarOutOnce()
+    {
+        // A bound IsVisible decides what is on the bar at all, so each one that resolves is a rebuild
+        // of the whole bar - 3 + 2 buttons here - unless the page holds them back until every item
+        // has its context.
+        var root = Page();
+        for (var i = 0; i < 4; i++)
+        {
+            var item = new NavBarItem { Text = $"Item {i}" };
+            if (i >= 2)
+                item.SetBinding(NavBarItem.IsVisibleProperty, new Binding(nameof(InboxModel.IsAdmin)));
+            ShinyNav.GetRightItems(root).Add(item);
+        }
+        _ = new ShinyNavigationPage(root) { MaxVisibleItems = 0 };
+
+        var built = 0;
+        BarOf(root).TrailingHost.ChildAdded += (_, _) => built++;
+
+        root.BindingContext = new InboxModel();
+
+        built.ShouldBe(2);
+        BarOf(root).TrailingHost.Children.Count.ShouldBe(2);
+    }
+
+
+    sealed class InboxModel
+    {
+        public string Name => "Inbox";
+
+        public bool IsAdmin => false;
+    }
+
+
+    [Fact]
     public void TheRootPageHasNoBackButton()
     {
         var root = Page();

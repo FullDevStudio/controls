@@ -40,6 +40,8 @@ The items are declared on the **page**, the way `ToolbarItems` already are:
 
 `Order="Secondary"` folds an item into the overflow menu however much room there is; anything past `MaxVisibleItems` (3 per side by default) folds in behind it.
 
+Item properties are live and cheap to bind: a change to an item's `Text`, icon, `IsEnabled`, `IsDestructive` or badge redraws only that item (for an item in the overflow menu, the overflow button and the open menu), and only `IsVisible`, `Order`, `Priority` and `IsSeparator` lay the side out again. A page's items are swapped in and handed its binding context in a single pass, so binding many items costs one draw of the bar, not one per item and property.
+
 ### Badges
 
 `NavBarItem.Badge` badges a declared item; `ShinyNav.Badge` is the attached form, so a page's own plain `ToolbarItem`s can be badged too without being rewritten:
