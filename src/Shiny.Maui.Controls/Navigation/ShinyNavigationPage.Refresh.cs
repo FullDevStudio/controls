@@ -106,7 +106,7 @@ public partial class ShinyNavigationPage
         var right = ShinyNav.GetRightItems(page);
 
         // Every collection change below asks the bar to rebuild its items, and every binding that
-        // resolves against the new context asks it to redraw one. Draw the result once instead.
+        // resolves against the new context asks again. Draw the result once instead.
         using var _ = bar.DeferItemRebuild();
 
         Replace(bar.LeftItems, left);

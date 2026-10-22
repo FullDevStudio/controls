@@ -184,67 +184,21 @@ public class ShinyNavBarTests
 
 
     [Fact]
-    public void ChangingOneItemRedrawsOnlyThatItem()
+    public void AnItemsBindingContextAloneDoesNotRebuildTheBar()
     {
-        // A count bound to one item's badge can tick often, and the buttons beside it have nothing
-        // to redraw.
+        // The context itself draws nothing - the properties bound to it raise changes of their own.
         var bar = Build();
-        bar.AutomationId = "Bar";
-        var alerts = new NavBarItem { Text = "Alerts" };
-        bar.RightItems.Add(new NavBarItem { Text = "Search" });
-        bar.RightItems.Add(alerts);
-        var search = bar.TrailingHost.Children[0];
-
-        alerts.Badge = "3";
-
-        bar.TrailingHost.Children[0].ShouldBeSameAs(search);
-        Descendants(bar.TrailingHost).OfType<BadgeView>().Single().Text.ShouldBe("3");
-
-        // The new button keeps the indexed id the old one was given.
-        bar.TrailingHost.Children.OfType<Border>().Last().AutomationId.ShouldBe("Bar_RightItem_1");
-    }
-
-
-    [Fact]
-    public void BadgingAnOverflowedItemRedrawsOnlyTheOverflowButton()
-    {
-        var bar = Build();
-        bar.MaxVisibleItems = 1;
-        var folded = new NavBarItem { Text = "Two" };
-        bar.RightItems.Add(new NavBarItem { Text = "One" });
-        bar.RightItems.Add(folded);
-        var first = bar.TrailingHost.Children[0];
-
-        folded.Badge = "4";
-
-        // The item itself is in the menu; what the bar shows of it is the overflow button's dot.
-        bar.TrailingHost.Children[0].ShouldBeSameAs(first);
-        Descendants(bar.TrailingHost).OfType<BadgeView>().Single().IsDot.ShouldBeTrue();
-    }
-
-
-    [Fact]
-    public void ABindingContextRedrawsEachBoundItemOnce()
-    {
-        // The context itself draws nothing - the properties bound to it do, and each of those is one
-        // item's business. Rebuilding the bar for both would build every button again per item and
-        // per property: 18 buttons here instead of 3, and far more on a page switch.
-        var bar = Build();
-        var items = Enumerable.Range(0, 3).Select(_ => new NavBarItem()).ToList();
+        var items = Enumerable.Range(0, 3).Select(i => new NavBarItem { Text = $"Item {i}" }).ToList();
         foreach (var item in items)
-        {
-            item.SetBinding(MenuItem.TextProperty, new Binding(nameof(ItemModel.Name)));
             bar.RightItems.Add(item);
-        }
 
         var built = 0;
         bar.TrailingHost.ChildAdded += (_, _) => built++;
 
         foreach (var item in items)
-            item.BindingContext = new ItemModel("Inbox");
+            item.BindingContext = new object();
 
-        built.ShouldBe(3);
-        Descendants(bar.TrailingHost).OfType<Label>().Select(l => l.Text).ShouldBe(new[] { "Inbox", "Inbox", "Inbox" });
+        built.ShouldBe(0);
     }
 
 
@@ -262,12 +216,6 @@ public class ShinyNavBarTests
 
         Descendants(bar.TrailingHost).OfType<Label>().Select(l => l.Text).ShouldBe(new[] { "Two" });
         bar.OverflowFor(NavBarSide.Right).ShouldBeEmpty();
-    }
-
-
-    sealed class ItemModel(string name)
-    {
-        public string Name { get; } = name;
     }
 
 

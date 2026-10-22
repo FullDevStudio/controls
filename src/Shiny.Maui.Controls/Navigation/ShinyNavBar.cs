@@ -93,7 +93,6 @@ public partial class ShinyNavBar : Grid
 
     readonly List<ToolbarItem> leftOverflow = new();
     readonly List<ToolbarItem> rightOverflow = new();
-    readonly List<DrawnView> drawnViews = new();
 
     int itemRebuildDeferrals;
     bool itemRebuildPending;
@@ -276,7 +275,7 @@ public partial class ShinyNavBar : Grid
         // that event - so every icon in the first bar drew as an empty 22pt box while its badge and
         // the overflow glyph, which are ordinary views, rendered fine. Rebuilding on load rebuilds
         // them against an attached tree, where Loaded does fire. RebuildItems is idempotent - it is
-        // already what every collection change runs - so a page that loads more than once is fine.
+        // already what every item property change runs - so a page that loads more than once is fine.
         this.Loaded += (_, _) => this.RebuildItems();
 
         // Seeded from the properties' defaults: a property left at its default never raises
