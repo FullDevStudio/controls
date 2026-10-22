@@ -26,7 +26,11 @@ public class CustomCell : CellBase
         nameof(CommandParameter), typeof(object), typeof(CustomCell), null);
 
     public static readonly BindableProperty LongCommandProperty = BindableProperty.Create(
-        nameof(LongCommand), typeof(ICommand), typeof(CustomCell), null);
+        nameof(LongCommand), typeof(ICommand), typeof(CustomCell), null,
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(CustomCell), () =>
+            {
+                ((CustomCell)b).UpdateLongPressGesture();
+            }));
 
     public static readonly BindableProperty LongCommandParameterProperty = BindableProperty.Create(
         nameof(LongCommandParameter), typeof(object), typeof(CustomCell), null);
@@ -42,6 +46,7 @@ public class CustomCell : CellBase
         nameof(KeepSelectedUntilBack), typeof(bool), typeof(CustomCell), false);
 
     Label? arrowLabel;
+    readonly TapGestureRecognizer longPress = new() { NumberOfTapsRequired = 2 };
 
     public View? CustomContent
     {
@@ -93,10 +98,8 @@ public class CustomCell : CellBase
 
     public CustomCell()
     {
-        // Double-tap for long command (MAUI has no built-in long-press gesture)
-        var longPress = new TapGestureRecognizer { NumberOfTapsRequired = 2 };
+        // Double-tap for long command (MAUI has no built-in long-press gesture), attached only while there is one
         longPress.Tapped += OnLongPressed;
-        GestureRecognizers.Add(longPress);
 
         // Last line: replays any styled property that was applied before the
         // children existed. See StyleGuard.
@@ -166,6 +169,20 @@ public class CustomCell : CellBase
         // Rebuild layout to include/exclude arrow
         if (!UseFullSize)
             UpdateAccessoryContent();
+    }
+
+    /// <summary>
+    /// The double-tap recognizer is only on the cell while there is a <see cref="LongCommand"/> to run. Like the
+    /// base tap, on the AppKit head it is an NSClickGestureRecognizer over the whole cell that takes the mouse-down
+    /// from the controls in <see cref="CustomContent"/> - a slider could not be dragged, a button not clicked.
+    /// </summary>
+    void UpdateLongPressGesture()
+    {
+        var attached = GestureRecognizers.Contains(longPress);
+        if (LongCommand != null && !attached)
+            GestureRecognizers.Add(longPress);
+        else if (LongCommand == null && attached)
+            GestureRecognizers.Remove(longPress);
     }
 
     protected override bool ShouldKeepSelection() => KeepSelectedUntilBack;
