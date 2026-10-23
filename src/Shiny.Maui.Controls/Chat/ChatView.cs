@@ -100,6 +100,7 @@ public partial class ChatView : ContentView
     bool hasMoreOlder = true;
     bool isReloading;
     CancellationTokenSource? loadCts;
+    CancellationTokenSource? olderCts;   // the in-flight LoadOlder - cancelled when the session changes
 
     // typing
     readonly Dictionary<string, long> typingUsers = new();

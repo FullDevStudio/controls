@@ -37,6 +37,7 @@ public partial class ChatView : IAsyncDisposable
     string? errorMessage;
     bool loading;
     bool loadingOlder;
+    CancellationTokenSource? olderCts;   // the in-flight LoadOlder - cancelled when the session changes
     bool hasMoreOlder;
     bool pendingScrollToEnd;
     bool initialized;
@@ -186,6 +187,12 @@ public partial class ChatView : IAsyncDisposable
         typingTimer?.Dispose();
         typingTimer = null;
         typing.Clear();
+
+        // A history page still in flight belongs to the session being torn down. Left running it lands
+        // in the next conversation's message list and overwrites its hasMoreOlder.
+        olderCts?.Cancel();
+        olderCts = null;
+        loadingOlder = false;
 
         if (session is not null)
         {
@@ -363,19 +370,37 @@ public partial class ChatView : IAsyncDisposable
             return;
 
         loadingOlder = true;
+        var s = session;
+        var cts = new CancellationTokenSource();
+        olderCts = cts;
+        var token = cts.Token;
         StateHasChanged();
 
-        var prevHeight = await module.InvokeAsync<double>("getScrollHeight", messagesEl);
-        var oldest = messages[0].MessageId;
         try
         {
-            var page = await session.GetMessagesAsync(oldest, MessagePageDirection.Older, PageSize);
+            var prevHeight = await module.InvokeAsync<double>("getScrollHeight", messagesEl);
+            if (token.IsCancellationRequested || !ReferenceEquals(s, session) || messages.Count == 0)
+                return;
+
+            var oldest = messages[0].MessageId;
+            var page = await s.GetMessagesAsync(oldest, MessagePageDirection.Older, PageSize, token);
+
+            // The provider may ignore the token - the session can still have changed underneath us.
+            if (token.IsCancellationRequested || !ReferenceEquals(s, session))
+                return;
+
             foreach (var m in page.Messages)
             {
                 if (!messages.Any(x => x.MessageId == m.MessageId))
                     InsertSorted(m);
             }
             hasMoreOlder = page.HasMore;
+
+            loadingOlder = false;
+            StateHasChanged();
+            await Task.Yield();
+            if (!disposed && ReferenceEquals(s, session))
+                await module.InvokeVoidAsync("maintainScrollPosition", messagesEl, prevHeight);
         }
         catch
         {
@@ -383,10 +408,18 @@ public partial class ChatView : IAsyncDisposable
         }
         finally
         {
-            loadingOlder = false;
-            StateHasChanged();
-            await Task.Yield();
-            await module.InvokeVoidAsync("maintainScrollPosition", messagesEl, prevHeight);
+            // A stale request must not clear the flag of the load that replaced it.
+            if (ReferenceEquals(olderCts, cts))
+            {
+                olderCts = null;
+                if (loadingOlder)
+                {
+                    loadingOlder = false;
+                    if (!disposed)
+                        StateHasChanged();
+                }
+            }
+            cts.Dispose();
         }
     }
 

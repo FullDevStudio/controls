@@ -96,6 +96,12 @@ public partial class ChatView
     {
         this.StopTypingTimer();
 
+        // A history page still in flight belongs to the session being torn down. Left running it lands
+        // in the next conversation's message list and overwrites its hasMoreOlder.
+        this.olderCts?.Cancel();
+        this.olderCts = null;
+        this.isLoadingOlder = false;
+
         if (this.session is not null)
         {
             this.Unsubscribe(this.session);
@@ -282,13 +288,17 @@ public partial class ChatView
         this.isLoadingOlder = true;
         this.SyncScrollMode();   // prepending must not drag the view to the newest message
 
+        var session = this.session;
         var cts = new CancellationTokenSource();
+        this.olderCts = cts;
         var token = cts.Token;
         try
         {
             var cursor = this.messages[0].MessageId;
-            var page = await this.session.GetMessagesAsync(cursor, MessagePageDirection.Older, this.PageSize, token);
-            if (token.IsCancellationRequested)
+            var page = await session.GetMessagesAsync(cursor, MessagePageDirection.Older, this.PageSize, token);
+
+            // The provider may ignore the token - the session can still have changed underneath us.
+            if (token.IsCancellationRequested || !ReferenceEquals(session, this.session))
                 return;
 
             var insertAt = 0;
@@ -311,8 +321,14 @@ public partial class ChatView
         catch (Exception) { }
         finally
         {
-            this.isLoadingOlder = false;
-            this.SyncScrollMode();
+            // A stale request must not clear the flag of the load that replaced it.
+            if (ReferenceEquals(this.olderCts, cts))
+            {
+                this.olderCts = null;
+                this.isLoadingOlder = false;
+                this.SyncScrollMode();
+            }
+            cts.Dispose();
         }
     }
 
