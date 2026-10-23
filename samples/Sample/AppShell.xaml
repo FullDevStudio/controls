@@ -1081,6 +1081,14 @@
         <ShellContent ContentTemplate="{DataTemplate mediaelement:VideoTextPage}" Route="videotext" />
     </FlyoutItem>
 
+    <FlyoutItem Title="Live Video">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x25CE;" Size="20"
+                             Color="{AppThemeBinding Light=#9333EA, Dark=#C084FC}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate camera:LiveVideoPage}" Route="livevideo" />
+    </FlyoutItem>
+
     <FlyoutItem Title="Media Service">
         <FlyoutItem.FlyoutIcon>
             <FontImageSource Glyph="&#x2699;" Size="20"

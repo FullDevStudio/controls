@@ -12,8 +12,9 @@ public static class CameraMauiAppBuilderExtensions
 {
     /// <summary>
     /// Register the Shiny <see cref="CameraView"/> handler and the <see cref="IMediaService"/> that drives
-    /// the modal camera. Call alongside <c>UseShinyControls()</c> in your MAUI program. Analyzer packages
-    /// (Barcode/Face/Motion/OCR/Documents) are assigned to the single <see cref="CameraView.Analyzer"/>
+    /// the modal camera, and the <see cref="RemoteVideoView"/> handler for live video. Call alongside
+    /// <c>UseShinyControls()</c> in your MAUI program. Analyzer packages (Barcode/Face/Motion/OCR/Documents)
+    /// and the <see cref="VideoEncoder"/> are assigned to the single <see cref="CameraView.Analyzer"/>
     /// property at the call site — no separate registration needed.
     /// </summary>
     /// <param name="builder">The app builder.</param>
@@ -27,6 +28,7 @@ public static class CameraMauiAppBuilderExtensions
         builder.ConfigureMauiHandlers(handlers =>
         {
             handlers.AddHandler<CameraView, CameraViewHandler>();
+            handlers.AddHandler<RemoteVideoView, RemoteVideoViewHandler>();
         });
 #endif
         var options = new MediaServiceOptions();

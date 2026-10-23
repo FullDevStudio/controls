@@ -4,6 +4,8 @@
         <TargetFramework>$(BaseTargetFramework)</TargetFramework>
         <IsPackable>false</IsPackable>
         <IsTestProject>true</IsTestProject>
+        <!-- YuvScalerTests address planes by pointer, the way the Android encoder does -->
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
 
     <ItemGroup>

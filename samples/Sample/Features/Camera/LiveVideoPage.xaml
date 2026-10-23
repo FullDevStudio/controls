@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:cam="http://shiny.net/maui/camera"
+             x:Class="Sample.Features.Camera.LiveVideoPage"
+             Title="Live Video"
+             AutomationId="LiveVideoPage">
+
+    <!-- A loopback call: the camera's VideoEncoder hands each encoded frame straight to the RemoteVideoView
+         below it, which is exactly what the far side of a real call does after the transport carries it.
+         Switch codec and profile while it runs to see the encoder rebuild itself. -->
+    <Grid RowDefinitions="*,*,Auto" RowSpacing="8" Padding="8">
+
+        <cam:CameraView x:Name="Camera"
+                        Grid.Row="0"
+                        Facing="Front"
+                        ScaleMode="AspectFit">
+            <cam:CameraView.Analyzer>
+                <cam:VideoEncoder x:Name="Encoder" />
+            </cam:CameraView.Analyzer>
+        </cam:CameraView>
+
+        <cam:RemoteVideoView x:Name="Remote"
+                             Grid.Row="1"
+                             Aspect="AspectFit"
+                             AutomationId="RemoteVideo" />
+
+        <VerticalStackLayout Grid.Row="2" Spacing="6">
+            <HorizontalStackLayout Spacing="8">
+                <Picker x:Name="CodecPicker" Title="Codec" WidthRequest="140"
+                        SelectedIndexChanged="OnCodecChanged" />
+                <Picker x:Name="ProfilePicker" Title="Profile" WidthRequest="180"
+                        SelectedIndexChanged="OnProfileChanged" />
+                <Button Text="Flip" Clicked="OnFlipClicked" />
+            </HorizontalStackLayout>
+            <Label x:Name="Stats" FontSize="13" Text="Waiting for frames…" />
+        </VerticalStackLayout>
+    </Grid>
+</ContentPage>
