@@ -90,8 +90,18 @@ sealed class AppleVideoDecoder(Action<CGImage, EncodedVideoFrame> onImage, Actio
         if (payload.Length == 0)
             return;
 
-        using var block = CMBlockBuffer.FromMemoryBlock(payload, 0, 0, out var blockError);
-        if (block is null || blockError != CMBlockBufferError.None)
+        // A block that owns its memory, with the frame copied in. FromMemoryBlock(byte[]) leaves the block
+        // unallocated, and VideoToolbox then drops every frame with kCMBlockBufferUnallocatedBlockErr (-12707).
+        using var block = CMBlockBuffer.FromMemoryBlock(
+            IntPtr.Zero,
+            (nuint)payload.Length,
+            null,
+            0,
+            (nuint)payload.Length,
+            CMBlockBufferFlags.AssureMemoryNow,
+            out var blockError
+        );
+        if (block is null || blockError != CMBlockBufferError.None || block.ReplaceDataBytes(payload, 0) != CMBlockBufferError.None)
         {
             onLostSync();
             return;
@@ -201,7 +211,8 @@ sealed class AppleRemoteVideoRenderer : IRemoteVideoRenderer
     readonly object gate = new();
     readonly AppleVideoDecoder decoder;
     readonly RemoteVideoLayer layer;
-    (CGImage Image, EncodedVideoFrame Frame)? pending;
+    // a class, not a tuple: Interlocked.Exchange only swaps references, and throws NotSupportedException for a struct
+    PendingImage? pending;
     int updateQueued;
     bool disposed;
 
@@ -231,7 +242,7 @@ sealed class AppleRemoteVideoRenderer : IRemoteVideoRenderer
 
     void Publish(CGImage image, EncodedVideoFrame frame)
     {
-        var previous = Interlocked.Exchange(ref this.pending, (image, frame));
+        var previous = Interlocked.Exchange(ref this.pending, new PendingImage(image, frame));
         previous?.Image.Dispose(); // never reached the layer, so still ours
 
         if (Interlocked.Exchange(ref this.updateQueued, 1) == 1)
@@ -254,6 +265,9 @@ sealed class AppleRemoteVideoRenderer : IRemoteVideoRenderer
         }
         Interlocked.Exchange(ref this.pending, null)?.Image.Dispose();
     }
+
+
+    sealed record PendingImage(CGImage Image, EncodedVideoFrame Frame);
 }
 
 

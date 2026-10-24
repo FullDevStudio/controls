@@ -171,7 +171,8 @@ sealed class AndroidRemoteVideoRenderer : Java.Lang.Object, IRemoteVideoRenderer
     int decoderWidth;
     int decoderHeight;
     bool disposed;
-    (Bitmap Bitmap, EncodedVideoFrame Frame)? pendingBitmap;
+    // a class, not a tuple: Interlocked.Exchange only swaps references, and throws NotSupportedException for a struct
+    PendingBitmap? pendingBitmap;
     EncodedVideoFrame? pendingTexture;
     int updateQueued;
 
@@ -205,7 +206,7 @@ sealed class AndroidRemoteVideoRenderer : Java.Lang.Object, IRemoteVideoRenderer
         if (bitmap is null)
             return; // one bad frame; the next stands alone
 
-        if (Interlocked.Exchange(ref this.pendingBitmap, (bitmap, frame)) is { } superseded)
+        if (Interlocked.Exchange(ref this.pendingBitmap, new PendingBitmap(bitmap, frame)) is { } superseded)
         {
             superseded.Bitmap.Recycle();
             superseded.Bitmap.Dispose();
@@ -459,3 +460,9 @@ public partial class RemoteVideoViewHandler : ViewHandler<RemoteVideoView, Remot
         handler.PlatformView.Fit();
     }
 }
+
+
+/// <summary>
+/// A decoded JPEG waiting for the next layout pass
+/// </summary>
+sealed record PendingBitmap(Bitmap Bitmap, EncodedVideoFrame Frame);
