@@ -27,6 +27,9 @@ Four displays: **`Popover`** (card, tail, counter and Back/Next/Skip — the def
 at all — the text sits on the dim and the cut-out does the pointing). Or replace the body entirely with
 `Content` / `ContentTemplate`.
 
+The card is a surface of the app's own theme (the high surface container, unless `CalloutColor` says otherwise) and
+follows a theme or colour change on every platform, Windows included.
+
 `RememberRunKey` is what makes onboarding onboarding: the tour runs once per user and then stays out of the
 way. It is backed by a replaceable `IWalkthroughStore` — `Preferences` on MAUI, `localStorage` on Blazor —
 so the flag can live with the rest of your user state instead. `Restart()` clears it and runs again, which

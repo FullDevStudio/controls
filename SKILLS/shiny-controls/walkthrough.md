@@ -95,7 +95,7 @@ xmlns:shiny="http://shiny.net/maui/controls"
 | `NextText` / `BackText` / `SkipText` / `FinishText` | Next / Back / Skip / Done | |
 | `AdvanceOnBackdropTap` | false | |
 | `ScrollToTarget` | true | Brings each target into view first. |
-| `CalloutColor` / `CalloutTextColor` / `CalloutCornerRadius` / `MaxCalloutWidth` | theme / theme / unset / 320 | |
+| `CalloutColor` / `CalloutTextColor` / `CalloutCornerRadius` / `MaxCalloutWidth` | theme / theme / unset / 320 | The card follows a theme or colour change on every platform, Windows included — no need to set both colours to keep the text readable. |
 | `CalloutOffset` / `ScreenMargin` | 14 / 16 | |
 
 Read-only: `StepCount`, `StepNumber`, `CurrentStep`, `CurrentStepIndex`, `HasRun`.
