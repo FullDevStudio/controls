@@ -413,9 +413,21 @@ public class TooltipBubble : Grid
 
     void OnProbeChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == BoxView.ColorProperty.PropertyName)
-            this.tail.Invalidate();
+        if (e.PropertyName != BoxView.ColorProperty.PropertyName)
+            return;
+
+        // Hand the card a new brush rather than relying on the bound one changing colour. On Windows the
+        // card's fill kept the first colour it was drawn with: a walkthrough callout stayed in the tooltip's
+        // dark inverse surface after it switched to the light surface container, and its dark text vanished.
+        if (ReferenceEquals(sender, this.fillProbe))
+            this.card.Background = new SolidColorBrush(this.fillProbe.Color ?? Colors.Transparent);
+        else if (ReferenceEquals(sender, this.strokeProbe))
+            this.card.Stroke = new SolidColorBrush(this.strokeProbe.Color ?? Colors.Transparent);
+
+        this.tail.Invalidate();
     }
+
+    internal Brush CardFill => this.card.Background;
 
 
     void ApplyAll()
